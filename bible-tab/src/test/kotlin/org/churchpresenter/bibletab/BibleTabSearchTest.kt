@@ -3,6 +3,7 @@
 package org.churchpresenter.bibletab
 
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performClick
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -23,6 +24,15 @@ import org.churchpresenter.sharedui.testing.showsExactly
  * See `BibleTabTestSupport.kt` for the harness.
  */
 class BibleTabSearchTest {
+    @Test
+    fun `two pinyin initials offer a book that can be selected`() = bibleTab { vm, _ ->
+        vm.onSmartQueryChanged("cs")
+        waitForIdle()
+        onAllNodesWithText("Genesis")[0].performClick()
+        waitForIdle()
+        assertEquals("Genesis ", vm.searchQuery.value)
+        assertEquals(0, vm.selectedBookIndex.value)
+    }
 
     @Test
     fun `submitting Chinese initials projects the entire requested passage`() = bibleTab { vm, reports ->
