@@ -25,6 +25,19 @@ import org.churchpresenter.sharedui.testing.showsExactly
  */
 class BibleTabSearchTest {
     @Test
+    fun `a single available fuzzy candidate is selected and accepts a passage`() = bibleTab { vm, reports ->
+        vm.selectBook(2)
+        vm.onSmartQueryChanged("cs")
+        waitUntil(timeoutMillis = 5_000) { vm.selectedBookIndex.value == 0 }
+        assertEquals("cs", vm.searchQuery.value)
+        vm.onSmartQueryChanged("cs 1 2 3")
+        vm.submitSmartQuery()
+        waitUntil(timeoutMillis = 5_000) { reports.live?.firstOrNull()?.verseRange == "2-3" }
+        waitForIdle()
+        assertEquals("2-3", reports.live?.first()?.verseRange)
+    }
+
+    @Test
     fun `two pinyin initials offer a book that can be selected`() = bibleTab { vm, _ ->
         vm.onSmartQueryChanged("cs")
         waitForIdle()
