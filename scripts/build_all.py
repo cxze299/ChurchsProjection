@@ -120,7 +120,7 @@ def wait_for_packages(repo, branch, commit, no_wait):
     print(f"构建任务：{run['html_url']}", flush=True)
     if no_wait:
         return
-    retried = False
+    retried = set()
     previous = None
     while True:
         run = api(repo, f"actions/runs/{run['id']}")
@@ -131,10 +131,23 @@ def wait_for_packages(repo, branch, commit, no_wait):
                              if conclusion != "skipped"), flush=True)
             previous = state
         if run["status"] == "completed":
-            if run["conclusion"] == "failure" and not retried:
-                print("重试失败的云端任务（仅一次）…", flush=True)
-                api(repo, f"actions/runs/{run['id']}/rerun-failed-jobs", {})
-                retried = True
+            retry = None
+            for job in jobs:
+                if job["name"] in retried:
+                    continue
+                capacity_cancelled = False
+                if job["conclusion"] == "cancelled":
+                    annotations = api(repo, f"check-runs/{job['id']}/annotations")
+                    capacity_cancelled = any("capacity constraints" in item["message"].lower()
+                                             or "not acquired by runner" in item["message"].lower()
+                                             for item in annotations)
+                if job["conclusion"] in ("failure", "timed_out") or capacity_cancelled:
+                    retry = job
+                    break
+            if retry:
+                print(f"重试云端任务（每个平台仅一次）：{retry['name']}", flush=True)
+                api(repo, f"actions/jobs/{retry['id']}/rerun", {})
+                retried.add(retry["name"])
                 time.sleep(10)
                 continue
             artifacts = api(repo, f"actions/runs/{run['id']}/artifacts")["artifacts"]

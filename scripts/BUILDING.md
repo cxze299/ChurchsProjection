@@ -10,7 +10,7 @@
 - 构建前退出 ChurchPresenter，并提交当前源码修改。脚本不自动暂存、提交或上传未跟踪文件。
 - 本机使用 `:composeApp:createDistributable` 更新固定软件入口。
 - 将已提交源码通过 GitHub API 上传到独立的 `codex/build-*` 分支，校验 Git 源码树一致后，触发现有 `build.yml`，构建 Windows MSI/MSIX、macOS arm64 DMG 和 macOS x64 DMG。
-- 脚本等待构建结束，失败任务自动重试一次，并输出各安装包的下载链接。下载 GitHub Actions 产物需要登录 GitHub。
+- 脚本等待构建结束，每个平台遇到失败或 runner 容量不足时自动重试一次，并输出各安装包的下载链接。下载 GitHub Actions 产物需要登录 GitHub。
 - macOS 使用 GitHub 的 Mac runner，本机无需安装 Xcode。没有配置 Apple 签名和公证凭据时，产物未签名、未公证。
 
 只构建云端三个版本：`.\Build-All.ps1 -CloudOnly`。

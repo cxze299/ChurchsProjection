@@ -52,5 +52,31 @@ class SourcePublishingTest(unittest.TestCase):
                 build_all.publish_source("owner/repo", "builds/base")
 
 
+class PackageRetryTest(unittest.TestCase):
+    def test_capacity_cancellation_is_retried_only_once(self):
+        retries = []
+
+        def fake_api(repo, path, payload=None):
+            run = {"id": 1, "head_sha": "commit", "html_url": "https://github.com/o/r/actions/runs/1",
+                   "status": "completed", "conclusion": "cancelled"}
+            if path.startswith("actions/runs?"):
+                return {"workflow_runs": [run]}
+            if path == "actions/runs/1":
+                return run
+            if path.endswith("/jobs"):
+                return {"jobs": [{"id": 2, "name": "macos-arm64", "status": "completed", "conclusion": "cancelled"}]}
+            if path.endswith("/annotations"):
+                return [{"message": "Due to capacity constraints, jobs may experience longer queue times."}]
+            if path.endswith("/rerun"):
+                retries.append(path)
+                return {}
+            return {"artifacts": []}
+
+        with patch.object(build_all, "api", side_effect=fake_api), patch.object(build_all.time, "sleep"):
+            with self.assertRaisesRegex(RuntimeError, "部分云端构建失败"):
+                build_all.wait_for_packages("o/r", "branch", "commit", False)
+        self.assertEqual(["actions/jobs/2/rerun"], retries)
+
+
 if __name__ == "__main__":
     unittest.main()
