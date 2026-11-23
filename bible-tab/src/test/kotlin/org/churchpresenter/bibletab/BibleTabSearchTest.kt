@@ -25,6 +25,18 @@ import org.churchpresenter.sharedui.testing.showsExactly
 class BibleTabSearchTest {
 
     @Test
+    fun `submitting Chinese initials projects the entire requested passage`() = bibleTab { vm, reports ->
+        vm.onSmartQueryChanged("csj 1 2 3")
+        vm.submitSmartQuery()
+        waitUntil(timeoutMillis = 5_000) { reports.live?.firstOrNull()?.verseRange == "2-3" }
+        waitForIdle()
+        assertEquals("2-3", reports.live?.first()?.verseRange)
+        assertEquals(listOf(1, 2), vm.selectedVerseIndices.sorted())
+        assertTrue(vm.multiVerseEnabled.value)
+        assertTrue(reports.live!!.first().verseText.contains("Let there be light"))
+    }
+
+    @Test
     fun `Chinese initials show a passage label without submitting`() = bibleTab { vm, _ ->
         vm.onSmartQueryChanged("csj 12 2 5")
         waitForIdle()
