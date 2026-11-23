@@ -5,6 +5,19 @@ from unittest.mock import patch
 import build_all
 
 
+class ApiRetryTest(unittest.TestCase):
+    def test_read_recovers_from_temporary_network_failure(self):
+        with patch.object(build_all, "command", side_effect=[RuntimeError("EOF"), b'{"status":"completed"}']), \
+                patch.object(build_all.time, "sleep"):
+            self.assertEqual({"status": "completed"}, build_all.api("o/r", "actions/runs/1"))
+
+    def test_writes_are_not_blindly_replayed_after_network_failure(self):
+        with patch.object(build_all, "command", side_effect=RuntimeError("EOF")) as command:
+            with self.assertRaises(RuntimeError):
+                build_all.api("o/r", "git/commits", {"tree": "source"})
+        command.assert_called_once()
+
+
 class SourcePublishingTest(unittest.TestCase):
     def test_verified_tree_uses_a_new_branch_without_force_push(self):
         writes = []

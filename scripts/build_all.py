@@ -28,7 +28,14 @@ def api(repo, endpoint, payload=None):
     if payload is not None:
         args += ["--method", "POST", "--input", "-"]
         options["input"] = json.dumps(payload).encode()
-    data = command(args, **options)
+    for attempt in range(4):
+        try:
+            data = command(args, **options)
+            break
+        except RuntimeError:
+            if payload is not None or attempt == 3:
+                raise
+            time.sleep(2 ** (attempt + 1))
     return json.loads(data) if data.strip() else {}
 
 
