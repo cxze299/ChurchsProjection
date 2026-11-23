@@ -38,6 +38,19 @@ private fun matchChapterVerse(input: String): ChapterVerse? {
 internal fun isChineseQuickReference(input: String): Boolean =
     matchChapterVerse(input)?.let { ChineseBookInitials.bookId(it.bookToken) != null } == true
 
+/** A live reading aid below the field; keep the typed initials intact for further editing. */
+internal fun BibleViewModel.quickReferenceLabel(query: String): String? {
+    if (!isChineseQuickReference(query)) return null
+    val ref = referenceFor(query) ?: return null
+    val book = _books.value.getOrNull(ref.bookIndex) ?: return null
+    val chapter = ref.chapter ?: return null
+    val verses = ref.verseStart?.let { start ->
+        val end = ref.verseEnd
+        if (end != null && end != start) "$start-${end}节" else "${start}节"
+    }.orEmpty()
+    return "$book ${chapter}章$verses"
+}
+
 internal fun BibleViewModel.parseReference(input: String): SmartReference? {
     val match = matchChapterVerse(input)
     if (match != null) {

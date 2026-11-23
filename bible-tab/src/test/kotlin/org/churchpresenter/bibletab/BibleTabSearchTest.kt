@@ -25,6 +25,14 @@ import org.churchpresenter.sharedui.testing.showsExactly
 class BibleTabSearchTest {
 
     @Test
+    fun `Chinese initials show a passage label without submitting`() = bibleTab { vm, _ ->
+        vm.onSmartQueryChanged("csj 12 2 5")
+        waitForIdle()
+        onNodeWithText("Genesis 12章2-5节").assertExists()
+        assertEquals("csj 12 2 5", vm.searchQuery.value)
+    }
+
+    @Test
     fun `the search box starts empty, showing its hint`() = bibleTab { _, _ ->
         assertTrue(
             showsExactly(BibleLabel.SEARCH_PLACEHOLDER),

@@ -102,6 +102,15 @@ internal fun ColumnScope.BibleTabContent(
             searchFocus = searchFocus,
         )
 
+        viewModel.quickReferenceLabel(searchQuery)?.let { label ->
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+            )
+        }
+
         if (engineSettings.enabled && sttConnected) {
             sttManager?.let { BibleTabDetection(viewModel, it) }
         }
