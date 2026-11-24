@@ -183,7 +183,7 @@ internal class BibleTabScope(
         viewModel: BibleViewModel,
         source: String = "manual",
         matchType: String? = null,
-        preserveSelection: Boolean = false,
+        preserveSelection: Boolean = true,
     ) {
         val selectedVerses = viewModel.getSelectedVerses()
         selectedVerses.firstOrNull()?.let { v ->
