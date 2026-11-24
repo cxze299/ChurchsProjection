@@ -37,12 +37,16 @@ class ApiRetryTest(unittest.TestCase):
 
 
 class SourcePublishingTest(unittest.TestCase):
-    def test_verified_tree_uses_a_new_branch_without_force_push(self):
+    def test_verified_tree_creates_the_fixed_build_branch(self):
         writes = []
 
         def fake_api(repo, path, payload=None):
             if payload is not None:
                 writes.append((path, payload))
+            if path.startswith("actions/workflows/"):
+                return {"workflow_runs": []}
+            if path.startswith("git/matching-refs/heads/"):
+                return []
             if path.startswith("git/ref/"):
                 return {"object": {"sha": "base"}}
             if path == "git/commits/base":
@@ -65,13 +69,15 @@ class SourcePublishingTest(unittest.TestCase):
 
         with patch.object(build_all, "api", side_effect=fake_api), patch.object(build_all, "command", side_effect=fake_command):
             branch, commit = build_all.publish_source("owner/repo", "base")
-        self.assertTrue(branch.startswith("codex/build-"))
+        self.assertEqual("codex/build-release", branch)
         self.assertEqual("commit", commit)
         self.assertEqual(["git/commits", "git/refs"], [path for path, _ in writes])
 
     def test_tree_mismatch_stops_before_creating_a_commit_or_branch(self):
         def fake_api(repo, path, payload=None):
             self.assertIsNone(payload)
+            if path.startswith("actions/workflows/"):
+                return {"workflow_runs": []}
             if path.startswith("git/ref/"):
                 return {"object": {"sha": "base"}}
             if path == "git/commits/base":
@@ -84,6 +90,30 @@ class SourcePublishingTest(unittest.TestCase):
         with patch.object(build_all, "api", side_effect=fake_api), patch.object(build_all, "command", side_effect=fake_command):
             with self.assertRaisesRegex(RuntimeError, "源码校验失败"):
                 build_all.publish_source("owner/repo", "base")
+
+
+class BuildBranchReuseTest(unittest.TestCase):
+    def test_existing_branch_is_updated_without_force_push(self):
+        refs = [{"ref": "refs/heads/codex/build-release"}]
+        with patch.object(build_all, "api", return_value=refs), patch.object(build_all, "command", return_value=b"") as command:
+            self.assertEqual("codex/build-release", build_all.publish_build_ref("o/r", "new-commit"))
+        args = command.call_args.args[0]
+        self.assertIn("PATCH", args)
+        self.assertEqual("repos/o/r/git/refs/heads/codex/build-release", args[-3])
+        self.assertEqual({"sha": "new-commit", "force": False}, json.loads(command.call_args.kwargs["input"]))
+
+    def test_active_build_blocks_reusing_the_branch(self):
+        runs = {"workflow_runs": [{"status": "in_progress", "html_url": "https://example.com/run"}]}
+        with patch.object(build_all, "api", return_value=runs):
+            with self.assertRaisesRegex(RuntimeError, "已有构建正在运行"):
+                build_all.ensure_build_branch_idle("o/r")
+
+    def test_non_fast_forward_update_failure_is_not_retried_with_force(self):
+        refs = [{"ref": "refs/heads/codex/build-release"}]
+        with patch.object(build_all, "api", return_value=refs), patch.object(build_all, "command", side_effect=RuntimeError("not fast-forward")) as command:
+            with self.assertRaisesRegex(RuntimeError, "not fast-forward"):
+                build_all.publish_build_ref("o/r", "new-commit")
+        command.assert_called_once()
 
 
 class PackageRetryTest(unittest.TestCase):

@@ -9,10 +9,10 @@ import subprocess
 import sys
 import tempfile
 import time
-from datetime import datetime, timezone
 from release_version import next_version
 
 ROOT = Path(__file__).resolve().parents[1]
+BUILD_BRANCH = "codex/build-release"
 
 
 def command(args, **kwargs):
@@ -51,7 +51,26 @@ def resolve_base(repo, base_branch=None):
     return branch, sha
 
 
+def ensure_build_branch_idle(repo):
+    runs = api(repo, f"actions/workflows/build-integrated.yml/runs?branch={BUILD_BRANCH}&per_page=20")["workflow_runs"]
+    active = next((run for run in runs if run["status"] != "completed"), None)
+    if active:
+        raise RuntimeError(f"已有构建正在运行，请完成后再启动：{active['html_url']}")
+
+
+def publish_build_ref(repo, commit):
+    ref = f"refs/heads/{BUILD_BRANCH}"
+    refs = api(repo, f"git/matching-refs/heads/{BUILD_BRANCH}")
+    if any(item["ref"] == ref for item in refs):
+        command(["gh", "api", "--method", "PATCH", f"repos/{repo}/git/{ref}", "--input", "-"],
+                input=json.dumps({"sha": commit, "force": False}).encode())
+    else:
+        api(repo, "git/refs", {"ref": ref, "sha": commit})
+    return BUILD_BRANCH
+
+
 def publish_source(repo, base):
+    ensure_build_branch_idle(repo)
     # Publish committed source only: never stage files, include untracked files, or force-push.
     command(["git", "diff", "--quiet", "HEAD", "--", ":/"])
     # Base each snapshot on current main; packaging is independent of source merging.
@@ -90,9 +109,8 @@ def publish_source(repo, base):
     commit = api(repo, "git/commits", {
         "message": "Build integrated desktop packages", "tree": tree, "parents": [base],
     })["sha"]
-    branch = "codex/build-" + datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
-    # Create the final source snapshot; packaging is dispatched explicitly below.
-    api(repo, "git/refs", {"ref": f"refs/heads/{branch}", "sha": commit})
+    # Keep the Actions cache scope stable; updates must fast-forward after the previous merge.
+    branch = publish_build_ref(repo, commit)
     print(f"云端源码已校验：{branch}（{tree[:12]}）", flush=True)
     return branch, commit
 
@@ -213,6 +231,7 @@ def main():
     print(f"发布仓库：{args.repo}，基础分支：{base_branch}", flush=True)
     if subprocess.run(["git", "diff", "--quiet", "HEAD", "--", ":/"], cwd=ROOT).returncode:
         raise RuntimeError("存在未提交的源码修改，请提交后再构建，以保证三个版本使用同一份源码。")
+    ensure_build_branch_idle(args.repo)
     tags = api(args.repo, "git/matching-refs/tags/v1.0")
     version = next_version(tag["ref"].rsplit("/", 1)[-1] for tag in tags)
     print(f"本次构建版本：{version}", flush=True)
