@@ -6,9 +6,9 @@ name: Render benchmark
 # output draws -- the output modules, or the benchmark itself -- so a slowdown there is caught
 # before it merges (AGENT.md, "Live-safe output paths"); other pull requests skip it, and a branch
 # can be checked by dispatching it by hand. The hosted runners are ~10x slower than
-# the reference Mac behind composeApp/benchmarks/results.json, so the absolute frame budget cannot
+# the reference Mac behind project/composeApp/benchmarks/results.json, so the absolute frame budget cannot
 # be checked here; what can is "this got meaningfully slower than it was", against
-# composeApp/benchmarks/ci/results.json. A row fails past baseline x 1.5 + 1 ms on its typical
+# project/composeApp/benchmarks/ci/results.json. A row fails past baseline x 1.5 + 1 ms on its typical
 # frame (render p50 + readback p50).
 #
 # Its own workflow rather than a job in test.yml: that file's one job is `test`, the required
@@ -18,20 +18,20 @@ name: Render benchmark
 #
 # The CI baseline is recorded by dispatching this workflow with `record_baseline`, or by any run
 # while no baseline is committed; either uploads `ci-render-baseline`, which a maintainer downloads
-# and commits as the two files in composeApp/benchmarks/ci/.
+# and commits as the two files in project/composeApp/benchmarks/ci/.
 on:
   pull_request:
     paths:
-      - 'modules/output/live-output/**'
-      - 'modules/engines/presenter/**'
-      - 'modules/engines/slides-engine/**'
-      - 'modules/engines/media-engine/**'
-      - 'modules/engines/canvas-engine/**'
-      - 'modules/engines/lower-third-engine/**'
-      - 'modules/engines/web-engine/**'
-      - 'modules/engines/stt-engine/**'
-      - 'composeApp/src/jvmTest/kotlin/org/churchpresenter/app/churchpresenter/benchmark/**'
-      - 'composeApp/benchmarks/ci/**'
+      - 'project/modules/output/live-output/**'
+      - 'project/modules/engines/presenter/**'
+      - 'project/modules/engines/slides-engine/**'
+      - 'project/modules/engines/media-engine/**'
+      - 'project/modules/engines/canvas-engine/**'
+      - 'project/modules/engines/lower-third-engine/**'
+      - 'project/modules/engines/web-engine/**'
+      - 'project/modules/engines/stt-engine/**'
+      - 'project/composeApp/src/jvmTest/kotlin/org/churchpresenter/app/churchpresenter/benchmark/**'
+      - 'project/composeApp/benchmarks/ci/**'
       - '.github/workflows/render-benchmark.yml'
   schedule:
     # Mondays 06:00 UTC, on main (a schedule always runs the default branch).
@@ -91,7 +91,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      BASELINE: composeApp/benchmarks/ci/results.json
+      BASELINE: project/composeApp/benchmarks/ci/results.json
       RECORD: ${{ github.event_name == 'workflow_dispatch' && inputs.record_baseline }}
     steps:
       - name: Checkout
@@ -112,7 +112,7 @@ jobs:
           cache-read-only: true
 
       - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+        run: chmod +x project/gradlew
 
       # With no baseline committed, a run records one instead of checking: a workflow new on a
       # branch cannot be dispatched until it is on the default branch, so the first pull request
@@ -126,7 +126,7 @@ jobs:
             echo "record=false" >> "$GITHUB_OUTPUT"
           else
             echo "record=true" >> "$GITHUB_OUTPUT"
-            echo "::notice::No CI render baseline committed yet ($BASELINE) -- this run records one; commit its ci-render-baseline artifact to composeApp/benchmarks/ci/."
+            echo "::notice::No CI render baseline committed yet ($BASELINE) -- this run records one; commit its ci-render-baseline artifact to project/composeApp/benchmarks/ci/."
             echo "No CI render baseline committed yet — this run recorded one (artifact ci-render-baseline)." >> "$GITHUB_STEP_SUMMARY"
           fi
 
@@ -134,23 +134,23 @@ jobs:
       # with nothing but the one benchmark JVM -- see the same step in test.yml.
       - name: Compile
         run: |
-          ./gradlew :composeApp:jvmTestClasses
+          ./project/gradlew -p project :composeApp:jvmTestClasses
           pkill -f KotlinCompileDaemon || true
 
       - name: Check render times against the CI baseline
         id: check
         if: steps.baseline.outputs.record != 'true'
-        run: ./gradlew :composeApp:renderBenchmark -PcheckRenderRegression
+        run: ./project/gradlew -p project :composeApp:renderBenchmark -PcheckRenderRegression
 
       - name: Record the CI baseline
         if: steps.baseline.outputs.record == 'true'
-        run: ./gradlew :composeApp:renderBenchmark -PrecordCiRenderBaseline
+        run: ./project/gradlew -p project :composeApp:renderBenchmark -PrecordCiRenderBaseline
 
       - name: Summary
         if: ${{ !cancelled() }}
         run: |
-          if [ -f composeApp/build/reports/render-benchmark/results.md ]; then
-            cat composeApp/build/reports/render-benchmark/results.md >> "$GITHUB_STEP_SUMMARY"
+          if [ -f project/composeApp/build/reports/render-benchmark/results.md ]; then
+            cat project/composeApp/build/reports/render-benchmark/results.md >> "$GITHUB_STEP_SUMMARY"
           else
             echo "The benchmark wrote no report; see the step log." >> "$GITHUB_STEP_SUMMARY"
           fi
@@ -161,8 +161,8 @@ jobs:
         with:
           name: render-benchmark
           path: |
-            composeApp/build/reports/render-benchmark/
-            composeApp/build/test-results/renderBenchmark/
+            project/composeApp/build/reports/render-benchmark/
+            project/composeApp/build/test-results/renderBenchmark/
           retention-days: 30
           if-no-files-found: warn
 
@@ -171,7 +171,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ci-render-baseline
-          path: composeApp/benchmarks/ci/
+          path: project/composeApp/benchmarks/ci/
           retention-days: 30
           if-no-files-found: error
 
@@ -188,7 +188,7 @@ jobs:
           LABEL="render-regression"
           gh label create "$LABEL" --color D93F0B \
             --description "The weekly render benchmark found main slower than its CI baseline" 2>/dev/null || true
-          REPORT=composeApp/build/reports/render-benchmark/results.md
+          REPORT=project/composeApp/build/reports/render-benchmark/results.md
           {
             echo "The weekly render benchmark found a row slower than its CI baseline on \`${GITHUB_SHA:0:9}\`."
             echo
@@ -200,7 +200,7 @@ jobs:
               echo "The benchmark wrote no report; see the run log."
             fi
             echo
-            echo "If the slowdown is intended, re-record the baseline: dispatch this workflow with \`record_baseline\` and commit its \`ci-render-baseline\` artifact to \`composeApp/benchmarks/ci/\`."
+            echo "If the slowdown is intended, re-record the baseline: dispatch this workflow with \`record_baseline\` and commit its \`ci-render-baseline\` artifact to \`project/composeApp/benchmarks/ci/\`."
           } > issue.md
           OPEN=$(gh issue list --label "$LABEL" --state open --limit 1 --json number -q '.[0].number // empty')
           if [ -n "$OPEN" ]; then

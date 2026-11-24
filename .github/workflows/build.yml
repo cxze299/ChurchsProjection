@@ -148,7 +148,7 @@ jobs:
           } > "$SIGNING_DIR/signing.properties"
           # local.properties is read with java.util.Properties, where a backslash is an escape:
           # D:\a\_temp would load as D:a_temp. Write the path with forward slashes.
-          echo "desktop.signing.repo.path=$(cygpath -m "$RUNNER_TEMP")/signing" >> local.properties
+          echo "desktop.signing.repo.path=$(cygpath -m "$RUNNER_TEMP")/signing" >> project/local.properties
           echo "Windows signing configuration written"
 
       - name: Add Windows SDK tools to PATH
@@ -171,7 +171,7 @@ jobs:
           PLANNING_CENTER_CLIENT_SECRET: ${{ secrets.PLANNING_CENTER_CLIENT_SECRET }}
           CALENDAR_RELAY_URL: ${{ secrets.CALENDAR_RELAY_URL }}
           CALENDAR_RELAY_CONFIG_URL: ${{ secrets.CALENDAR_RELAY_CONFIG_URL }}
-        run: ./gradlew --quiet :composeApp:signWindowsMsi
+        run: ./project/gradlew -p project --quiet :composeApp:signWindowsMsi
 
       # Its own step, bounded and allowed to fail: the MSIX is only for the Store (store-submit.yml),
       # and a makeappx that stalls must not hold back the signed MSI, the release or the nightly.
@@ -192,7 +192,7 @@ jobs:
           MSIX_PUBLISHER: ${{ vars.MSIX_PUBLISHER }}
           MSIX_PUBLISHER_DISPLAY_NAME: ${{ vars.MSIX_PUBLISHER_DISPLAY_NAME }}
         run: >-
-          ./gradlew :composeApp:packageMsix
+          ./project/gradlew -p project :composeApp:packageMsix
           "-Pmsix.identityName=$MSIX_IDENTITY_NAME"
           "-Pmsix.publisher=$MSIX_PUBLISHER"
           "-Pmsix.publisherDisplayName=$MSIX_PUBLISHER_DISPLAY_NAME"
@@ -200,7 +200,7 @@ jobs:
       - name: Rename MSI (add WINDOWS-x64 label)
         shell: bash
         run: |
-          for f in composeApp/build/compose/binaries/main/msi/*.msi; do
+          for f in project/composeApp/build/compose/binaries/main/msi/*.msi; do
             mv "$f" "${f%.msi}-WINDOWS-x64.msi"
           done
 
@@ -208,7 +208,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: windows-msi
-          path: composeApp/build/compose/binaries/main/msi
+          path: project/composeApp/build/compose/binaries/main/msi
           retention-days: 2
 
       # For store-submit.yml or a hand upload; not attached to the GitHub release, since an MSIX
@@ -218,7 +218,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: windows-msix
-          path: composeApp/build/compose/binaries/main/msix
+          path: project/composeApp/build/compose/binaries/main/msix
           retention-days: 7
 
   build-macos:
@@ -244,7 +244,7 @@ jobs:
           cache-read-only: false
 
       - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+        run: chmod +x project/gradlew
 
 
       # ── macOS Code Signing & Notarization ──────────────────────────────────
@@ -295,7 +295,7 @@ jobs:
             echo "notarizationPassword=${NOTARIZATION_PASSWORD}"
             echo "keychain=${KEYCHAIN_PATH}"
           } > "$SIGNING_DIR/signing.properties"
-          echo "desktop.signing.repo.path=$RUNNER_TEMP/signing" >> local.properties
+          echo "desktop.signing.repo.path=$RUNNER_TEMP/signing" >> project/local.properties
           echo "Signing configuration written"
 
       # ── Build ──────────────────────────────────────────────────────────────
@@ -307,7 +307,7 @@ jobs:
           PLANNING_CENTER_CLIENT_SECRET: ${{ secrets.PLANNING_CENTER_CLIENT_SECRET }}
           CALENDAR_RELAY_URL: ${{ secrets.CALENDAR_RELAY_URL }}
           CALENDAR_RELAY_CONFIG_URL: ${{ secrets.CALENDAR_RELAY_CONFIG_URL }}
-        run: ./gradlew --quiet :composeApp:packageDmg
+        run: ./project/gradlew -p project --quiet :composeApp:packageDmg
 
       - name: Notarize DMG (upload to Apple + wait for approval + staple ticket)
         if: ${{ env.MACOS_SIGNING_ENABLED == 'true' }}
@@ -360,7 +360,7 @@ jobs:
           fi
           echo "✅ Credentials verified"
 
-          DMG=$(find composeApp/build/compose/binaries/main/dmg -name "*.dmg" | head -1)
+          DMG=$(find project/composeApp/build/compose/binaries/main/dmg -name "*.dmg" | head -1)
           echo "Submitting for notarization: $(basename "$DMG")"
           # `--wait` exits 0 on "Invalid" too, so the verdict has to be read from the output;
           # otherwise the staple below fails with "Record not found" and the real reason — which
@@ -412,7 +412,7 @@ jobs:
 
       - name: Rename macOS DMG (add MACOS-MSilicon label)
         run: |
-          for f in composeApp/build/compose/binaries/main/dmg/*.dmg; do
+          for f in project/composeApp/build/compose/binaries/main/dmg/*.dmg; do
             mv "$f" "${f%.dmg}-MACOS-MSilicon.dmg"
           done
 
@@ -420,7 +420,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: macos-dmg
-          path: composeApp/build/compose/binaries/main/dmg
+          path: project/composeApp/build/compose/binaries/main/dmg
           retention-days: 2
 
       # ── Cleanup ────────────────────────────────────────────────────────────
@@ -456,7 +456,7 @@ jobs:
           cache-read-only: false
 
       - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+        run: chmod +x project/gradlew
 
 
       # ── macOS Code Signing & Notarization ──────────────────────────────────
@@ -506,7 +506,7 @@ jobs:
             echo "notarizationPassword=${NOTARIZATION_PASSWORD}"
             echo "keychain=${KEYCHAIN_PATH}"
           } > "$SIGNING_DIR/signing.properties"
-          echo "desktop.signing.repo.path=$RUNNER_TEMP/signing" >> local.properties
+          echo "desktop.signing.repo.path=$RUNNER_TEMP/signing" >> project/local.properties
           echo "Signing configuration written"
 
       # ── Build ──────────────────────────────────────────────────────────────
@@ -518,7 +518,7 @@ jobs:
           PLANNING_CENTER_CLIENT_SECRET: ${{ secrets.PLANNING_CENTER_CLIENT_SECRET }}
           CALENDAR_RELAY_URL: ${{ secrets.CALENDAR_RELAY_URL }}
           CALENDAR_RELAY_CONFIG_URL: ${{ secrets.CALENDAR_RELAY_CONFIG_URL }}
-        run: ./gradlew --quiet :composeApp:packageDmg
+        run: ./project/gradlew -p project --quiet :composeApp:packageDmg
 
       - name: Notarize DMG (upload to Apple + wait for approval + staple ticket)
         if: ${{ env.MACOS_SIGNING_ENABLED == 'true' }}
@@ -573,7 +573,7 @@ jobs:
           fi
           echo "✅ Credentials verified"
 
-          DMG=$(find composeApp/build/compose/binaries/main/dmg -name "*.dmg" | head -1)
+          DMG=$(find project/composeApp/build/compose/binaries/main/dmg -name "*.dmg" | head -1)
           echo "Submitting for notarization: $(basename "$DMG")"
           # `--wait` exits 0 on "Invalid" too, so the verdict has to be read from the output;
           # otherwise the staple below fails with "Record not found" and the real reason — which
@@ -625,7 +625,7 @@ jobs:
 
       - name: Rename macOS DMG (add MACOS-Intel label)
         run: |
-          for f in composeApp/build/compose/binaries/main/dmg/*.dmg; do
+          for f in project/composeApp/build/compose/binaries/main/dmg/*.dmg; do
             mv "$f" "${f%.dmg}-MACOS-Intel.dmg"
           done
 
@@ -633,7 +633,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: macos-dmg-x64
-          path: composeApp/build/compose/binaries/main/dmg
+          path: project/composeApp/build/compose/binaries/main/dmg
           retention-days: 2
 
       # ── Cleanup ────────────────────────────────────────────────────────────
@@ -672,7 +672,7 @@ jobs:
           cache-read-only: true
 
       - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+        run: chmod +x project/gradlew
 
 
       # ── Linux GPG Signing ──────────────────────────────────────────────────
@@ -697,7 +697,7 @@ jobs:
             echo "gpgKeyId=${GPG_KEY_ID}"
             echo "gpgPassphrase=${GPG_PASSPHRASE}"
           } > "$SIGNING_DIR/signing.properties"
-          echo "desktop.signing.repo.path=$RUNNER_TEMP/signing" >> local.properties
+          echo "desktop.signing.repo.path=$RUNNER_TEMP/signing" >> project/local.properties
           echo "Linux signing configuration written (key: $GPG_KEY_ID)"
 
       - name: Build and sign installer
@@ -707,7 +707,7 @@ jobs:
           PLANNING_CENTER_CLIENT_SECRET: ${{ secrets.PLANNING_CENTER_CLIENT_SECRET }}
           CALENDAR_RELAY_URL: ${{ secrets.CALENDAR_RELAY_URL }}
           CALENDAR_RELAY_CONFIG_URL: ${{ secrets.CALENDAR_RELAY_CONFIG_URL }}
-        run: ./gradlew --quiet :composeApp:signLinuxDeb
+        run: ./project/gradlew -p project --quiet :composeApp:signLinuxDeb
 
       # The runner's Ubuntu names some libraries differently from 22.04 (libasound2t64, not
       # libasound2), and jpackage writes the runner's names. Installing it on 22.04 here is what
@@ -720,7 +720,7 @@ jobs:
       - name: Install the .deb on Ubuntu 22.04
         run: |
           docker run --rm -e DEBIAN_FRONTEND=noninteractive \
-            -v "$PWD/composeApp/build/compose/binaries/main/deb:/deb:ro" \
+            -v "$PWD/project/composeApp/build/compose/binaries/main/deb:/deb:ro" \
             ubuntu:22.04@sha256:5ec03bb3441e8b0bf3b4f9cd4629a1ae763010dc3035bb8da3ae6cf026486401 \
             bash -c '
               set -e
@@ -762,24 +762,24 @@ jobs:
 
       - name: Rename DEB (add DEBIAN-x64 label)
         run: |
-          for f in composeApp/build/compose/binaries/main/deb/*.deb; do
+          for f in project/composeApp/build/compose/binaries/main/deb/*.deb; do
             BASENAME=$(basename "$f" .deb)
-            mv "$f" "composeApp/build/compose/binaries/main/deb/${BASENAME}-DEBIAN-x64.deb"
+            mv "$f" "project/composeApp/build/compose/binaries/main/deb/${BASENAME}-DEBIAN-x64.deb"
           done
 
       - name: Upload artifact
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: linux-deb
-          path: composeApp/build/compose/binaries/main/deb
+          path: project/composeApp/build/compose/binaries/main/deb
           retention-days: 2
 
       # The software bill of materials for the release: every library the app runs with (CycloneDX
       # JSON, from the runtime classpath only). Platform-independent, so one runner makes it.
       - name: Generate SBOM
         run: |
-          ./gradlew :composeApp:cyclonedxDirectBom
-          cp composeApp/build/reports/cyclonedx/bom.json ChurchPresenter-sbom.cdx.json
+          ./project/gradlew -p project :composeApp:cyclonedxDirectBom
+          cp project/composeApp/build/reports/cyclonedx/bom.json ChurchPresenter-sbom.cdx.json
 
       - name: Upload SBOM
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -863,7 +863,7 @@ jobs:
           PREV_TAG=$(gh release list --limit 5 --json tagName \
             -q '[.[] | select(.tagName != "nightly")][0].tagName // empty' 2>/dev/null || echo "")
           if [ -n "$PREV_TAG" ]; then
-            NOTES=$(python3 scripts/generate_release_notes.py "$PREV_TAG" "$VERSION" "${{ inputs.windows && needs.build-windows.result == 'success' }}" "${{ inputs.macos_arm64 && needs.build-macos.result == 'success' }}" "${{ inputs.macos_x64 && needs.build-macos-x64.result == 'success' }}" "${{ inputs.linux && needs.build-linux.result == 'success' }}")
+            NOTES=$(python3 project/scripts/generate_release_notes.py "$PREV_TAG" "$VERSION" "${{ inputs.windows && needs.build-windows.result == 'success' }}" "${{ inputs.macos_arm64 && needs.build-macos.result == 'success' }}" "${{ inputs.macos_x64 && needs.build-macos-x64.result == 'success' }}" "${{ inputs.linux && needs.build-linux.result == 'success' }}")
           else
             NOTES="Download the installer for your platform below."
           fi

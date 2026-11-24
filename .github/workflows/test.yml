@@ -113,7 +113,7 @@ jobs:
           cache-read-only: true
 
       # Which modules' suites this change can affect, read off the build's own dependency graph
-      # (`./gradlew moduleGraph`): a module runs when a file in its directory changed or when a
+      # (`./project/gradlew -p project moduleGraph`): a module runs when a file in its directory changed or when a
       # module it depends on -- transitively, test fixtures included -- did. .github/ci/affected_modules.py
       # says what it does and the few files that run everything; .github/ci/plan_ci.py packs the
       # affected suites into the `modules` job's groups. :composeApp runs regardless.
@@ -128,8 +128,8 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
         run: |
           python3 -m unittest discover -s .github/ci
-          chmod +x gradlew
-          ./gradlew -q moduleGraph > module-graph.txt
+          chmod +x project/gradlew
+          ./project/gradlew -p project -q moduleGraph > module-graph.txt
           if [ -n "$BASE_SHA" ] && ! git fetch --no-tags --depth=1 origin "$BASE_SHA"; then
             BASE_SHA=""
           fi
@@ -139,7 +139,7 @@ jobs:
   # Static analysis. No module has a detekt baseline: every module listed here has to be clean.
   #
   # NOT gated on which modules changed, deliberately. A module's detekt task costs seconds, and the
-  # gate is worth nothing if a change that breaks it can skip it: the shared config/detekt/detekt.yml
+  # gate is worth nothing if a change that breaks it can skip it: the shared project/config/detekt/detekt.yml
   # governs every module at once, so "this PR didn't touch that folder" does not mean that folder
   # still passes.
   # The Gradle build's resolved dependency graph, submitted to GitHub so Dependabot alerts cover it
@@ -163,6 +163,8 @@ jobs:
           distribution: 'temurin'
       - name: Submit the dependency graph
         uses: gradle/actions/dependency-submission@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        with:
+          build-root-directory: project
       - name: Review the dependencies this change adds
         if: github.event_name == 'pull_request'
         uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
@@ -188,13 +190,13 @@ jobs:
           cache-read-only: true
       - name: Detekt
         # Every module that applies detekt (cp.detekt), the app included -- a new one is in by default.
-        run: ./gradlew detekt
+        run: ./project/gradlew -p project detekt
       - name: Module layers
         # Which modules may depend on which: AGENT.md, "Layers".
-        run: ./gradlew checkModuleLayers
+        run: ./project/gradlew -p project checkModuleLayers
       - name: Live-safe allowlist
         # Every line names a file that still exists: AGENT.md, "Live-safe output paths".
-        run: ./gradlew checkLiveSafeAllowlist
+        run: ./project/gradlew -p project checkLiveSafeAllowlist
 
   app:
     needs: prepare
@@ -223,9 +225,9 @@ jobs:
         # forks (each well past its 1 GB heap in native Skia memory) it took the 16 GB runner to zero
         # with swap full; GitHub then loses the runner and reports the step as "cancelled".
         run: |
-          ./gradlew :composeApp:jvmTestClasses
+          ./project/gradlew -p project :composeApp:jvmTestClasses
           pkill -f KotlinCompileDaemon || true
-          ./gradlew :composeApp:jvmTest -PhangThresholdMs=150000
+          ./project/gradlew -p project :composeApp:jvmTest -PhangThresholdMs=150000
 
       # So an outlier explains itself instead of needing a guess.
       - name: Slowest test classes
@@ -234,7 +236,7 @@ jobs:
           python3 - <<'PY'
           import glob, re
           rows = []
-          for path in glob.glob('composeApp/build/test-results/jvmTest*/TEST-*.xml'):
+          for path in glob.glob('project/composeApp/build/test-results/jvmTest*/TEST-*.xml'):
               head = open(path, errors='replace').read(4000)
               m = re.search(r'<testsuite name="([^"]+)"[^>]*tests="(\d+)"[^>]*time="([\d.]+)"', head)
               if m:
@@ -259,7 +261,7 @@ jobs:
       - name: Coverage summary
         if: ${{ !cancelled() }}
         timeout-minutes: 10
-        run: ./gradlew :composeApp:jacocoTestReport -x jvmTest -x jvmTestSerial "-PstepSummary=$GITHUB_STEP_SUMMARY"
+        run: ./project/gradlew -p project :composeApp:jacocoTestReport -x jvmTest -x jvmTestSerial "-PstepSummary=$GITHUB_STEP_SUMMARY"
 
       # The floors, off the execution data the suite just wrote. Advisory whenever the suite did not
       # pass: the exec data is then from a run that did not finish, so a breach would be an artefact.
@@ -267,21 +269,21 @@ jobs:
         if: ${{ !cancelled() }}
         continue-on-error: ${{ steps.unit_tests.outcome != 'success' }}
         timeout-minutes: 10
-        run: ./gradlew :composeApp:jacocoTestCoverageVerification -x jvmTest -x jvmTestSerial
+        run: ./project/gradlew -p project :composeApp:jacocoTestCoverageVerification -x jvmTest -x jvmTestSerial
 
       - name: Keep the results for the report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          # Not `results-*`: every path here is under composeApp/build/, which the upload strips, so
+          # Not `results-*`: every path here is under project/composeApp/build/, which the upload strips, so
           # `test` downloads these back under that directory itself.
           name: app-results
           if-no-files-found: ignore
           retention-days: 7
           path: |
-            composeApp/build/test-results/
-            composeApp/build/reports/tests/
-            composeApp/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml
+            project/composeApp/build/test-results/
+            project/composeApp/build/reports/tests/
+            project/composeApp/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml
 
   # The module suites, in the groups prepare packed them into: one runner per group. A group compiles
   # in parallel, then runs its suites one at a time (`--max-workers=1`) -- several at once on one
@@ -322,9 +324,9 @@ jobs:
           echo "Modules: $MODULES"
           compile=()
           for m in $MODULES; do compile+=(":$m:testClasses"); done
-          ./gradlew "${compile[@]}" --max-workers=4
+          ./project/gradlew -p project "${compile[@]}" --max-workers=4
           pkill -f KotlinCompileDaemon || true
-          ./gradlew $TASKS --continue --max-workers=1
+          ./project/gradlew -p project $TASKS --continue --max-workers=1
 
       - name: Keep the results for the report
         if: ${{ !cancelled() }}
@@ -334,9 +336,9 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
           path: |
-            modules/*/*/build/test-results/
-            modules/*/*/build/reports/tests/
-            modules/*/*/build/reports/jacoco/test/jacocoTestReport.xml
+            project/modules/*/*/build/test-results/
+            project/modules/*/*/build/reports/tests/
+            project/modules/*/*/build/reports/jacoco/test/jacocoTestReport.xml
 
   # AGENT.md's flake rule, enforced: every test class this change added or edited runs three more
   # times. `--rerun` reruns only the test task; JaCoCo is off (-PfastTest) because coverage is
@@ -373,7 +375,7 @@ jobs:
             for c in $classes; do filters+=(--tests "$c"); done
             for run in 1 2 3; do
               echo "::group::$task, run $run of 3"
-              ./gradlew "$task" --rerun -PfastTest "${filters[@]}" < /dev/null
+              ./project/gradlew -p project "$task" --rerun -PfastTest "${filters[@]}" < /dev/null
               echo "::endgroup::"
             done
           done < changed-tests.txt
@@ -407,13 +409,13 @@ jobs:
           pattern: results-*
           merge-multiple: true
 
-      # The app's own artifact was uploaded relative to composeApp/build/ -- see `app`.
+      # The app's own artifact was uploaded relative to project/composeApp/build/ -- see `app`.
       - name: Gather the app's results
         if: ${{ !cancelled() && needs.app.result != 'skipped' }}
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: app-results
-          path: composeApp/build/
+          path: project/composeApp/build/
 
       # Puts the failure message and stack trace of every failed test in the pull request itself, and
       # annotates the failing line. Only modules that ran in this build are listed (plan_ci.py
@@ -442,13 +444,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR: ${{ github.event.pull_request.number }}
         run: |
-          ./gradlew coverageFloors -q > floors.csv || true
+          ./project/gradlew -p project coverageFloors -q > floors.csv || true
           python3 - <<'PY' > coverage.md
           import glob, os, xml.etree.ElementTree as ET
 
           COUNTERS = ["INSTRUCTION", "BRANCH", "LINE", "COMPLEXITY", "METHOD", "CLASS"]
           PATTERNS = [
-              "modules/*/*/build/reports/jacoco/*/*.xml",
+              "project/modules/*/*/build/reports/jacoco/*/*.xml",
           ]
 
           # The floor as the verification task itself has it, so the cap reported is the cap enforced.
@@ -544,8 +546,8 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
           path: |
-            modules/*/*/build/test-results/
-            modules/*/*/build/reports/tests/
+            project/modules/*/*/build/test-results/
+            project/modules/*/*/build/reports/tests/
 
       - name: Report a hung test as an issue
         if: ${{ !cancelled() && (needs.app.result == 'failure' || needs.modules.result == 'failure') }}

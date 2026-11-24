@@ -57,6 +57,7 @@ def changed_files(base):
 
 
 def module_of(path, graph):
+    path = path.removeprefix("project/")
     for name, directory in MODULE_PATHS.items():
         if path.startswith(directory + "/") and ":" + name in graph:
             return ":" + name
@@ -66,6 +67,8 @@ def module_of(path, graph):
 
 
 def affected(files, graph):
+    if files is not None:
+        files = [path.removeprefix("project/") for path in files]
     if files is None or any(f in SHARED_FILES or f.startswith(SHARED_DIRS) for f in files):
         return set(graph)
     changed = {m for f in files if (m := module_of(f, graph))}

@@ -6,7 +6,7 @@
 # network, discovers it, receives it and checks the red pixel and its alpha came back.
 #
 # On a pull request that touches OMT it stops there. Run by hand with `publish` ticked, it also
-# attaches the pair to a release of this repository — the URL gradle/omt-builds.properties pins as
+# attaches the pair to a release of this repository — the URL project/gradle/omt-builds.properties pins as
 # linux-x86_64, with the digest this run prints.
 #
 # Built on ubuntu-22.04 rather than -latest on purpose: a NativeAOT library links against the glibc
@@ -17,7 +17,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/omt-linux.yml'
-      - 'modules/engines/omt/**'
+      - 'project/modules/engines/omt/**'
   workflow_dispatch:
     inputs:
       publish:
@@ -149,7 +149,7 @@ jobs:
           archive="omt-${OMT_VERSION}-linux-x86_64.tar.gz"
           # Fixed mtime, owner and order, so rebuilding the same commits gives the same digest.
           tar --sort=name --mtime='2026-01-01 00:00Z' --owner=0 --group=0 --numeric-owner \
-            -C dist -czf "$archive" libomt.so libvmx.so LICENSE.txt
+            -C dist -czf "$archive" libomt.so libvmx.so project/LICENSE.txt
           sha=$(sha256sum "$archive" | cut -d' ' -f1)
           echo "archive=$archive" >> "$GITHUB_OUTPUT"
           echo "sha256=$sha" >> "$GITHUB_OUTPUT"
@@ -176,7 +176,7 @@ jobs:
       # the colour and the alpha survived. The runner is its own LAN of one, which is enough — the
       # test falls back to the sender's own address if DNS-SD finds nothing.
       - name: Loopback test against the built libraries
-        run: ./gradlew :omt:test -PomtHardware=true -PomtLibrary="$PWD/dist" --tests '*OmtHardwareTest*' -i
+        run: ./project/gradlew -p project :omt:test -PomtHardware=true -PomtLibrary="$PWD/dist" --tests '*OmtHardwareTest*' -i
 
   publish:
     needs: build
@@ -200,6 +200,6 @@ jobs:
             --title "OMT libraries ${OMT_VERSION} for Linux" --prerelease \
             --notes "libomt and libvmx built for Linux x86_64 by .github/workflows/omt-linux.yml. Bundled by fetchBundledOmt; not an app release."
           gh release upload "$tag" "$ARCHIVE" -R "$GITHUB_REPOSITORY" --clobber
-          echo "Pin in gradle/omt-builds.properties:"
+          echo "Pin in project/gradle/omt-builds.properties:"
           echo "linux-x86_64.url=https://github.com/${GITHUB_REPOSITORY}/releases/download/${tag}/${ARCHIVE}"
           echo "linux-x86_64.sha256=${SHA256}"

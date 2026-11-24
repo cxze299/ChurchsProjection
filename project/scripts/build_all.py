@@ -52,7 +52,7 @@ def resolve_base(repo, base_branch=None):
 
 def publish_source(repo, base):
     # Publish committed source only: never stage files, include untracked files, or force-push.
-    command(["git", "diff", "--quiet", "HEAD", "--"])
+    command(["git", "diff", "--quiet", "HEAD", "--", ":/"])
     # Base each snapshot on current main; packaging is independent of source merging.
     base_tree = api(repo, f"git/commits/{base}")["tree"]["sha"]
     remote = api(repo, f"git/trees/{base_tree}?recursive=1")
@@ -60,7 +60,7 @@ def publish_source(repo, base):
         raise RuntimeError("远端文件列表不完整，已停止发布。")
     old = {item["path"]: item for item in remote["tree"] if item["type"] != "tree"}
     local = {}
-    for entry in command(["git", "ls-tree", "-rz", "HEAD"]).split(b"\0"):
+    for entry in command(["git", "ls-tree", "-rz", "--full-tree", "HEAD"]).split(b"\0"):
         if not entry:
             continue
         header, path = entry.split(b"\t", 1)
@@ -210,7 +210,7 @@ def main():
     command(["gh", "auth", "status"])
     base_branch, base = resolve_base(args.repo, args.base_branch)
     print(f"发布仓库：{args.repo}，基础分支：{base_branch}", flush=True)
-    if subprocess.run(["git", "diff", "--quiet", "HEAD", "--"], cwd=ROOT).returncode:
+    if subprocess.run(["git", "diff", "--quiet", "HEAD", "--", ":/"], cwd=ROOT).returncode:
         raise RuntimeError("存在未提交的源码修改，请提交后再构建，以保证三个版本使用同一份源码。")
     count = int(command(["git", "rev-list", "--count", "HEAD"]).decode().strip())
     version = f"{datetime.now(timezone.utc).year % 100}.{count // 256}.{count % 256}"

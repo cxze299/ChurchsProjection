@@ -32,10 +32,13 @@ its own if the machine does not have one.
 There are no submodules, so a plain clone is everything you need:
 
 ```shell
-git clone https://github.com/cxze299/ChurchsProjectionown.git
+git clone https://github.com/cxze299/ChurchsProjection.git
+cd ChurchsProjection/project
 ```
 
 ### Build and run
+
+The complete application project is in `project/`. Open that directory in your IDE and run the commands below from it. On Windows, double-click `project\Build-All.cmd` from the repository folder.
 
 Use the run configuration in your IDE's toolbar, or run it from the terminal:
 

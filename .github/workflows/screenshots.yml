@@ -88,7 +88,7 @@ jobs:
           cache-read-only: true
 
       - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+        run: chmod +x project/gradlew
 
       # Only the screenshot class: the rest of the suite is the `test` workflow's job and would
       # add ~14 minutes here for nothing.
@@ -103,7 +103,7 @@ jobs:
         # `--tests` binds to the task named just before it, so each task needs its own: written once at
         # the end it filtered only the last module, and the others recorded their whole unit suites.
         run: >-
-          ./gradlew
+          ./project/gradlew -p project
           :composeApp:recordRoborazziJvm --tests '*ScreenshotTest*'
           :shared-ui:recordRoborazziJvm --tests '*ScreenshotTest*'
           :slides:recordRoborazziJvm --tests '*ScreenshotTest*'
@@ -135,7 +135,7 @@ jobs:
 
       # So the rendered set can be fetched without running Gradle locally, and the source the
       # website's screenshots should be taken from — not because the images are uncommitted (they
-      # are committed, under composeApp/screenshots, and AGENT.md is emphatic that they stay that
+      # are committed, under project/composeApp/screenshots, and AGENT.md is emphatic that they stay that
       # way), but because these are the Linux renders and so are consistent with each other, which
       # a set recorded on someone's macOS checkout is not. Uploaded before the comparison so a
       # visual difference, which is advisory and never fails the job, cannot cost the artifact.
@@ -143,7 +143,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: screenshots
-          path: composeApp/screenshots
+          path: project/composeApp/screenshots
           retention-days: 30
           if-no-files-found: error
 
@@ -153,7 +153,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: screenshots-shared-ui
-          path: modules/core/shared-ui/screenshots
+          path: project/modules/core/shared-ui/screenshots
           retention-days: 30
           if-no-files-found: error
 
@@ -161,7 +161,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: screenshots-slides
-          path: modules/features/slides/screenshots
+          path: project/modules/features/slides/screenshots
           retention-days: 30
           if-no-files-found: error
 
@@ -169,7 +169,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: screenshots-media
-          path: modules/features/media/screenshots
+          path: project/modules/features/media/screenshots
           retention-days: 30
           if-no-files-found: error
 
@@ -177,7 +177,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: screenshots-songs
-          path: modules/features/songs/screenshots
+          path: project/modules/features/songs/screenshots
           retention-days: 30
           if-no-files-found: error
 
@@ -185,7 +185,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: screenshots-bible-tab
-          path: modules/features/bible-tab/screenshots
+          path: project/modules/features/bible-tab/screenshots
           retention-days: 30
           if-no-files-found: error
 
@@ -193,7 +193,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: screenshots-schedule
-          path: modules/features/schedule/screenshots
+          path: project/modules/features/schedule/screenshots
           retention-days: 30
           if-no-files-found: error
 
@@ -201,7 +201,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: screenshots-canvas
-          path: modules/features/canvas/screenshots
+          path: project/modules/features/canvas/screenshots
           retention-days: 30
           if-no-files-found: error
 
@@ -209,7 +209,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: screenshots-presenter
-          path: modules/engines/presenter/screenshots
+          path: project/modules/engines/presenter/screenshots
           retention-days: 30
           if-no-files-found: error
 
@@ -217,7 +217,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: screenshots-profiles
-          path: modules/integrations/profiles/screenshots
+          path: project/modules/integrations/profiles/screenshots
           retention-days: 30
           if-no-files-found: error
 
@@ -225,7 +225,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: screenshots-live-output
-          path: modules/output/live-output/screenshots
+          path: project/modules/output/live-output/screenshots
           retention-days: 30
           if-no-files-found: error
 
@@ -233,7 +233,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: screenshots-server-ui
-          path: modules/integrations/server-ui/screenshots
+          path: project/modules/integrations/server-ui/screenshots
           retention-days: 30
           if-no-files-found: error
 
@@ -241,7 +241,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: screenshots-app-settings
-          path: modules/integrations/app-settings/screenshots
+          path: project/modules/integrations/app-settings/screenshots
           retention-days: 30
           if-no-files-found: error
 
@@ -249,7 +249,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: screenshots-updater
-          path: modules/features/updater/screenshots
+          path: project/modules/features/updater/screenshots
           retention-days: 30
           if-no-files-found: error
 
@@ -257,7 +257,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: screenshots-companion-surface
-          path: modules/features/companion-surface/screenshots
+          path: project/modules/features/companion-surface/screenshots
           retention-days: 30
           if-no-files-found: error
 
@@ -265,7 +265,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: screenshots-helper
-          path: modules/features/helper/screenshots
+          path: project/modules/features/helper/screenshots
           retention-days: 30
           if-no-files-found: error
 
@@ -273,7 +273,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: screenshots-announcements
-          path: modules/features/announcements/screenshots
+          path: project/modules/features/announcements/screenshots
           retention-days: 30
           if-no-files-found: error
 
@@ -281,7 +281,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: screenshots-calendar
-          path: modules/features/calendar/screenshots
+          path: project/modules/features/calendar/screenshots
           retention-days: 30
           if-no-files-found: error
 
@@ -289,7 +289,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: screenshots-crossword-tab
-          path: modules/features/crossword-tab/screenshots
+          path: project/modules/features/crossword-tab/screenshots
           retention-days: 30
           if-no-files-found: error
 
@@ -297,7 +297,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: screenshots-dictionary
-          path: modules/features/dictionary/screenshots
+          path: project/modules/features/dictionary/screenshots
           retention-days: 30
           if-no-files-found: error
 
@@ -305,7 +305,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: screenshots-lottieGenerator
-          path: modules/engines/lottieGenerator/screenshots
+          path: project/modules/engines/lottieGenerator/screenshots
           retention-days: 30
           if-no-files-found: error
 
@@ -313,7 +313,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: screenshots-lower-third
-          path: modules/features/lower-third/screenshots
+          path: project/modules/features/lower-third/screenshots
           retention-days: 30
           if-no-files-found: error
 
@@ -321,7 +321,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: screenshots-obs
-          path: modules/features/obs/screenshots
+          path: project/modules/features/obs/screenshots
           retention-days: 30
           if-no-files-found: error
 
@@ -329,7 +329,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: screenshots-qa
-          path: modules/features/qa/screenshots
+          path: project/modules/features/qa/screenshots
           retention-days: 30
           if-no-files-found: error
 
@@ -337,7 +337,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: screenshots-songlibrary
-          path: modules/features/songlibrary/screenshots
+          path: project/modules/features/songlibrary/screenshots
           retention-days: 30
           if-no-files-found: error
 
@@ -345,7 +345,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: screenshots-stt
-          path: modules/features/stt/screenshots
+          path: project/modules/features/stt/screenshots
           retention-days: 30
           if-no-files-found: error
 
@@ -353,7 +353,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: screenshots-dialogs
-          path: modules/integrations/dialogs/screenshots
+          path: project/modules/integrations/dialogs/screenshots
           retention-days: 30
           if-no-files-found: error
 
@@ -361,7 +361,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: screenshots-signage
-          path: modules/features/signage/screenshots
+          path: project/modules/features/signage/screenshots
           retention-days: 30
           if-no-files-found: error
 
@@ -369,12 +369,12 @@ jobs:
       # above regardless of screen density (see import-screenshots.mjs in ChurchPresenter-Website).
       # Limited to the classes behind the seven homepage images so this doesn't re-run the other
       # ~20 AppPreview* tests a second time for output nothing reads. -PpreviewDensity=2 writes to
-      # the SAME filenames under composeApp/screenshots (roborazzi.outputDir has no density-aware
+      # the SAME filenames under project/composeApp/screenshots (roborazzi.outputDir has no density-aware
       # naming), so this overwrites just those files in the working copy with the 2x version.
       - name: Render homepage screenshots at 2x
         timeout-minutes: 10
         run: |
-          ./gradlew :composeApp:recordRoborazziJvm -PpreviewDensity=2 \
+          ./project/gradlew -p project :composeApp:recordRoborazziJvm -PpreviewDensity=2 \
             --tests '*AppPreviewBibleScreenshotTest' \
             --tests '*AppPreviewSongsScreenshotTest' \
             --tests '*AppPreviewCanvasScreenshotTest' \
@@ -390,7 +390,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: screenshots-2x
-          path: composeApp/screenshots
+          path: project/composeApp/screenshots
           retention-days: 30
           if-no-files-found: error
 
@@ -398,7 +398,7 @@ jobs:
       # compares against the same density the committed baseline and the `screenshots` artifact use.
       - name: Restore homepage screenshots to 1x
         run: |
-          ./gradlew :composeApp:recordRoborazziJvm \
+          ./project/gradlew -p project :composeApp:recordRoborazziJvm \
             --tests '*AppPreviewBibleScreenshotTest' \
             --tests '*AppPreviewSongsScreenshotTest' \
             --tests '*AppPreviewCanvasScreenshotTest' \
@@ -413,41 +413,41 @@ jobs:
         run: |
           rm -rf screenshots-compare
           mkdir -p screenshots-compare/shared-ui screenshots-compare/slides screenshots-compare/media screenshots-compare/songs screenshots-compare/bible-tab screenshots-compare/schedule screenshots-compare/companion-surface screenshots-compare/canvas screenshots-compare/presenter screenshots-compare/profiles screenshots-compare/live-output screenshots-compare/updater screenshots-compare/server-ui screenshots-compare/app-settings screenshots-compare/helper screenshots-compare/announcements screenshots-compare/calendar screenshots-compare/crossword-tab screenshots-compare/dictionary screenshots-compare/lottieGenerator screenshots-compare/lower-third screenshots-compare/obs screenshots-compare/qa screenshots-compare/songlibrary screenshots-compare/stt screenshots-compare/dialogs screenshots-compare/signage
-          cp -R composeApp/screenshots/. screenshots-compare/
-          cp -R modules/core/shared-ui/screenshots/. screenshots-compare/shared-ui/
-          cp -R modules/features/slides/screenshots/. screenshots-compare/slides/
-          cp -R modules/features/media/screenshots/. screenshots-compare/media/
-          cp -R modules/features/songs/screenshots/. screenshots-compare/songs/
-          cp -R modules/features/bible-tab/screenshots/. screenshots-compare/bible-tab/
-          cp -R modules/features/schedule/screenshots/. screenshots-compare/schedule/
-          cp -R modules/features/canvas/screenshots/. screenshots-compare/canvas/
-          cp -R modules/engines/presenter/screenshots/. screenshots-compare/presenter/
-          cp -R modules/integrations/profiles/screenshots/. screenshots-compare/profiles/
-          cp -R modules/output/live-output/screenshots/. screenshots-compare/live-output/
-          cp -R modules/features/updater/screenshots/. screenshots-compare/updater/
-          cp -R modules/integrations/app-settings/screenshots/. screenshots-compare/app-settings/
-          cp -R modules/integrations/server-ui/screenshots/. screenshots-compare/server-ui/
-          cp -R modules/features/companion-surface/screenshots/. screenshots-compare/companion-surface/
-          cp -R modules/features/helper/screenshots/. screenshots-compare/helper/
-          cp -R modules/features/announcements/screenshots/. screenshots-compare/announcements/
-          cp -R modules/features/calendar/screenshots/. screenshots-compare/calendar/
-          cp -R modules/features/crossword-tab/screenshots/. screenshots-compare/crossword-tab/
-          cp -R modules/features/dictionary/screenshots/. screenshots-compare/dictionary/
-          cp -R modules/engines/lottieGenerator/screenshots/. screenshots-compare/lottieGenerator/
-          cp -R modules/features/lower-third/screenshots/. screenshots-compare/lower-third/
-          cp -R modules/features/obs/screenshots/. screenshots-compare/obs/
-          cp -R modules/features/qa/screenshots/. screenshots-compare/qa/
-          cp -R modules/features/songlibrary/screenshots/. screenshots-compare/songlibrary/
-          cp -R modules/features/stt/screenshots/. screenshots-compare/stt/
-          cp -R modules/integrations/dialogs/screenshots/. screenshots-compare/dialogs/
-          cp -R modules/features/signage/screenshots/. screenshots-compare/signage/
+          cp -R project/composeApp/screenshots/. screenshots-compare/
+          cp -R project/modules/core/shared-ui/screenshots/. screenshots-compare/shared-ui/
+          cp -R project/modules/features/slides/screenshots/. screenshots-compare/slides/
+          cp -R project/modules/features/media/screenshots/. screenshots-compare/media/
+          cp -R project/modules/features/songs/screenshots/. screenshots-compare/songs/
+          cp -R project/modules/features/bible-tab/screenshots/. screenshots-compare/bible-tab/
+          cp -R project/modules/features/schedule/screenshots/. screenshots-compare/schedule/
+          cp -R project/modules/features/canvas/screenshots/. screenshots-compare/canvas/
+          cp -R project/modules/engines/presenter/screenshots/. screenshots-compare/presenter/
+          cp -R project/modules/integrations/profiles/screenshots/. screenshots-compare/profiles/
+          cp -R project/modules/output/live-output/screenshots/. screenshots-compare/live-output/
+          cp -R project/modules/features/updater/screenshots/. screenshots-compare/updater/
+          cp -R project/modules/integrations/app-settings/screenshots/. screenshots-compare/app-settings/
+          cp -R project/modules/integrations/server-ui/screenshots/. screenshots-compare/server-ui/
+          cp -R project/modules/features/companion-surface/screenshots/. screenshots-compare/companion-surface/
+          cp -R project/modules/features/helper/screenshots/. screenshots-compare/helper/
+          cp -R project/modules/features/announcements/screenshots/. screenshots-compare/announcements/
+          cp -R project/modules/features/calendar/screenshots/. screenshots-compare/calendar/
+          cp -R project/modules/features/crossword-tab/screenshots/. screenshots-compare/crossword-tab/
+          cp -R project/modules/features/dictionary/screenshots/. screenshots-compare/dictionary/
+          cp -R project/modules/engines/lottieGenerator/screenshots/. screenshots-compare/lottieGenerator/
+          cp -R project/modules/features/lower-third/screenshots/. screenshots-compare/lower-third/
+          cp -R project/modules/features/obs/screenshots/. screenshots-compare/obs/
+          cp -R project/modules/features/qa/screenshots/. screenshots-compare/qa/
+          cp -R project/modules/features/songlibrary/screenshots/. screenshots-compare/songlibrary/
+          cp -R project/modules/features/stt/screenshots/. screenshots-compare/stt/
+          cp -R project/modules/integrations/dialogs/screenshots/. screenshots-compare/dialogs/
+          cp -R project/modules/features/signage/screenshots/. screenshots-compare/signage/
 
       - name: Compare with the base branch
         uses: reg-viz/reg-actions@f0cccbcab7e7ecf9b0434b719f1e842c97bcd2a7 # v3
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           # What the step above gathered from the two record outputs — `roborazzi.outputDir` in
-          # composeApp/ and shared-ui/build.gradle.kts, both `ScreenshotSupport.SCREENSHOT_ROOT`.
+          # project/composeApp/ and shared-ui/build.gradle.kts, both `ScreenshotSupport.SCREENSHOT_ROOT`.
           image-directory-path: ./screenshots-compare
           # Every changed image is shown in the comment; with a handful of surfaces there is no
           # reason to make a reviewer expand a details block to see what moved.

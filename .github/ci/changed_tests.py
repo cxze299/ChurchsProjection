@@ -28,7 +28,7 @@ import sys
 NO_BASE = ("", "0" * 40)
 
 # <module dir>/src/<source set>/kotlin/<path>/<Name>Test.kt
-TEST_FILE = re.compile(r"^(?:modules/[^/]+/)?(?P<module>[^/]+)/src/(?P<source_set>test|jvmTest)/kotlin/.+/(?P<name>[A-Za-z0-9_]+Test)\.kt$")
+TEST_FILE = re.compile(r"^(?:project/)?(?:modules/[^/]+/)?(?P<module>[^/]+)/src/(?P<source_set>test|jvmTest)/kotlin/.+/(?P<name>[A-Za-z0-9_]+Test)\.kt$")
 PACKAGE = re.compile(r"^\s*package\s+([A-Za-z0-9_.]+)", re.MULTILINE)
 # A top-level class whose name ends in `Test`: at the start of a line, after any modifiers.
 TEST_CLASS = re.compile(r"^(?:(?:internal|open|abstract)\s+)*class\s+([A-Za-z0-9_]+Test)\b", re.MULTILINE)

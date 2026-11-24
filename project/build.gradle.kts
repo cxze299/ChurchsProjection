@@ -14,7 +14,7 @@ plugins {
 }
 
 val gitHooksPath = ".githooks"
-if (layout.projectDirectory.file(".git").asFile.exists()) {
+if (layout.projectDirectory.file("../.git").asFile.exists()) {
     val current = providers.exec {
         commandLine("git", "config", "--get", "core.hooksPath")
         isIgnoreExitValue = true          // exits 1 when the key is simply unset

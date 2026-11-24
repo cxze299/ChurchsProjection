@@ -28,7 +28,7 @@
 #
 set -euo pipefail
 
-ROOT="$(git rev-parse --show-toplevel)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)" || exit 1
 cd "$ROOT"
 
 MAIN_SRC="composeApp/src/jvmMain/kotlin composeApp/src/commonMain/kotlin"
@@ -62,11 +62,11 @@ run_full_suite() {
 
 # ── 1. What changed ──────────────────────────────────────────────────────────
 changed_files() {
-  git diff --name-only HEAD                       # unstaged + staged vs HEAD
+  git diff --relative --name-only HEAD            # unstaged + staged vs HEAD, within project/
   git ls-files --others --exclude-standard        # brand-new untracked files
   if [ "$STAGED_ONLY" -eq 0 ] && git rev-parse --verify --quiet "$BASE_REF" >/dev/null; then
     mb="$(git merge-base HEAD "$BASE_REF" 2>/dev/null || true)"
-    if [ -n "$mb" ]; then git diff --name-only "$mb" HEAD; fi
+    if [ -n "$mb" ]; then git diff --relative --name-only "$mb" HEAD; fi
   fi
 }
 

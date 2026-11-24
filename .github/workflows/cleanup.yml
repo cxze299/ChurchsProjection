@@ -46,7 +46,7 @@ name: Cleanup
 #   What it costs: the inline images in reg-actions PR comments are served from this branch by URL.
 #   Collapsing history does not remove any file the tip still has, so live comments keep their
 #   pictures; only directories the action itself already expired become unrecoverable. The images
-#   reviewers actually approve are committed under `composeApp/screenshots` and are untouched.
+#   reviewers actually approve are committed under `project/composeApp/screenshots` and are untouched.
 #
 #   Note the branch is NOT the comparison baseline, despite the name suggesting it. reg-actions
 #   resolves the expected images from the workflow *artifact* attached to the run matching the
