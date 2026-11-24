@@ -4416,4 +4416,11 @@
     <string name="shortcut_description_hold_all_screens">Hold every screen on its last frame</string>
     <string name="shortcut_description_release_all_screens">Release every held screen</string>
     <string name="bible_append_passages">Append passages</string>
+    <string name="bible_clear_passages">Clear verses</string>
+    <string name="projection_toolbar_screen">Output</string>
+    <string name="projection_toolbar_clear_display">Clear</string>
+    <string name="projection_toolbar_preview_settings">Preview</string>
+    <string name="projection_toolbar_clear_text">Clear text</string>
+    <string name="projection_toolbar_restore_text">Restore</string>
+    <string name="projection_toolbar_clear_layers">Layers</string>
 </resources>

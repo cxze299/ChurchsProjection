@@ -1,6 +1,8 @@
 package org.churchpresenter.app.churchpresenter
 
 import org.churchpresenter.liveoutput.clearFromOperator
+import org.churchpresenter.liveoutput.clearLayer
+import org.churchpresenter.liveshow.Layer
 import org.churchpresenter.core.models.schedule.ScheduleItem
 import org.churchpresenter.liveoutput.PresenterManager
 import org.churchpresenter.liveoutput.cueOrSetAnnouncementText
@@ -11,6 +13,12 @@ import org.churchpresenter.settings.AppSettings
 import org.churchpresenter.settings.ProjectionSettings
 import org.churchpresenter.sharedui.models.Presenting
 import java.io.File
+
+/** Clear Bible text on Program and Preview while leaving other presentation types alone. */
+internal fun clearBibleProjection(manager: PresenterManager) {
+    if (manager.slideContent.value == Presenting.BIBLE) manager.clearLayer(Layer.SLIDE)
+    if (manager.previewBus.manager.slideContent.value == Presenting.BIBLE) manager.previewBus.clear()
+}
 
 /*
  * What the main window's output actions do, over only the collaborators each one uses -- so they can

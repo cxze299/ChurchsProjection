@@ -2,6 +2,14 @@ package org.churchpresenter.bibletab
 
 import org.churchpresenter.core.models.bible.SelectedVerse
 
+/** Clear the accumulated text and start the next mouse click as a new passage. */
+internal fun BibleTabScope.clearPassages(viewModel: BibleViewModel) {
+    ui.appendedPassages = emptyList()
+    viewModel.clearMultiVerseSelection()
+    viewModel.mouseRangeSelectionToken = null
+    onClearVerses()
+}
+
 /** One accumulated text block per translation, so existing projection layouts still apply. */
 internal fun BibleTabScope.publishPassage(verses: List<SelectedVerse>) {
     if (!ui.appendPassages || verses.isEmpty()) {

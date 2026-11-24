@@ -92,6 +92,7 @@ fun BibleTab(
     /** True when [selectedVerseItem] is to go live (a double-click or the row's Go Live), not just open. */
     selectedVerseItemGoLive: Boolean = false,
     onVerseSelected: (List<SelectedVerse>) -> Unit = {},
+    onClearVerses: () -> Unit = {},
 
     onInstanceLinkSendVerse: ((
         bookName: String,
@@ -134,6 +135,7 @@ fun BibleTab(
     // Read through state rather than keyed on, for the same reason: the app's hook is a new lambda
     // on each recomposition.
     val onVerseWentLiveState = rememberUpdatedState(onVerseWentLive)
+    val onClearVersesState = rememberUpdatedState(onClearVerses)
     val tab = remember(
         states, appSettings, onSettingsChange, onAddToSchedule, onVerseSelected, onInstanceLinkSendVerse,
         onInstanceLinkSendBibleHold, onPresenting, bibleOutput, verseStatistics, verseSequenceLog, sttManager,
@@ -146,6 +148,7 @@ fun BibleTab(
             onSettingsChange = onSettingsChange,
             onAddToSchedule = onAddToSchedule,
             onVerseSelected = onVerseSelected,
+            onClearVerses = { onClearVersesState.value() },
             onInstanceLinkSendVerse = onInstanceLinkSendVerse,
             onInstanceLinkSendBibleHold = onInstanceLinkSendBibleHold,
             onPresenting = onPresenting,
