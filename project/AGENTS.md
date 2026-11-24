@@ -12,7 +12,7 @@
 - 每次功能修复必须更新 CHANGELOG.md，说明具体修复行为与验证范围，不得把未验证项目写为已通过。
 
 - 所有已授权功能持续集成在当前源码中，统一构建同一个软件。
-- 三平台构建由本地 project/Build-All.cmd 手动发起：默认本地构建 Windows，显式调度 Actions 打包 macOS MSilicon 与 Intel；推送源码不自动打包，三平台使用同一源码与版本号。
+- 三平台构建由本地 project/Build-All.cmd 手动发起：默认本地构建 Windows，显式调度 Actions 打包 macOS M-Silicon 与 Intel；推送源码不自动打包，三平台使用同一源码与版本号。
 - macOS 安装包使用仓库根目录 `.github/workflows/build.yml` 的 macOS runner 构建，交付时分别报告各平台的构建结果与可下载产物；遇到权限、签名或运行环境阻塞时明确说明。
 - 使用 `:composeApp:createDistributable` 的标准输出目录。
 - 用户已授权完整工程迁入 project/；固定软件入口更新为 `D:\churchpre\project\composeApp\build\compose\binaries\main\app\ChurchPresenter\ChurchPresenter.exe`，后续功能更新同一入口。

@@ -5,24 +5,23 @@ import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.process.ExecOperations
 import java.io.File
-import java.util.Calendar
 import java.util.Properties
 import javax.inject.Inject
 
 // What :composeApp's build script and its `cp.app-*` plugins share: the app's version, the build's
 // provenance, the signing credentials and the JDK it packages with.
 
-/** The version's first segment: the two-digit year of the build. */
-val versionYear: Int = Calendar.getInstance().get(Calendar.YEAR) % 100
-
-/**
- * The app's version: year, then the commit count split across two segments, because Windows MSI
- * limits each version segment to 0-255.
- */
+/** Start at 1.0.0, then increment the patch past existing 1.0 release tags. */
 fun Project.appVersion(): String {
-    providers.gradleProperty("churchPresenterVersion").orNull?.takeIf { it.isNotBlank() }?.let { return it.removePrefix("v") }
-    val commits = gitCommitCount()
-    return "$versionYear.${commits / 256}.${commits % 256}"
+    providers.gradleProperty("churchPresenterVersion").orNull?.takeIf { it.isNotBlank() }?.let {
+        val version = it.removePrefix("v")
+        return if (version.count { character -> character == '.' } == 1) "$version.0" else version
+    }
+    val pattern = Regex("""v?1\.0(?:\.(\d+))?""")
+    val patches = gitOutput("tag", "--list").orEmpty().lineSequence().mapNotNull { tag ->
+        pattern.matchEntire(tag.trim())?.groupValues?.get(1)?.ifEmpty { "0" }?.toIntOrNull()
+    }
+    return "1.0.${(patches.maxOrNull() ?: -1) + 1}"
 }
 
 fun Project.gitCommitCount(): Int = gitOutput("rev-list", "--count", "HEAD")?.toIntOrNull() ?: 0

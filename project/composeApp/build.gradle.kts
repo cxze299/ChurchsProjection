@@ -399,7 +399,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Exe, TargetFormat.Deb)
             packageName = "ChurchPresenter"
-            // Windows MSI limits each version segment to 0-255, so split commit count across minor.patch
+            // Share the resolved 1.0 release version across app metadata and installers.
             packageVersion = appVersion()
             description = "Church Presenter - Presentation software for worship services"
             copyright = "© ${Calendar.getInstance().get(Calendar.YEAR)} Church Presenter. All rights reserved."
