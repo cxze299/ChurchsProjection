@@ -7,7 +7,7 @@ that shipping it requires.
 ## What is included
 
 One `ffmpeg` program per platform, taken unmodified from a published build. Which build, and the
-SHA-256 it is verified against, is recorded in [`gradle/ffmpeg-builds.properties`](gradle/ffmpeg-builds.properties)
+SHA-256 it is verified against, is recorded in [`gradle/ffmpeg-builds.properties`](../../gradle/ffmpeg-builds.properties)
 — that file is the authoritative list, because it is what the build itself reads.
 
 Nothing else from those archives is included: not `ffprobe`, not `ffplay`, and no libraries.
@@ -16,7 +16,7 @@ Nothing else from those archives is included: not `ffprobe`, not `ffplay`, and n
 
 The included builds are configured with `--enable-gpl`, and are therefore covered by the
 **GNU General Public License, version 3 or later**. ChurchPresenter is itself released under the
-GNU GPL v3 (see [`LICENSE.txt`](LICENSE.txt)), so the combined work is distributable under that same
+GNU GPL v3 (see [`LICENSE.txt`](../../LICENSE.txt)), so the combined work is distributable under that same
 licence — which is precisely why ffmpeg can be bundled where the NDI Runtime (whose licence forbids
 redistribution) and VLC (a separate application) cannot.
 

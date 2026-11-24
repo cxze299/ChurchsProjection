@@ -133,7 +133,7 @@ jobs:
             echo "Not a release: use it to try what has landed since **${BASE:-the last release}**."
             echo
             if [ -n "$BASE" ]; then
-              python3 generate_release_notes.py "$BASE" "$VERSION" true true true true HEAD
+              python3 scripts/generate_release_notes.py "$BASE" "$VERSION" true true true true HEAD
             else
               echo "Download the installer for your platform below."
             fi

@@ -6,7 +6,7 @@ at running a live show*, not because it is free.
 
 ## Where it stands
 
-The feature list is already wider than most of the field (`FEATURES.md`): songs with chords and
+The feature list is already wider than most of the field (`docs/product/FEATURES.md`): songs with chords and
 two languages, Bibles with speech-driven follow-along, PowerPoint/Keynote with real animations,
 Lottie lower thirds, a scene compositor, captions and translation, Q&A, output profiles, NDI/OMT/
 DeckLink/Browser Source out, ATEM/OBS/Companion control, Instance Link, Calendar and Planning

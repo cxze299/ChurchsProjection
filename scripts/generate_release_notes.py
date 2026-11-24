@@ -6,7 +6,7 @@ One bullet per pull request, titled the way the PR was titled, plus anything pus
 branch. Not one bullet per commit: a release is read by people deciding whether to upgrade, and the
 steps a branch took to get where it got are not that.
 
-Usage: python3 generate_release_notes.py [from_tag [version [windows macos_arm64 macos_x64 linux [end_ref]]]]
+Usage: python3 scripts/generate_release_notes.py [from_tag [version [windows macos_arm64 macos_x64 linux [end_ref]]]]
 Platform args are 'true'/'false' strings; omit to include all platforms. `end_ref` names where the
 notes stop; omit it and they stop at the newest tag reachable from HEAD, or at HEAD when that tag is
 `from_tag`. The nightly passes HEAD explicitly: its base is the last *full* release, so a pre-release

@@ -2,6 +2,10 @@
 # ChurchPresenter Code Quality Report
 # Run this before committing to verify code quality standards
 
+# Resolve project inputs from the repository root after moving this script into scripts/.
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)" || exit 1
+cd "$ROOT" || exit 1
+
 echo "╔════════════════════════════════════════════════════════╗"
 echo "║     ChurchPresenter Code Quality Report                ║"
 echo "╚════════════════════════════════════════════════════════╝"
@@ -17,7 +21,7 @@ else
 fi
 
 # Count Material 2 imports (androidx.compose.material.icons.* is Material 3's icon library and
-# is explicitly allowed — see DEVELOPMENT_GUIDE.md's "Use Material 3 icons" rule — so it's excluded
+# is explicitly allowed — see docs/development/DEVELOPMENT_GUIDE.md's "Use Material 3 icons" rule — so it's excluded
 # here rather than being flagged as a false Material 2 violation)
 MATERIAL2=$(grep -r 'import androidx.compose.material\.[^3]' --include='*.kt' composeApp/src/ 2>/dev/null | grep -v 'import androidx\.compose\.material\.icons' | wc -l | tr -d ' ')
 echo "🎨 Material 2 imports: $MATERIAL2"
@@ -70,7 +74,7 @@ fi
 # Every other module of the build (settings.gradle.kts), main and test sources. The print check
 # covers main sources only and skips what prints on purpose: CLI tools under a `tools/` package,
 # bible-engine's standalone-launch files (Main.kt, AppConfig.kt), and lines behind its
-# `verboseLog` flag. DEVELOPMENT_GUIDE.md's decision log lists the same exceptions.
+# `verboseLog` flag. docs/development/DEVELOPMENT_GUIDE.md's decision log lists the same exceptions.
 echo ""
 echo "Modules:"
 MODULES=$(grep -oE 'include\(":[A-Za-z-]+"\)' settings.gradle.kts | sed -E 's/include\(":(.*)"\)/\1/' | grep -v '^composeApp$')

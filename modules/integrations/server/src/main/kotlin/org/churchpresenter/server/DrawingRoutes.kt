@@ -23,7 +23,7 @@ private val PNG_SIGNATURE = byteArrayOf(
 private val PAPER_COLOUR = Regex("^#[0-9A-Fa-f]{6}$")
 
 /**
- * A page drawn on a phone or tablet's canvas, put on the outputs — see `COMPANION_API.md`, Drawing.
+ * A page drawn on a phone or tablet's canvas, put on the outputs — see `docs/api/COMPANION_API.md`, Drawing.
  *
  * - `POST /api/drawing/frame?takeOver=true` is Go Live: it asks the operator exactly as
  *   `POST /api/project` does, and waits for the answer.

@@ -101,7 +101,7 @@ Discipline rules from past passes — follow these, they each earned their place
    diffs, rejected hypotheses) goes in `SESSIONS.md` under a dated `## YYYY-MM-DD` heading, newest
    first. `SESSIONS.md` is gitignored and is **not** read at the start of a pass — open it only to
    answer a specific question ("has this shape been seen before?", "why is that constant 0.45?").
-   It is the *only* file findings go in: never `AGENT.md`, `CLAUDE.md`, `FEATURES.md`,
-   `DEVELOPMENT_GUIDE.md`, `CODING_STANDARDS.md`, `README.md`, nor a plan or agent-instruction file.
+   It is the *only* file findings go in: never `AGENT.md`, `CLAUDE.md`, `docs/product/FEATURES.md`,
+   `docs/development/DEVELOPMENT_GUIDE.md`, `docs/development/CODING_STANDARDS.md`, `README.md`, nor a plan or agent-instruction file.
 
 Start with Phase A. Only enter Phase B if there's ground truth or I ask for fixes.

@@ -6,7 +6,7 @@ The original authors and contributors retain their copyrights in their contribut
 Original copyright notices and third-party license files must be preserved.
 
 The derivative project continues to be distributed under the GNU General Public License,
-version 3; see [LICENSE.txt](LICENSE.txt). Independent repository hosting does not change
+version 3; see [LICENSE.txt](../../LICENSE.txt). Independent repository hosting does not change
 the licensing of the inherited source. Distributions of covered binaries must provide
 corresponding source in accordance with that license.
 

@@ -1,2 +1,2 @@
 @AGENT.md
-@CODING_STANDARDS.md
+@docs/development/CODING_STANDARDS.md
