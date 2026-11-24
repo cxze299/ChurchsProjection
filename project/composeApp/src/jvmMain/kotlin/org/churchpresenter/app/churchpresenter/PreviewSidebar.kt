@@ -31,8 +31,23 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.ui.Alignment
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import org.churchpresenter.strings.generated.resources.projection_toolbar_screen
 import org.churchpresenter.strings.generated.resources.projection_toolbar_clear_display
@@ -88,9 +103,6 @@ import org.churchpresenter.liveoutput.preview.LivePreviewPanel
 import org.churchpresenter.liveoutput.preview.PreviewGroupsPopover
 import org.churchpresenter.liveoutput.preview.ProfileSetsPopover
 import org.churchpresenter.app.churchpresenter.composables.QuickBackgroundTray
-import org.churchpresenter.sharedui.composables.ToolbarKey
-import org.churchpresenter.sharedui.composables.ToolbarKeyStyle
-import org.churchpresenter.sharedui.composables.TooltipIconButton
 import org.churchpresenter.sharedui.utils.previewOutputSize
 import org.churchpresenter.liveoutput.PresenterManager
 import org.churchpresenter.settings.CompanionSatelliteSettings
@@ -335,22 +347,46 @@ internal object WindowedSidebarDialogs : SidebarDialogs {
 /** Where the sidebar's editors open: in their own windows, unless a test says otherwise. */
 internal val LocalSidebarDialogs = staticCompositionLocalOf<SidebarDialogs> { WindowedSidebarDialogs }
 
-/** Keep toolbar icons aligned and show a short caption below each one. */
+/** A single click target for icon and label; the visible label replaces the hover tooltip. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SidebarActionCaption(label: String, content: @Composable () -> Unit) {
-    Column(
-        modifier = Modifier.widthIn(min = 48.dp, max = 64.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(2.dp),
-    ) {
-        Box(Modifier.height(40.dp), contentAlignment = Alignment.Center) { content() }
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+private fun SidebarToolbarButton(
+    label: String,
+    painter: Painter,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    description: String = label,
+    selected: Boolean = false,
+    menu: Boolean = false,
+    iconTint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+) {
+    val colors = MaterialTheme.colorScheme
+    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 36.dp) {
+        OutlinedButton(
+            onClick = onClick,
+            modifier = modifier.heightIn(min = 36.dp).semantics { contentDescription = description },
+            shape = MaterialTheme.shapes.small,
+            border = BorderStroke(1.dp, if (selected) colors.primary else colors.outlineVariant),
+            colors = ButtonDefaults.outlinedButtonColors(
+                containerColor = if (selected) colors.secondaryContainer else colors.surface,
+                contentColor = colors.onSurface,
+            ),
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
+        ) {
+            Icon(painter, contentDescription = null, modifier = Modifier.size(16.dp), tint = iconTint)
+            Spacer(Modifier.width(6.dp))
+            Text(
+                text = label,
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.labelMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (menu) {
+                Spacer(Modifier.width(2.dp))
+                Icon(Icons.Filled.ArrowDropDown, contentDescription = null, modifier = Modifier.size(14.dp))
+            }
+        }
     }
 }
 
@@ -364,104 +400,109 @@ internal fun SidebarButtons(
     onSettingsChange: ((AppSettings) -> AppSettings) -> Unit,
     onEditPreviewLayout: () -> Unit,
 ) {
-    // Wraps rather than clips: the panel is resizable.
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        var choosing by remember { mutableStateOf(false) }
-        SidebarActionCaption(stringResource(Res.string.projection_toolbar_screen)) {
-            Box {
-                TooltipIconButton(
-                    painter = rememberVectorPainter(Icons.Default.Monitor),
-                    text = stringResource(Res.string.hymn_quick_screen),
-                    onClick = { choosing = true },
-                    buttonSize = 36.dp,
-                    modifier = Modifier.guideTarget(GuideTargets.TOGGLE_OUTPUTS),
-                    iconTint = if (presenterManager.showPresenterWindow.value)
-                        MaterialTheme.colorScheme.primary
-                    else
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val fullWidth = maxWidth
+            val actionWidth = if (maxWidth >= 232.dp) {
+                with(LocalDensity.current) { ((constraints.maxWidth - 6.dp.roundToPx()) / 2).toDp() }
+            } else maxWidth
+            val showProfileSets = appSettings.projectionSettings.showsProfileSetsButton()
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                SidebarScreenButton(presenterManager, appSettings, onSettingsChange, Modifier.width(actionWidth))
+                SidebarToolbarButton(
+                    label = stringResource(Res.string.projection_toolbar_clear_display),
+                    description = stringResource(Res.string.tooltip_clear_display),
+                    painter = painterResource(IconRes.drawable.ic_close),
+                    onClick = onClearDisplay,
+                    modifier = Modifier.width(actionWidth).guideTarget(GuideTargets.CLEAR_OUTPUT),
+                    iconTint = MaterialTheme.colorScheme.error,
                 )
-                if (choosing) {
-                    val screens = remember {
-                        if (java.awt.GraphicsEnvironment.isHeadless()) emptyList() else
-                            java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment().screenDevices.map {
-                                it.defaultConfiguration.bounds
-                            }
+                PreviewSettingsButton(appSettings.projectionSettings, onEditPreviewLayout, Modifier.width(actionWidth)) { updated ->
+                    onSettingsChange { s -> s.copy(projectionSettings = updated) }
+                }
+                ClearTextButton(presenterManager, Modifier.width(actionWidth))
+                ClearLayersButton(
+                    presenterManager, appSettings, showControl.devMode, onSettingsChange,
+                    Modifier.width(if (showProfileSets) actionWidth else fullWidth),
+                )
+                if (showProfileSets) {
+                    ProfileSetsButton(appSettings.projectionSettings, Modifier.width(actionWidth)) { updated ->
+                        onSettingsChange { s -> s.copy(projectionSettings = updated) }
                     }
-                    val title = stringResource(Res.string.hymn_quick_screen)
-                    val labels = listOf(stringResource(Res.string.hymn_quick_window)) + screens.mapIndexed { i, bounds ->
-                        "$title ${i + 1} · ${bounds.width}×${bounds.height}"
+                }
+            }
+        }
+        if (showControl.devMode) {
+            DevModeBox {
+                LiveToolStrip {
+                    MessageButton(presenterManager, appSettings, onSettingsChange)
+                    PropsButton(presenterManager, appSettings, onSettingsChange)
+                    MacrosButton(appSettings, showControl, onSettingsChange)
+                    LiveToolDivider()
+                    PreviewModeToggle(appSettings.projectionSettings.previewModeEnabled) { on ->
+                        onSettingsChange { it.withPreviewMode(on) }
                     }
-                    DropdownMenu(expanded = true, onDismissRequest = { choosing = false }) {
-                        labels.forEachIndexed { index, label ->
-                            val projection = appSettings.projectionSettings
-                            val selected = if (index == 0) projection.windowedProjection else
-                                !projection.windowedProjection && projection.quickPlayDisplay == index - 1
-                            DropdownMenuItem(text = { Text(label) }, leadingIcon = {
-                                androidx.compose.material3.RadioButton(selected = selected, onClick = null)
-                            }, onClick = {
-                                choosing = false
-                                val display = (index - 1).takeIf { it >= 0 }
-                                onSettingsChange {
-                                    it.copy(projectionSettings = it.projectionSettings.copy(
-                                        windowedProjection = display == null, quickPlayDisplay = display,
-                                    ))
-                                }
-                                presenterManager.setShowPresenterWindow(true)
-                            })
+                }
+                if (appSettings.projectionSettings.previewModeEnabled) PreviewTakeButton(presenterManager)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SidebarScreenButton(
+    presenterManager: PresenterManager,
+    appSettings: AppSettings,
+    onSettingsChange: ((AppSettings) -> AppSettings) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var choosing by remember { mutableStateOf(false) }
+    Box(modifier) {
+        SidebarToolbarButton(
+            label = stringResource(Res.string.projection_toolbar_screen),
+            description = stringResource(Res.string.hymn_quick_screen),
+            painter = rememberVectorPainter(Icons.Default.Monitor),
+            onClick = { choosing = true },
+            modifier = Modifier.fillMaxWidth().guideTarget(GuideTargets.TOGGLE_OUTPUTS),
+            selected = choosing,
+            menu = true,
+            iconTint = if (presenterManager.showPresenterWindow.value) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (choosing) {
+            val screens = remember {
+                if (java.awt.GraphicsEnvironment.isHeadless()) emptyList() else
+                    java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment().screenDevices.map {
+                        it.defaultConfiguration.bounds
+                    }
+            }
+            val title = stringResource(Res.string.hymn_quick_screen)
+            val labels = listOf(stringResource(Res.string.hymn_quick_window)) + screens.mapIndexed { i, bounds ->
+                "$title ${i + 1} · ${bounds.width}×${bounds.height}"
+            }
+            DropdownMenu(expanded = true, onDismissRequest = { choosing = false }) {
+                labels.forEachIndexed { index, label ->
+                    val projection = appSettings.projectionSettings
+                    val selected = if (index == 0) projection.windowedProjection else
+                        !projection.windowedProjection && projection.quickPlayDisplay == index - 1
+                    DropdownMenuItem(text = { Text(label) }, leadingIcon = {
+                        androidx.compose.material3.RadioButton(selected = selected, onClick = null)
+                    }, onClick = {
+                        choosing = false
+                        val display = (index - 1).takeIf { it >= 0 }
+                        onSettingsChange {
+                            it.copy(projectionSettings = it.projectionSettings.copy(
+                                windowedProjection = display == null, quickPlayDisplay = display,
+                            ))
                         }
-                    }
+                        presenterManager.setShowPresenterWindow(true)
+                    })
                 }
             }
         }
-        SidebarActionCaption(stringResource(Res.string.projection_toolbar_clear_display)) {
-            TooltipIconButton(
-                painter = painterResource(IconRes.drawable.ic_close),
-                text = stringResource(Res.string.tooltip_clear_display),
-                onClick = onClearDisplay,
-                buttonSize = 36.dp,
-                modifier = Modifier.guideTarget(GuideTargets.CLEAR_OUTPUT),
-                iconTint = MaterialTheme.colorScheme.error
-            )
-        }
-        SidebarActionCaption(stringResource(Res.string.projection_toolbar_preview_settings)) {
-            PreviewSettingsButton(appSettings.projectionSettings, onEditPreviewLayout) { updated ->
-                onSettingsChange { s -> s.copy(projectionSettings = updated) }
-            }
-        }
-        SidebarActionCaption(stringResource(if (presenterManager.textCleared) {
-            Res.string.projection_toolbar_restore_text
-        } else {
-            Res.string.projection_toolbar_clear_text
-        })) {
-            ClearTextButton(presenterManager)
-        }
-        SidebarActionCaption(stringResource(Res.string.projection_toolbar_clear_layers)) {
-            ClearLayersButton(presenterManager, appSettings, showControl.devMode, onSettingsChange)
-        }
-        if (appSettings.projectionSettings.showsProfileSetsButton()) {
-            ProfileSetsButton(appSettings.projectionSettings) { updated ->
-                onSettingsChange { s -> s.copy(projectionSettings = updated) }
-            }
-        }
-    }
-    if (showControl.devMode) {
-        DevModeBox {
-            LiveToolStrip {
-                MessageButton(presenterManager, appSettings, onSettingsChange)
-                PropsButton(presenterManager, appSettings, onSettingsChange)
-                MacrosButton(appSettings, showControl, onSettingsChange)
-                LiveToolDivider()
-                PreviewModeToggle(appSettings.projectionSettings.previewModeEnabled) { on ->
-                    onSettingsChange { it.withPreviewMode(on) }
-                }
-            }
-            if (appSettings.projectionSettings.previewModeEnabled) PreviewTakeButton(presenterManager)
-        }
-    }
     }
 }
 
@@ -549,17 +590,21 @@ private fun ClearLayersButton(
     appSettings: AppSettings,
     devMode: Boolean,
     onSettingsChange: ((AppSettings) -> AppSettings) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val layers = clearableLayers(devMode)
     var menuOpen by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf(false) }
-    Box {
-        LiveToolButton(
-            tool = LiveTool.CLEAR,
+    Box(modifier) {
+        SidebarToolbarButton(
             painter = rememberVectorPainter(Icons.Outlined.LayersClear),
-            label = stringResource(Res.string.tooltip_clear_layers),
+            label = stringResource(Res.string.projection_toolbar_clear_layers),
+            description = stringResource(Res.string.tooltip_clear_layers),
             onClick = { menuOpen = true },
-            modifier = Modifier.testTag(CLEAR_LAYERS_BUTTON_TAG),
+            modifier = Modifier.fillMaxWidth().testTag(CLEAR_LAYERS_BUTTON_TAG),
+            selected = menuOpen,
+            menu = true,
+            iconTint = MaterialTheme.colorScheme.error,
         )
         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
             ClearLayersMenuItems(
@@ -591,16 +636,16 @@ internal const val CLEAR_LAYERS_BUTTON_TAG = "preview_clear_layers"
  * key -- pressed again, it puts them back.
  */
 @Composable
-private fun ClearTextButton(presenterManager: PresenterManager) {
+private fun ClearTextButton(presenterManager: PresenterManager, modifier: Modifier = Modifier) {
     val cleared = presenterManager.textCleared
-    ToolbarKey(
+    SidebarToolbarButton(
         painter = rememberVectorPainter(if (cleared) Icons.Outlined.TextFields else Icons.Outlined.FormatClear),
-        text = stringResource(if (cleared) Res.string.tooltip_restore_text else Res.string.tooltip_clear_text),
+        label = stringResource(if (cleared) Res.string.projection_toolbar_restore_text else Res.string.projection_toolbar_clear_text),
+        description = stringResource(if (cleared) Res.string.tooltip_restore_text else Res.string.tooltip_clear_text),
         onClick = { if (cleared) presenterManager.restoreText() else presenterManager.clearTextOnly() },
-        style = ToolbarKeyStyle.PANEL_TOGGLE,
-        open = cleared,
-        buttonSize = 40.dp,
-        tint = if (cleared) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+        modifier = modifier,
+        selected = cleared,
+        iconTint = if (cleared) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }
 
@@ -609,17 +654,19 @@ private fun ClearTextButton(presenterManager: PresenterManager) {
 private fun PreviewSettingsButton(
     proj: ProjectionSettings,
     onEditLayout: () -> Unit,
+    modifier: Modifier = Modifier,
     onChange: (ProjectionSettings) -> Unit,
 ) {
-    Box {
+    Box(modifier) {
         var open by remember { mutableStateOf(false) }
-        ToolbarKey(
+        SidebarToolbarButton(
             painter = rememberVectorPainter(Icons.Outlined.DisplaySettings),
-            text = stringResource(Res.string.tooltip_preview_settings),
+            label = stringResource(Res.string.projection_toolbar_preview_settings),
+            description = stringResource(Res.string.tooltip_preview_settings),
             onClick = { open = true },
-            style = ToolbarKeyStyle.PANEL_TOGGLE,
-            open = open,
-            buttonSize = 40.dp,
+            modifier = Modifier.fillMaxWidth(),
+            selected = open,
+            menu = true,
         )
         PreviewGroupsPopover(
             expanded = open,
@@ -633,17 +680,16 @@ private fun PreviewSettingsButton(
 
 /** Beside the layout button, while the layout menu's switch for it is on: opens the saved profile sets. */
 @Composable
-private fun ProfileSetsButton(proj: ProjectionSettings, onChange: (ProjectionSettings) -> Unit) {
-    Box {
+private fun ProfileSetsButton(proj: ProjectionSettings, modifier: Modifier = Modifier, onChange: (ProjectionSettings) -> Unit) {
+    Box(modifier) {
         var open by remember { mutableStateOf(false) }
-        ToolbarKey(
+        SidebarToolbarButton(
             painter = rememberVectorPainter(Icons.Outlined.SwitchAccount),
-            text = stringResource(Res.string.profile_sets),
+            label = stringResource(Res.string.profile_sets),
             onClick = { open = true },
-            style = ToolbarKeyStyle.PANEL_TOGGLE,
-            open = open,
-            buttonSize = 40.dp,
-            modifier = Modifier.testTag(PROFILE_SETS_BUTTON_TAG),
+            selected = open,
+            menu = true,
+            modifier = Modifier.fillMaxWidth().testTag(PROFILE_SETS_BUTTON_TAG),
         )
         ProfileSetsPopover(expanded = open, onDismiss = { open = false }, proj = proj, onChange = onChange)
     }

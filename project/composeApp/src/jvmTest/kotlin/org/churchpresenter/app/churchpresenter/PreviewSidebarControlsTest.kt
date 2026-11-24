@@ -2,6 +2,10 @@
 
 package org.churchpresenter.app.churchpresenter
 
+import java.util.Locale
+import kotlin.test.AfterTest
+
+
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
@@ -39,9 +43,16 @@ import kotlin.test.assertTrue
  * open real windows and are left closed.
  */
 class PreviewSidebarControlsTest {
+    private var originalLocale: Locale = Locale.getDefault()
+
+    @AfterTest
+    fun restoreLocale() { Locale.setDefault(originalLocale) }
+
 
     @BeforeTest
     fun latch() {
+        originalLocale = Locale.getDefault()
+        Locale.setDefault(Locale.ENGLISH)
         TestSingletons.latchSkikoHostOs()
         TestSingletons.latchToTestHome()
     }
@@ -99,13 +110,13 @@ class PreviewSidebarControlsTest {
     }
 
     @Test
-    fun `the display toggle and the clear button reach the output`() {
+    fun `the display selector and the clear button reach the output`() {
         val manager = PresenterManager()
         sidebar(AppSettings(), manager) { seen ->
-            val before = manager.showPresenterWindow.value
-            onNodeWithContentDescription("Toggle Presenter Displays").performClick()
+            onNodeWithContentDescription("Output screen").performClick()
+            onNodeWithText("Projection window").performClick()
             waitForIdle()
-            assertEquals(!before, manager.showPresenterWindow.value)
+            assertTrue(manager.showPresenterWindow.value)
             onNodeWithContentDescription("Clear Display").performClick()
             waitForIdle()
             assertEquals(1, seen.clears)

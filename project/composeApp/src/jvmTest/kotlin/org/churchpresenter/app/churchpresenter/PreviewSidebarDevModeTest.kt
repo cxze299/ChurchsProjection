@@ -2,6 +2,11 @@
 
 package org.churchpresenter.app.churchpresenter
 
+import java.util.Locale
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
+
+
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
@@ -28,6 +33,17 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 
 /** The dev-mode box, the preview-mode toggle and the sidebar's macro button, drawn closed. */
 class PreviewSidebarDevModeTest {
+    private var originalLocale: Locale = Locale.getDefault()
+
+    @BeforeTest
+    fun selectTestLanguage() {
+        originalLocale = Locale.getDefault()
+        Locale.setDefault(Locale.ENGLISH)
+    }
+
+    @AfterTest
+    fun restoreLocale() { Locale.setDefault(originalLocale) }
+
 
     @Test
     fun `the dev mode box shows its heading and what is put in it`() = runComposeUiTest {
