@@ -94,10 +94,8 @@ def publish_source(repo, base):
         "message": "Build integrated desktop packages", "tree": tree, "parents": [base],
     })["sha"]
     branch = "codex/build-" + datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
-    api(repo, "git/refs", {"ref": f"refs/heads/{branch}", "sha": base})
-    # Updating a branch triggers the push workflow even when it is absent on the default branch.
-    command(["gh", "api", "--method", "PATCH", f"repos/{repo}/git/refs/heads/{branch}",
-             "--input", "-"], input=json.dumps({"sha": commit, "force": False}).encode())
+    # Create the branch at its final snapshot: one push, one package build.
+    api(repo, "git/refs", {"ref": f"refs/heads/{branch}", "sha": commit})
     print(f"云端源码已校验：{branch}（{tree[:12]}）", flush=True)
     return branch, commit
 

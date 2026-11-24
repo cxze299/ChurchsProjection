@@ -1,5 +1,9 @@
 # ChurchsProjection
 
+<p align="center">
+  <img src="assets/branding/app-icon.png" width="144" height="144" alt="ChurchsProjection — 见证之窗" />
+</p>
+
 ChurchsProjection is independently maintained by cxze299, based on
 [ChurchPresenter](https://github.com/ChurchPresenter/ChurchPresenter).
 It adds scripture quick projection, hymn search, configurable shortcuts and resource directories,

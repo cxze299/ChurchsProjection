@@ -119,4 +119,4 @@ jobs:
             echo "The source branch changed during checks; leaving the pull request open for the next push." >&2
             exit 1
           fi
-          gh pr merge "$PR" --repo "$REPOSITORY" --auto --squash
+          gh pr merge "$PR" --repo "$REPOSITORY" --auto --merge --match-head-commit "$EXPECTED_SHA"
