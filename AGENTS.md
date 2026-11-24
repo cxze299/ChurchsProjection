@@ -1,5 +1,7 @@
 # Local project instructions
 
+- 目录分类以 DIRECTORY_LAYOUT.md 为准；本地试验软件、未采用设计稿和个人笔记存入 .local/ 并保持忽略，正式品牌资源使用 assets/branding/。不得将 Gradle 模块、平台权限文件或必需原生工具当作无关文件清理。
+
 - 每次构建分支的三平台构建发布成功后，自动将该构建提交合并到 cxze299/ChurchsProjection 的 main，无需再次询问；不自动合并无关依赖更新分支。
 
 - 每次只修改用户当前指定的一个功能；发现其他问题先报告，未经用户明确要求不得顺带修改。
