@@ -58,8 +58,8 @@ jobs:
         run: |
           import glob, os, xml.etree.ElementTree as ET
           rows = []
-          for path in sorted(glob.glob("*/build/reports/pitest/mutations.xml")):
-              module = path.split("/")[0]
+          for path in sorted(glob.glob("modules/*/*/build/reports/pitest/mutations.xml")):
+              module = path.split("/build/")[0].split("/")[-1]
               mutations = ET.parse(path).getroot().findall("mutation")
               killed = sum(1 for m in mutations if m.get("detected") == "true")
               survived = sum(1 for m in mutations if m.get("status") == "SURVIVED")
@@ -78,4 +78,4 @@ jobs:
           name: pitest-reports
           if-no-files-found: ignore
           retention-days: 14
-          path: '*/build/reports/pitest/'
+          path: 'modules/*/*/build/reports/pitest/'

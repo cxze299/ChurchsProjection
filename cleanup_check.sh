@@ -77,7 +77,9 @@ MODULES=$(grep -oE 'include\(":[A-Za-z-]+"\)' settings.gradle.kts | sed -E 's/in
 MOD_CRITICAL=0
 MOD_WARNINGS=0
 MOD_DIRTY=0
-for MOD in $MODULES; do
+for MODULE in $MODULES; do
+    MOD=$(awk -F= -v module="$MODULE" '$1 == module {print $2}' config/architecture/module-paths.properties)
+    MOD=${MOD:-$MODULE}
     [ -d "$MOD/src" ] || continue
     M_WILD=$(grep -rE '^import .*\.\*$' --include='*.kt' "$MOD/src" 2>/dev/null | wc -l | tr -d ' ')
     M_M2=$(grep -r 'import androidx\.compose\.material\.' --include='*.kt' "$MOD/src" 2>/dev/null \

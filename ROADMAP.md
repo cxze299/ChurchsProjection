@@ -29,7 +29,7 @@ have and this app does not yet:
 
 | Work | Done when |
 |---|---|
-| **Finish modularization**: settings dialog tabs, `server/` | Each feature owns its settings page and routes; `:composeApp` is the shell, the wiring and the output pipeline |
+| **Finish modularization**: settings dialog tabs, `modules/integrations/server/` | Each feature owns its settings page and routes; `:composeApp` is the shell, the wiring and the output pipeline |
 | **Render performance budget** | A benchmark suite renders each content type to an off-screen output and fails CI past a frame-time budget (e.g. p99 < 16.7 ms at 1080p, < 33 ms at 4K) |
 | **Live-safe threading** | No disk, network or decode work on the UI thread during a show, enforced by a debug-build watchdog that logs any frame over budget with its stack |
 | **Output isolation** | An output window survives a crash or hang of the operator UI (separate render thread at minimum; evaluate a separate process) |
@@ -127,7 +127,7 @@ projectors and an NDI feed inside the Phase 0 frame budget.
 
 Steps are ordered by what each one needs. Within a stage, the lanes run in parallel; a stage starts
 when the stage before it is done, except where a step says otherwise. **Nothing touches the live
-output path (`PresenterManager`, `presenter/`, the output-profile pages, `server/`'s live
+output path (`PresenterManager`, `modules/engines/presenter/`, the output-profile pages, `modules/integrations/server/`'s live
 commands) until the layer design is approved (step 1.1)**, so no code is moved twice.
 
 ### Stage 1 — Decide and measure (no output-path code changes)
@@ -147,7 +147,7 @@ commands) until the layer design is approved (step 1.1)**, so no code is moved t
 |---|---|---|---|---|
 | 2.1 | Core | **Layers**: per-layer state and composition in every output; each layer with its own transition and Clear; Clear All | 1.1, 1.2 | Every content type lands on its layer; benchmark no slower than the 1.2 baseline |
 | 2.2 | Core | **Preview / Program** with Take and transitions; direct Go Live kept as a preference | 2.1 | Works for every content type; screenshot suites per layer combination |
-| 2.3 | Modules | **Extract `server/`** against the new layer commands | 1.1 (can start alongside 2.1) | Routes in their feature modules; remote, Companion and Instance Link tests green |
+| 2.3 | Modules | **Extract `modules/integrations/server/`** against the new layer commands | 1.1 (can start alongside 2.1) | Routes in their feature modules; remote, Companion and Instance Link tests green |
 | 2.4 | Core | **Looks**: output profiles choose which layers they show | 2.1 | Stage monitor and stream key configured as looks |
 | 2.5 | Core | **Messages and props** on their layers | 2.1 | Nursery message and logo bug run over a live song without disturbing it |
 | 2.6 | Import | **ProPresenter import** in `:converter` | 1.5 | A real library imports with a report of what did not carry over |

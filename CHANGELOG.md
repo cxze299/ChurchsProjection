@@ -4,6 +4,9 @@
 
 ### 2026-11-24
 
+- 按现有架构将 63 个源码模块迁入 modules/core、engines、features、output、integrations，平台文件归入 platform，独立辅助工具归入 tools；保留 Gradle 模块名及 composeApp 固定软件入口。
+- 新增模块物理路径清单，同步构建、CI、截图、覆盖率、图标生成与架构检查路径，并更新目录索引；仅整理目录，不改变业务功能。
+
 - Build-All.cmd 默认在本机构建 Windows 程序及 MSI，并显式手动调度 macOS MSilicon、Intel 的 Actions 打包；源码推送不触发打包，各平台固定使用同一源码和版本号。
 - 自动合并不再等待打包结果；Windows MSI 先上传 Release 草稿，Mac 打包成功后加入并正式发布，构建状态与分支合并独立。
 

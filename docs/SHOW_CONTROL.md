@@ -124,7 +124,7 @@ HTTP/WebSocket API, Companion and MIDI/OSC:
   `OBSWebSocketManager.setScene`, `AtemClient.setKeyOnAir`, `CompanionSatelliteViewModel
   .pressButton`, `LowerThirdSequencer.run`, the announcement timer, `MediaViewModel`).
 - **Serialized with an explicit `@SerialName` on every action**, never a class name, so the module
-  can move without orphaning anyone's schedule (the rule in `settings/AGENT.md`). Unknown actions in
+  can move without orphaning anyone's schedule (the rule in `modules/core/settings/AGENT.md`). Unknown actions in
   a newer file are kept and skipped, as `CueAction` strings are today.
 - **A list runs in order**, one coroutine per run; `wait` suspends it. A run is cancelled when its
   row fires again, or on Clear All.

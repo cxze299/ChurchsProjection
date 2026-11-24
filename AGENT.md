@@ -96,7 +96,7 @@ main.kt → MainDesktop.kt → tabs/* + PresenterManager (:live-output)
                         ↘ CompanionServer (:server)
 ```
 - `MainDesktop.kt` is the root composable; `Presenting` (in `:shared-ui`) is the live-content enum.
-- New user-facing strings go in `strings/src/main/composeResources/values/strings.xml` — the
+- New user-facing strings go in `modules/core/strings/src/main/composeResources/values/strings.xml` — the
   `:strings` module.
 - Per-feature source locations are listed in `FEATURES.md`.
 
@@ -109,67 +109,67 @@ module-specific notes there, not here.**
 
 | Module                 | Gradle                 | What it is                                                                        | Notes                                    |
 |------------------------|------------------------|-----------------------------------------------------------------------------------|------------------------------------------|
-| `converter/`           | `:converter`           | Song/Bible format converter, opened from the Help menu                            | [AGENT.md](converter/AGENT.md)           |
-| `companion-satellite/` | `:companion-satellite` | Bitfocus Companion Satellite protocol client                                      | [AGENT.md](companion-satellite/AGENT.md) |
-| `theme/`               | `:theme`               | The nine color schemes, semantic colors, type and shape scales                    | [AGENT.md](theme/AGENT.md)               |
-| `core-models/`         | `:core-models`         | The shared data models                                                            | [AGENT.md](core-models/AGENT.md)         |
-| `bible-engine/`        | `:bible-engine`        | Bible Lookup Engine — speech-to-reference detection                               | [AGENT.md](bible-engine/AGENT.md)        |
-| `lottieGenerator/`     | `:lottieGenerator`     | Animated lower-third generator, also a standalone app                             | [AGENT.md](lottieGenerator/AGENT.md)     |
-| `crossword/`           | `:crossword`           | Crossword authoring tool + the encoded puzzles the app ships                      | [AGENT.md](crossword/AGENT.md)           |
-| `presentation-engine/` | `:presentation-engine` | PPTX/PPT/Keynote/PDF parsing, timing and animation                                | [AGENT.md](presentation-engine/AGENT.md) |
-| `songlibrary/`         | `:songlibrary`         | The Song Library Manager window, opened from the Help menu                        | [AGENT.md](songlibrary/AGENT.md)         |
-| `settings/`            | `:settings`            | Everything the app persists: the settings classes, `SettingsManager`, `Constants` | [AGENT.md](settings/AGENT.md)            |
-| `diagnostics/`         | `:diagnostics`         | Crash reporting: the crash log on disk and the Sentry bridge behind it            | [AGENT.md](diagnostics/AGENT.md)         |
-| `atem/`                | `:atem`                | The Blackmagic ATEM protocol client — UDP, state, keyers, media-pool upload       | [AGENT.md](atem/AGENT.md)                |
-| `ndi/`                 | `:ndi`                 | NDI in and out — runtime discovery, the send calls and the receive calls, behind one interface | [AGENT.md](ndi/AGENT.md)                 |
-| `omt/`                 | `:omt`                 | OMT (Open Media Transport) in and out, over the libomt the app bundles, behind one interface | [AGENT.md](omt/AGENT.md)                 |
-| `planning-center/`     | `:planning-center`     | The Planning Center Online client — OAuth, the Services REST calls, the callback, the import window | [AGENT.md](planning-center/AGENT.md)     |
-| `bible-formats/`       | `:bible-formats`       | The `.spb` converters and the Bible download catalogues (eBible, Zefania, Beblia)  | [AGENT.md](bible-formats/AGENT.md)       |
-| `song-chords/`         | `:song-chords`         | The chord grammar songs are written in — parsing, transposition, chord-sheet import | [AGENT.md](song-chords/AGENT.md)         |
-| `bible/`               | `:bible`               | The Bible itself: a loaded `.spb` translation, its books, verses and search        | [AGENT.md](bible/AGENT.md)               |
-| `calendar/`            | `:calendar`            | The Calendar Manager — planned services on a month grid, each with a run of show   | [AGENT.md](calendar/AGENT.md)            |
-| `calendar-core/`       | `:calendar-core`       | The Calendar Manager's model without its window: run of show, clocks, cues, reference parser, PDF export | [AGENT.md](calendar-core/AGENT.md)       |
-| `strings/`             | `:strings`             | The app's user-facing strings, every locale, and the `Res` class generated from them | [AGENT.md](strings/AGENT.md)             |
-| `icons/`               | `:icons`               | The UI drawables and the window-icon frames — not the installer icons               | [AGENT.md](icons/AGENT.md)               |
-| `shared-ui/`           | `:shared-ui`           | The composables and helpers more than one feature uses — fields, pickers, buttons, text styling | [AGENT.md](shared-ui/AGENT.md)           |
-| `slides-engine/`       | `:slides-engine`       | What the picture and presentation outputs draw: `PicturePresenter`, `PresentationPresenter`, `PictureDecoder` | [AGENT.md](slides-engine/AGENT.md)       |
-| `slides/`              | `:slides`              | The Pictures and Presentation tabs: their viewmodels, presenters, picture decoding and recent files | [AGENT.md](slides/AGENT.md)              |
-| `media-engine/`        | `:media-engine`        | The playback under the Media tab: the VLC and software players, VLC discovery, subtitles, `MediaPresenter`, `MediaViewModel` | [AGENT.md](media-engine/AGENT.md)        |
-| `media/`               | `:media`               | The Media tab and the VLC playback under it: player, decoder, subtitles, stock media search | [AGENT.md](media/AGENT.md)               |
-| `web-engine/`          | `:web-engine`          | The embedded Chromium (JCEF): its install, the embedded browser, `WebsitePresenter` | [AGENT.md](web-engine/AGENT.md)          |
-| `web/`                 | `:web`                 | The Web tab                                                                       | [AGENT.md](web/AGENT.md)                 |
-| `crossword-tab/`       | `:crossword-tab`       | The hidden Crossword tab and the decoder for the puzzles it plays                  | [AGENT.md](crossword-tab/AGENT.md)       |
-| `qa/`                  | `:qa`                  | The Q&A tab and `QAManager`, the session behind it                                 | [AGENT.md](qa/AGENT.md)                  |
-| `dictionary/`          | `:dictionary`          | The Strong's dictionary tab, its view model, and the Strong's and interlinear data   | [AGENT.md](dictionary/AGENT.md)          |
-| `stt-engine/`          | `:stt-engine`          | `STTManager`, the caption server's socket.io client, without the tab                | [AGENT.md](stt-engine/AGENT.md)          |
-| `stt/`                 | `:stt`                 | The STT tab                                                                         | [AGENT.md](stt/AGENT.md)                 |
-| `announcements/`       | `:announcements`       | The Announcements tab and its timer                                                 | [AGENT.md](announcements/AGENT.md)       |
-| `lower-third-engine/`  | `:lower-third-engine`  | What a lower third plays and uploads with: the render cache, `LowerThirdPresenter`, the ATEM sequencer, the bundled lottie fonts | [AGENT.md](lower-third-engine/AGENT.md)  |
-| `lower-third/`         | `:lower-third`         | The Lower Third tab and the ATEM settings page                                      | [AGENT.md](lower-third/AGENT.md)         |
-| `songs/`               | `:songs`               | The Songs tab, `SongsViewModel` and the song library on disk                        | [AGENT.md](songs/AGENT.md)               |
-| `bible-tab/`           | `:bible-tab`           | The Bible tab, `BibleViewModel`, the cross references and the verse-sequence log     | [AGENT.md](bible-tab/AGENT.md)           |
-| `schedule/`            | `:schedule`            | The Schedule tab, `ScheduleViewModel` and the `.schedule` files                      | [AGENT.md](schedule/AGENT.md)            |
-| `canvas-engine/`       | `:canvas-engine`       | What a scene is drawn from: `SceneCanvas`, the renderer, `ScenePresenter`, and the capture sources (cameras, screen, browser, NDI/OMT in, DeckLink) | [AGENT.md](canvas-engine/AGENT.md)       |
-| `canvas/`              | `:canvas`              | The Canvas tab: `SceneViewModel`, the scene editor and the source property editors | [AGENT.md](canvas/AGENT.md)              |
-| `presenter/`           | `:presenter`           | What the song and Bible outputs draw: slides, looks, layouts, backgrounds, the Lottie bands and the style models | [AGENT.md](presenter/AGENT.md)           |
-| `profiles/`            | `:profiles`            | The Profiles settings pages (looks, layout, backgrounds, previews), the song background panel and the settings row kit every settings page uses | [AGENT.md](profiles/AGENT.md)            |
-| `server/`              | `:server`              | The companion server and Instance Link: the Ktor API, tunnel, SSL, ATEM bridge, calendar sync | [AGENT.md](server/AGENT.md)              |
-| `companion-surface/`   | `:companion-surface`   | The Companion Surface tab and panels, and `CompanionSatelliteViewModel`             | [AGENT.md](companion-surface/AGENT.md)   |
-| `obs/`                 | `:obs`                 | The OBS Studio integration — the obs-websocket client, scene mapping and its settings page | [AGENT.md](obs/AGENT.md)                 |
-| `live-show/`           | `:live-show`           | The layer model — `Layer`, `Cue`, and `LiveShow`'s program and preview (see `docs/LAYER_MODEL.md`) | [AGENT.md](live-show/AGENT.md)           |
-| `show-control/`        | `:show-control`        | The action vocabulary and `ActionRunner`, played through the app's `ShowHost` (see `docs/SHOW_CONTROL.md`) | [AGENT.md](show-control/AGENT.md)        |
-| `control-in/`          | `:control-in`          | MIDI and OSC in and out: the codecs, the ports and the hub that maps what arrives to actions | [AGENT.md](control-in/AGENT.md)          |
-| `detekt-rules/`        | `:detekt-rules`        | The build's own detekt rules: the live-safe check on every module's composables, run by every module's detekt | [AGENT.md](detekt-rules/AGENT.md)        |
-| `output-api/`          | `:output-api`          | What each tab needs of the live output, as interfaces, and the frame a deck plays: declared against by the tabs, implemented by `:live-output` | [AGENT.md](output-api/AGENT.md)          |
-| `output-guard/`        | `:output-guard`        | The output guard: a second process that keeps each output's last still under it and shows it if the app dies (dev mode only) | [AGENT.md](output-guard/AGENT.md)        |
-| `live-output/`         | `:live-output`         | `PresenterManager` and what is on air, the output windows and stage monitor, and the off-screen outputs (NDI, OMT, Browser Source, DeckLink) on `ComposeScenePump` | [AGENT.md](live-output/AGENT.md)         |
-| `helper/`              | `:helper`              | Wick, the helper lamp — tips, display setup, typed requests, the spotlight that rings controls | [AGENT.md](helper/AGENT.md)              |
-| `statistics/`          | `:statistics`          | What was presented and when — the counters, the play log, the CCLI lookup and exports — and the statistics window over them | [AGENT.md](statistics/AGENT.md)          |
-| `updater/`             | `:updater`             | The in-app updater: the GitHub release check, the installer download, the update window | [AGENT.md](updater/AGENT.md)             |
-| `server-ui/`           | `:server-ui`           | The Server settings page, calendar sync's card and Instance Link's windows: the Compose face of `:server` | [AGENT.md](server-ui/AGENT.md)           |
-| `app-settings/`        | `:app-settings`        | The System settings page, the setup wizard, auto-start and the `.sps` converter    | [AGENT.md](app-settings/AGENT.md)        |
-| `telemetry/`           | `:telemetry`           | What the app reports about itself: the live-map ping, usage events, the contact form, the device report | [AGENT.md](telemetry/AGENT.md)           |
-| `dialogs/`             | `:dialogs`             | The dialogs and small windows: About, Contact Us, keyboard shortcuts, Customize Theme, the remote and show-control dialogs | [AGENT.md](dialogs/AGENT.md)             |
+| `modules/features/converter/`           | `:converter`           | Song/Bible format converter, opened from the Help menu                            | [AGENT.md](modules/features/converter/AGENT.md)           |
+| `modules/engines/companion-satellite/` | `:companion-satellite` | Bitfocus Companion Satellite protocol client                                      | [AGENT.md](modules/engines/companion-satellite/AGENT.md) |
+| `modules/core/theme/`               | `:theme`               | The nine color schemes, semantic colors, type and shape scales                    | [AGENT.md](modules/core/theme/AGENT.md)               |
+| `modules/core/core-models/`         | `:core-models`         | The shared data models                                                            | [AGENT.md](modules/core/core-models/AGENT.md)         |
+| `modules/engines/bible-engine/`        | `:bible-engine`        | Bible Lookup Engine — speech-to-reference detection                               | [AGENT.md](modules/engines/bible-engine/AGENT.md)        |
+| `modules/engines/lottieGenerator/`     | `:lottieGenerator`     | Animated lower-third generator, also a standalone app                             | [AGENT.md](modules/engines/lottieGenerator/AGENT.md)     |
+| `modules/features/crossword/`           | `:crossword`           | Crossword authoring tool + the encoded puzzles the app ships                      | [AGENT.md](modules/features/crossword/AGENT.md)           |
+| `modules/engines/presentation-engine/` | `:presentation-engine` | PPTX/PPT/Keynote/PDF parsing, timing and animation                                | [AGENT.md](modules/engines/presentation-engine/AGENT.md) |
+| `modules/features/songlibrary/`         | `:songlibrary`         | The Song Library Manager window, opened from the Help menu                        | [AGENT.md](modules/features/songlibrary/AGENT.md)         |
+| `modules/core/settings/`            | `:settings`            | Everything the app persists: the settings classes, `SettingsManager`, `Constants` | [AGENT.md](modules/core/settings/AGENT.md)            |
+| `modules/core/diagnostics/`         | `:diagnostics`         | Crash reporting: the crash log on disk and the Sentry bridge behind it            | [AGENT.md](modules/core/diagnostics/AGENT.md)         |
+| `modules/engines/atem/`                | `:atem`                | The Blackmagic ATEM protocol client — UDP, state, keyers, media-pool upload       | [AGENT.md](modules/engines/atem/AGENT.md)                |
+| `modules/engines/ndi/`                 | `:ndi`                 | NDI in and out — runtime discovery, the send calls and the receive calls, behind one interface | [AGENT.md](modules/engines/ndi/AGENT.md)                 |
+| `modules/engines/omt/`                 | `:omt`                 | OMT (Open Media Transport) in and out, over the libomt the app bundles, behind one interface | [AGENT.md](modules/engines/omt/AGENT.md)                 |
+| `modules/features/planning-center/`     | `:planning-center`     | The Planning Center Online client — OAuth, the Services REST calls, the callback, the import window | [AGENT.md](modules/features/planning-center/AGENT.md)     |
+| `modules/engines/bible-formats/`       | `:bible-formats`       | The `.spb` converters and the Bible download catalogues (eBible, Zefania, Beblia)  | [AGENT.md](modules/engines/bible-formats/AGENT.md)       |
+| `modules/core/song-chords/`         | `:song-chords`         | The chord grammar songs are written in — parsing, transposition, chord-sheet import | [AGENT.md](modules/core/song-chords/AGENT.md)         |
+| `modules/core/bible/`               | `:bible`               | The Bible itself: a loaded `.spb` translation, its books, verses and search        | [AGENT.md](modules/core/bible/AGENT.md)               |
+| `modules/features/calendar/`            | `:calendar`            | The Calendar Manager — planned services on a month grid, each with a run of show   | [AGENT.md](modules/features/calendar/AGENT.md)            |
+| `modules/engines/calendar-core/`       | `:calendar-core`       | The Calendar Manager's model without its window: run of show, clocks, cues, reference parser, PDF export | [AGENT.md](modules/engines/calendar-core/AGENT.md)       |
+| `modules/core/strings/`             | `:strings`             | The app's user-facing strings, every locale, and the `Res` class generated from them | [AGENT.md](modules/core/strings/AGENT.md)             |
+| `modules/core/icons/`               | `:icons`               | The UI drawables and the window-icon frames — not the installer icons               | [AGENT.md](modules/core/icons/AGENT.md)               |
+| `modules/core/shared-ui/`           | `:shared-ui`           | The composables and helpers more than one feature uses — fields, pickers, buttons, text styling | [AGENT.md](modules/core/shared-ui/AGENT.md)           |
+| `modules/engines/slides-engine/`       | `:slides-engine`       | What the picture and presentation outputs draw: `PicturePresenter`, `PresentationPresenter`, `PictureDecoder` | [AGENT.md](modules/engines/slides-engine/AGENT.md)       |
+| `modules/features/slides/`              | `:slides`              | The Pictures and Presentation tabs: their viewmodels, presenters, picture decoding and recent files | [AGENT.md](modules/features/slides/AGENT.md)              |
+| `modules/engines/media-engine/`        | `:media-engine`        | The playback under the Media tab: the VLC and software players, VLC discovery, subtitles, `MediaPresenter`, `MediaViewModel` | [AGENT.md](modules/engines/media-engine/AGENT.md)        |
+| `modules/features/media/`               | `:media`               | The Media tab and the VLC playback under it: player, decoder, subtitles, stock media search | [AGENT.md](modules/features/media/AGENT.md)               |
+| `modules/engines/web-engine/`          | `:web-engine`          | The embedded Chromium (JCEF): its install, the embedded browser, `WebsitePresenter` | [AGENT.md](modules/engines/web-engine/AGENT.md)          |
+| `modules/features/web/`                 | `:web`                 | The Web tab                                                                       | [AGENT.md](modules/features/web/AGENT.md)                 |
+| `modules/features/crossword-tab/`       | `:crossword-tab`       | The hidden Crossword tab and the decoder for the puzzles it plays                  | [AGENT.md](modules/features/crossword-tab/AGENT.md)       |
+| `modules/features/qa/`                  | `:qa`                  | The Q&A tab and `QAManager`, the session behind it                                 | [AGENT.md](modules/features/qa/AGENT.md)                  |
+| `modules/features/dictionary/`          | `:dictionary`          | The Strong's dictionary tab, its view model, and the Strong's and interlinear data   | [AGENT.md](modules/features/dictionary/AGENT.md)          |
+| `modules/engines/stt-engine/`          | `:stt-engine`          | `STTManager`, the caption server's socket.io client, without the tab                | [AGENT.md](modules/engines/stt-engine/AGENT.md)          |
+| `modules/features/stt/`                 | `:stt`                 | The STT tab                                                                         | [AGENT.md](modules/features/stt/AGENT.md)                 |
+| `modules/features/announcements/`       | `:announcements`       | The Announcements tab and its timer                                                 | [AGENT.md](modules/features/announcements/AGENT.md)       |
+| `modules/engines/lower-third-engine/`  | `:lower-third-engine`  | What a lower third plays and uploads with: the render cache, `LowerThirdPresenter`, the ATEM sequencer, the bundled lottie fonts | [AGENT.md](modules/engines/lower-third-engine/AGENT.md)  |
+| `modules/features/lower-third/`         | `:lower-third`         | The Lower Third tab and the ATEM settings page                                      | [AGENT.md](modules/features/lower-third/AGENT.md)         |
+| `modules/features/songs/`               | `:songs`               | The Songs tab, `SongsViewModel` and the song library on disk                        | [AGENT.md](modules/features/songs/AGENT.md)               |
+| `modules/features/bible-tab/`           | `:bible-tab`           | The Bible tab, `BibleViewModel`, the cross references and the verse-sequence log     | [AGENT.md](modules/features/bible-tab/AGENT.md)           |
+| `modules/features/schedule/`            | `:schedule`            | The Schedule tab, `ScheduleViewModel` and the `.schedule` files                      | [AGENT.md](modules/features/schedule/AGENT.md)            |
+| `modules/engines/canvas-engine/`       | `:canvas-engine`       | What a scene is drawn from: `SceneCanvas`, the renderer, `ScenePresenter`, and the capture sources (cameras, screen, browser, NDI/OMT in, DeckLink) | [AGENT.md](modules/engines/canvas-engine/AGENT.md)       |
+| `modules/features/canvas/`              | `:canvas`              | The Canvas tab: `SceneViewModel`, the scene editor and the source property editors | [AGENT.md](modules/features/canvas/AGENT.md)              |
+| `modules/engines/presenter/`           | `:presenter`           | What the song and Bible outputs draw: slides, looks, layouts, backgrounds, the Lottie bands and the style models | [AGENT.md](modules/engines/presenter/AGENT.md)           |
+| `modules/integrations/profiles/`            | `:profiles`            | The Profiles settings pages (looks, layout, backgrounds, previews), the song background panel and the settings row kit every settings page uses | [AGENT.md](modules/integrations/profiles/AGENT.md)            |
+| `modules/integrations/server/`              | `:server`              | The companion server and Instance Link: the Ktor API, tunnel, SSL, ATEM bridge, calendar sync | [AGENT.md](modules/integrations/server/AGENT.md)              |
+| `modules/features/companion-surface/`   | `:companion-surface`   | The Companion Surface tab and panels, and `CompanionSatelliteViewModel`             | [AGENT.md](modules/features/companion-surface/AGENT.md)   |
+| `modules/features/obs/`                 | `:obs`                 | The OBS Studio integration — the obs-websocket client, scene mapping and its settings page | [AGENT.md](modules/features/obs/AGENT.md)                 |
+| `modules/engines/live-show/`           | `:live-show`           | The layer model — `Layer`, `Cue`, and `LiveShow`'s program and preview (see `docs/LAYER_MODEL.md`) | [AGENT.md](modules/engines/live-show/AGENT.md)           |
+| `modules/core/show-control/`        | `:show-control`        | The action vocabulary and `ActionRunner`, played through the app's `ShowHost` (see `docs/SHOW_CONTROL.md`) | [AGENT.md](modules/core/show-control/AGENT.md)        |
+| `modules/core/control-in/`          | `:control-in`          | MIDI and OSC in and out: the codecs, the ports and the hub that maps what arrives to actions | [AGENT.md](modules/core/control-in/AGENT.md)          |
+| `modules/core/detekt-rules/`        | `:detekt-rules`        | The build's own detekt rules: the live-safe check on every module's composables, run by every module's detekt | [AGENT.md](modules/core/detekt-rules/AGENT.md)        |
+| `modules/engines/output-api/`          | `:output-api`          | What each tab needs of the live output, as interfaces, and the frame a deck plays: declared against by the tabs, implemented by `:live-output` | [AGENT.md](modules/engines/output-api/AGENT.md)          |
+| `modules/engines/output-guard/`        | `:output-guard`        | The output guard: a second process that keeps each output's last still under it and shows it if the app dies (dev mode only) | [AGENT.md](modules/engines/output-guard/AGENT.md)        |
+| `modules/output/live-output/`         | `:live-output`         | `PresenterManager` and what is on air, the output windows and stage monitor, and the off-screen outputs (NDI, OMT, Browser Source, DeckLink) on `ComposeScenePump` | [AGENT.md](modules/output/live-output/AGENT.md)         |
+| `modules/features/helper/`              | `:helper`              | Wick, the helper lamp — tips, display setup, typed requests, the spotlight that rings controls | [AGENT.md](modules/features/helper/AGENT.md)              |
+| `modules/features/statistics/`          | `:statistics`          | What was presented and when — the counters, the play log, the CCLI lookup and exports — and the statistics window over them | [AGENT.md](modules/features/statistics/AGENT.md)          |
+| `modules/features/updater/`             | `:updater`             | The in-app updater: the GitHub release check, the installer download, the update window | [AGENT.md](modules/features/updater/AGENT.md)             |
+| `modules/integrations/server-ui/`           | `:server-ui`           | The Server settings page, calendar sync's card and Instance Link's windows: the Compose face of `:server` | [AGENT.md](modules/integrations/server-ui/AGENT.md)           |
+| `modules/integrations/app-settings/`        | `:app-settings`        | The System settings page, the setup wizard, auto-start and the `.sps` converter    | [AGENT.md](modules/integrations/app-settings/AGENT.md)        |
+| `modules/integrations/telemetry/`           | `:telemetry`           | What the app reports about itself: the live-map ping, usage events, the contact form, the device report | [AGENT.md](modules/integrations/telemetry/AGENT.md)           |
+| `modules/integrations/dialogs/`             | `:dialogs`             | The dialogs and small windows: About, Contact Us, keyboard shortcuts, Customize Theme, the remote and show-control dialogs | [AGENT.md](modules/integrations/dialogs/AGENT.md)             |
 
 Every one is a real Gradle module of this build and is committed directly (no git submodules, no
 second wrapper): tested with `./gradlew :<module>:test` on the root wrapper, dependency versions

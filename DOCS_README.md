@@ -19,8 +19,8 @@ bash cleanup_check.sh          # wildcard imports, Material 2, prints, fully qua
 
 ## File locations
 
-- **String resources:** `strings/src/main/composeResources/values/strings.xml` (English only)
-- **Constants:** `settings/src/main/kotlin/org/churchpresenter/settings/utils/Constants.kt` (anything
+- **String resources:** `modules/core/strings/src/main/composeResources/values/strings.xml` (English only)
+- **Constants:** `modules/core/settings/src/main/kotlin/org/churchpresenter/settings/utils/Constants.kt` (anything
   persisted or shared with the settings)
 
 Historical coding standards are kept in `docs/archive/legacy/`. Personal notes and unselected logo drafts are machine-local under `.local/` and are excluded from Git.

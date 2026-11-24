@@ -57,11 +57,11 @@ class ReportInputsTest(unittest.TestCase):
 
     def test_only_modules_with_results_are_reported(self):
         with tempfile.TemporaryDirectory() as root:
-            os.makedirs(f"{root}/theme/build/test-results/test")
-            open(f"{root}/theme/build/test-results/test/TEST-x.xml", "w").close()
-            os.makedirs(f"{root}/settings/build")
+            os.makedirs(f"{root}/modules/core/theme/build/test-results/test")
+            open(f"{root}/modules/core/theme/build/test-results/test/TEST-x.xml", "w").close()
+            os.makedirs(f"{root}/modules/core/settings/build")
             paths, names = plan_ci.report_inputs(root)
-        self.assertEqual("theme/build/test-results/**/TEST-*.xml", paths)
+        self.assertEqual("modules/core/theme/build/test-results/**/TEST-*.xml", paths)
         self.assertEqual("Theme", names)
 
 

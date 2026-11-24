@@ -19,6 +19,7 @@ import glob
 import json
 import math
 import sys
+from module_layout import module_directory
 
 # (directory, JUnit check name, CI minutes of its suite as measured on a 4-core runner)
 MODULES = [
@@ -148,6 +149,7 @@ def unlisted(known_keys):
 def report_inputs(root="."):
     """JUnit report paths and check names for the modules that produced results in this run."""
     rows = [("composeApp", "App")] + [(d, n) for d, n, _ in MODULES]
+    rows = [(module_directory(d, root), n) for d, n in rows]
     ran = [(d, n) for d, n in rows if glob.glob(f"{root}/{d}/build/test-results/**/TEST-*.xml", recursive=True)]
     return (
         "\n".join(f"{d}/build/test-results/**/TEST-*.xml" for d, _ in ran),

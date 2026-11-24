@@ -80,7 +80,7 @@ downloads the build pinned in `gradle/ffmpeg-builds.properties`, verifies its SH
 single `ffmpeg` program into `composeApp/src/jvmMain/appResources/<os>/`, which is what packaging
 and `run` both read. Packaging and `run` depend on that task, so there is nothing to do by hand.
 On macOS, when a signing identity is configured, `:composeApp:signBundledFfmpeg` then codesigns it
-with the hardened runtime and `desktop/macos/ffmpeg.entitlements` before it goes into the bundle —
+with the hardened runtime and `platform/desktop/macos/ffmpeg.entitlements` before it goes into the bundle —
 Compose never signs anything under `appResources`, and notarization rejects the DMG otherwise.
 
 A target with no URL configured is not an error: the app then falls back to whatever ffmpeg is
@@ -91,6 +91,8 @@ Licensing and the written offer of source are in [THIRD_PARTY_FFMPEG.md](THIRD_P
 
 ## Project layout
 
+Source modules are grouped under `modules/` by architecture layer; platform files live under `platform/`. See [DIRECTORY_LAYOUT.md](DIRECTORY_LAYOUT.md) for the full map. Gradle task names and the `composeApp` output path stay unchanged.
+
 [`composeApp/`](./composeApp/src) is the app itself: all of its code is in
 [`jvmMain`](./composeApp/src/jvmMain/kotlin) and its tests in [`jvmTest`](./composeApp/src/jvmTest/kotlin).
 
@@ -100,25 +102,25 @@ documents itself in its own `AGENT.md`.
 
 | Module | What it is |
 |---|---|
-| [`settings/`](./settings) | Everything the app persists: the settings data classes, the `SettingsManager` that loads, migrates and saves `settings.json`, and the constants their defaults are written with. |
-| [`diagnostics/`](./diagnostics) | Crash reporting: the crash log written to `~/.churchpresenter/crash-reports/` and the Sentry forwarding behind it, including the PII scrubbing every outgoing event passes through. |
-| [`core-models/`](./core-models) | The shared data models (schedule items, scenes, questions, lyrics), and the song model and `.song` file format. |
-| [`theme/`](./theme) | The app's look: the nine color schemes, the semantic color roles, the typography and shape scales. |
-| [`bible/`](./bible) | The Bible itself: a loaded `.spb` translation, its books, its two numberings and the search over them. |
-| [`bible-formats/`](./bible-formats) | Getting a Bible onto disk: the eBible, Zefania and Beblia catalogues the download browser lists, and the converters that turn USFX and Zefania XML into `.spb`. |
-| [`bible-engine/`](./bible-engine) | The Bible Lookup Engine: speech-to-reference detection. |
-| [`song-chords/`](./song-chords) | The grammar songs are written in: chords, section headings, transposition, and turning a pasted chord sheet into inline `[G]lyric` markup. Depends on nothing, so the app and the converter share one rule. |
-| [`songlibrary/`](./songlibrary) | The Song Library Manager: every song in the library folder in one editable grid, opened from the Help menu. |
-| [`calendar/`](./calendar) | The Calendar Manager: every planned service on a month grid, each with a run of show that loads into the Schedule, opened from the Help menu. Pairs phones through an end-to-end encrypted relay. |
-| [`presentation-engine/`](./presentation-engine) | PPTX/PPT/Keynote/PDF parsing, timing and animation, entirely in-JVM. |
-| [`lottieGenerator/`](./lottieGenerator) | A standalone Compose Desktop app that generates animated lower thirds as Lottie JSON, also opened from the Lower Third settings. |
-| [`converter/`](./converter) | A song/Bible format converter, opened from the Help menu. `./gradlew :converter:run` starts it alone. |
-| [`crossword/`](./crossword) | The crossword authoring tool. Not compiled into the app: a build-time task copies its encoded puzzles into the app's resources. `./gradlew :crossword:run` opens it. |
-| [`planning-center/`](./planning-center) | The Planning Center Online client: the OAuth conversation, the Services API calls that read a service plan, and the loopback listener that catches the consent redirect. Each church brings its own free PCO Developer credentials; nothing is written back. |
-| [`companion-satellite/`](./companion-satellite) | A pure-Kotlin Bitfocus Companion Satellite protocol client. |
-| [`atem/`](./atem) | The Blackmagic ATEM protocol client: the UDP conversation with the switcher, from the handshake to a media-pool upload. Its suite runs against a loopback fake switcher built from a capture of real hardware, so no device is needed. |
-| [`ndi/`](./ndi) | NDI in both directions: an output put on the network as an NDI source, and someone else's received onto the Canvas. The NDI Runtime is a separate free download, detected at startup as VLC is. |
-| [`omt/`](./omt) | Open Media Transport in both directions. Unlike NDI the libraries are MIT and ship inside the app, fetched and pinned at build time as ffmpeg is. |
+| [`modules/core/settings/`](./modules/core/settings) | Everything the app persists: the settings data classes, the `SettingsManager` that loads, migrates and saves `settings.json`, and the constants their defaults are written with. |
+| [`modules/core/diagnostics/`](./modules/core/diagnostics) | Crash reporting: the crash log written to `~/.churchpresenter/crash-reports/` and the Sentry forwarding behind it, including the PII scrubbing every outgoing event passes through. |
+| [`modules/core/core-models/`](./modules/core/core-models) | The shared data models (schedule items, scenes, questions, lyrics), and the song model and `.song` file format. |
+| [`modules/core/theme/`](./modules/core/theme) | The app's look: the nine color schemes, the semantic color roles, the typography and shape scales. |
+| [`modules/core/bible/`](./modules/core/bible) | The Bible itself: a loaded `.spb` translation, its books, its two numberings and the search over them. |
+| [`modules/engines/bible-formats/`](./modules/engines/bible-formats) | Getting a Bible onto disk: the eBible, Zefania and Beblia catalogues the download browser lists, and the converters that turn USFX and Zefania XML into `.spb`. |
+| [`modules/engines/bible-engine/`](./modules/engines/bible-engine) | The Bible Lookup Engine: speech-to-reference detection. |
+| [`modules/core/song-chords/`](./modules/core/song-chords) | The grammar songs are written in: chords, section headings, transposition, and turning a pasted chord sheet into inline `[G]lyric` markup. Depends on nothing, so the app and the converter share one rule. |
+| [`modules/features/songlibrary/`](./modules/features/songlibrary) | The Song Library Manager: every song in the library folder in one editable grid, opened from the Help menu. |
+| [`modules/features/calendar/`](./modules/features/calendar) | The Calendar Manager: every planned service on a month grid, each with a run of show that loads into the Schedule, opened from the Help menu. Pairs phones through an end-to-end encrypted relay. |
+| [`modules/engines/presentation-engine/`](./modules/engines/presentation-engine) | PPTX/PPT/Keynote/PDF parsing, timing and animation, entirely in-JVM. |
+| [`modules/engines/lottieGenerator/`](./modules/engines/lottieGenerator) | A standalone Compose Desktop app that generates animated lower thirds as Lottie JSON, also opened from the Lower Third settings. |
+| [`modules/features/converter/`](./modules/features/converter) | A song/Bible format converter, opened from the Help menu. `./gradlew :converter:run` starts it alone. |
+| [`modules/features/crossword/`](./modules/features/crossword) | The crossword authoring tool. Not compiled into the app: a build-time task copies its encoded puzzles into the app's resources. `./gradlew :crossword:run` opens it. |
+| [`modules/features/planning-center/`](./modules/features/planning-center) | The Planning Center Online client: the OAuth conversation, the Services API calls that read a service plan, and the loopback listener that catches the consent redirect. Each church brings its own free PCO Developer credentials; nothing is written back. |
+| [`modules/engines/companion-satellite/`](./modules/engines/companion-satellite) | A pure-Kotlin Bitfocus Companion Satellite protocol client. |
+| [`modules/engines/atem/`](./modules/engines/atem) | The Blackmagic ATEM protocol client: the UDP conversation with the switcher, from the handshake to a media-pool upload. Its suite runs against a loopback fake switcher built from a capture of real hardware, so no device is needed. |
+| [`modules/engines/ndi/`](./modules/engines/ndi) | NDI in both directions: an output put on the network as an NDI source, and someone else's received onto the Canvas. The NDI Runtime is a separate free download, detected at startup as VLC is. |
+| [`modules/engines/omt/`](./modules/engines/omt) | Open Media Transport in both directions. Unlike NDI the libraries are MIT and ship inside the app, fetched and pinned at build time as ffmpeg is. |
 
 Every module's suite runs with `./gradlew :<module>:test`.
 

@@ -334,9 +334,9 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
           path: |
-            */build/test-results/
-            */build/reports/tests/
-            */build/reports/jacoco/test/jacocoTestReport.xml
+            modules/*/*/build/test-results/
+            modules/*/*/build/reports/tests/
+            modules/*/*/build/reports/jacoco/test/jacocoTestReport.xml
 
   # AGENT.md's flake rule, enforced: every test class this change added or edited runs three more
   # times. `--rerun` reruns only the test task; JaCoCo is off (-PfastTest) because coverage is
@@ -448,7 +448,7 @@ jobs:
 
           COUNTERS = ["INSTRUCTION", "BRANCH", "LINE", "COMPLEXITY", "METHOD", "CLASS"]
           PATTERNS = [
-              "*/build/reports/jacoco/*/*.xml",
+              "modules/*/*/build/reports/jacoco/*/*.xml",
           ]
 
           # The floor as the verification task itself has it, so the cap reported is the cap enforced.
@@ -544,8 +544,8 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
           path: |
-            */build/test-results/
-            */build/reports/tests/
+            modules/*/*/build/test-results/
+            modules/*/*/build/reports/tests/
 
       - name: Report a hung test as an issue
         if: ${{ !cancelled() && (needs.app.result == 'failure' || needs.modules.result == 'failure') }}
@@ -558,7 +558,7 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          DUMPS=$(find . -path '*/build/test-results/*' -name hung-test-dump.txt -type f 2>/dev/null | sort)
+          DUMPS=$(find . -path './*/build/test-results/*' -name hung-test-dump.txt -type f 2>/dev/null | sort)
           if [ -z "$DUMPS" ]; then
             echo "No hung-test dump; nothing to file."
             exit 0

@@ -20,7 +20,7 @@ class LocaleStringsTest {
         var dir: File? = File(System.getProperty("user.dir"))
         repeat(6) {
             val here = dir ?: return@repeat
-            File(here, "strings/src/main/composeResources")
+            File(here, "modules/core/strings/src/main/composeResources")
                 .takeIf { it.isDirectory }
                 ?.let { return@lazy it }
             dir = here.parentFile
