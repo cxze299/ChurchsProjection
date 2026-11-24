@@ -1,4 +1,13 @@
 import org.churchpresenter.buildlogic.SecurityFloorRule
+import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
+
+// Invalidate pre-migration compiler state once, without tying shared caches to a machine path.
+// A module or project-directory move changes this input and triggers a complete recompilation.
+val sourceLayout = layout.projectDirectory.asFile
+    .relativeTo(rootProject.projectDir.parentFile).invariantSeparatorsPath
+tasks.withType<KotlinJvmCompile>().configureEach {
+    inputs.property("churchPresenterSourceLayout", sourceLayout)
+}
 
 // What every module of the build carries, the Kotlin Multiplatform app included: its version and
 // the security floors below.
