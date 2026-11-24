@@ -4,8 +4,9 @@
 
 | 仓库根目录 | 用途 |
 |---|---|
+| `README.md` | 仓库首页，链接到 project 内的工程和文档 |
 | `project/` | 全部工程文件、源码、文档、构建配置及本地缓存 |
-| `.github/` | 必须位于仓库根目录的 Actions、Issue 模板及仓库首页 |
+| `.github/` | 必须位于仓库根目录的 Actions 和 Issue 模板 |
 | `.githooks/` | Git 提交钩子 |
 | `.git/` | 本地 Git 仓库数据，不作为项目文件提交 |
 
@@ -46,7 +47,6 @@ Windows 构建入口：`D:\churchpre\project\Build-All.cmd`。
 
 | 文件 | 保留原因 |
 |---|---|
-| `README.md` | 项目首页，指向分类后的文档 |
 | `CHANGELOG.md` | 更新记录 |
 | `LICENSE`、`LICENSE.txt` | 项目授权文件，保留现有副本及引用兼容 |
 | `AGENTS.md`、`AGENT.md`、`CLAUDE.md` | 自动发现的开发代理指令与规范 |
