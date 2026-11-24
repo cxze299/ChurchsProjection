@@ -62,6 +62,7 @@ on:
         default: false
 
 env:
+  ORG_GRADLE_PROJECT_churchPresenterVersion: ${{ inputs.version }}
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 permissions:
@@ -878,6 +879,7 @@ jobs:
           name: ChurchPresenter ${{ needs.version.outputs.version }}
           body: ${{ steps.body.outputs.BODY }}
           prerelease: ${{ inputs.prerelease }}
+          draft: false
           files: |
             release/windows/*
             release/macos/*

@@ -53,11 +53,7 @@ def resolve_base(repo, base_branch=None):
 def publish_source(repo, base):
     # Publish committed source only: never stage files, include untracked files, or force-push.
     command(["git", "diff", "--quiet", "HEAD", "--"])
-    # Keep snapshot ancestry increasing so commit-count versions advance between releases.
-    recent = api(repo, "actions/runs?event=push&per_page=30").get("workflow_runs", [])
-    previous = next((run for run in recent if run.get("head_branch", "").startswith("codex/build-")), None)
-    if previous:
-        base = previous["head_sha"]
+    # Base each snapshot on current main; packaging is independent of source merging.
     base_tree = api(repo, f"git/commits/{base}")["tree"]["sha"]
     remote = api(repo, f"git/trees/{base_tree}?recursive=1")
     if remote.get("truncated"):
@@ -94,16 +90,15 @@ def publish_source(repo, base):
         "message": "Build integrated desktop packages", "tree": tree, "parents": [base],
     })["sha"]
     branch = "codex/build-" + datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
-    # Create the branch at its final snapshot: one push, one package build.
+    # Create the final source snapshot; packaging is dispatched explicitly below.
     api(repo, "git/refs", {"ref": f"refs/heads/{branch}", "sha": commit})
     print(f"云端源码已校验：{branch}（{tree[:12]}）", flush=True)
     return branch, commit
 
 
-def build_windows():
+def build_windows(version):
     if os.name != "nt":
-        print("当前不是 Windows，本地打包交由 GitHub Windows runner。", flush=True)
-        return
+        raise RuntimeError("本机 Windows 构建需要 Windows；其他系统可显式使用 --cloud-only。")
     env = os.environ.copy()
     if not env.get("JAVA_HOME"):
         candidates = sorted((Path(env.get("LOCALAPPDATA", "")) / "ChurchPresenterTools").glob("jdk-21*"))
@@ -113,7 +108,7 @@ def build_windows():
     # Optional machine-local repository/proxy configuration; no machine paths are saved in source.
     if env.get("CHURCHPRESENTER_GRADLE_INIT"):
         args += ["--init-script", env["CHURCHPRESENTER_GRADLE_INIT"]]
-    args += [":composeApp:createDistributable"]
+    args += [f"-PchurchPresenterVersion={version}", ":composeApp:createDistributable", ":composeApp:packageMsi"]
     print("正在构建 Windows 固定入口…", flush=True)
     with tempfile.TemporaryFile() as output:
         result = subprocess.run(args, cwd=ROOT, env=env, stdout=output, stderr=subprocess.STDOUT)
@@ -125,12 +120,28 @@ def build_windows():
     if not entry.is_file():
         raise RuntimeError("未找到 Windows 固定入口。")
     print(f"Windows 构建成功：{entry}", flush=True)
+    packages = list((ROOT / "composeApp/build/compose/binaries/main/msi").glob(f"*{version}*.msi"))
+    if not packages:
+        raise RuntimeError("未找到本次版本的 Windows MSI 安装包。")
+    return max(packages, key=lambda path: path.stat().st_mtime)
 
 
-def wait_for_packages(repo, branch, commit, no_wait):
+def prepare_windows_release(repo, commit, version, package):
+    tag = "v" + version
+    existing = command(["gh", "release", "list", "--repo", repo, "--limit", "100", "--json", "tagName"])
+    if tag not in {item["tagName"] for item in json.loads(existing)}:
+        command(["gh", "release", "create", tag, "--repo", repo, "--target", commit,
+                 "--draft", "--title", "ChurchPresenter " + tag,
+                 "--notes", "Windows is built locally; macOS packages are added by the manually dispatched workflow."])
+    command(["gh", "release", "upload", tag, str(package) + f"#ChurchPresenter-{version}-WINDOWS-x64.msi",
+             "--repo", repo, "--clobber"])
+    print(f"Windows MSI 已上传到 Release 草稿：{tag}", flush=True)
+
+
+def wait_for_packages(repo, branch, commit, no_wait, cloud_windows=True):
     run = None
     for _ in range(24):
-        runs = api(repo, f"actions/runs?branch={branch}&event=push&per_page=10")["workflow_runs"]
+        runs = api(repo, f"actions/workflows/build-integrated.yml/runs?branch={branch}&event=workflow_dispatch&per_page=10")["workflow_runs"]
         run = next((item for item in runs if item["head_sha"] == commit), None)
         if run:
             break
@@ -177,8 +188,9 @@ def wait_for_packages(repo, branch, commit, no_wait):
             if run["conclusion"] != "success":
                 raise RuntimeError("部分云端构建失败，请查看上述任务链接。")
             names = {item["name"] for item in artifacts if not item["expired"]}
-            if not {"windows-msi", "macos-dmg", "macos-dmg-x64"}.issubset(names):
-                raise RuntimeError("任务结束，但缺少预期的三平台安装包。")
+            expected = {"macos-dmg", "macos-dmg-x64"} | ({"windows-msi"} if cloud_windows else set())
+            if not expected.issubset(names):
+                raise RuntimeError("任务结束，但缺少预期的云端安装包。")
             print("三平台构建成功。未配置 Apple 签名凭据时，Mac 包未签名、未公证。")
             print(f"Release： https://github.com/{repo}/releases")
             return
@@ -200,10 +212,17 @@ def main():
     print(f"发布仓库：{args.repo}，基础分支：{base_branch}", flush=True)
     if subprocess.run(["git", "diff", "--quiet", "HEAD", "--"], cwd=ROOT).returncode:
         raise RuntimeError("存在未提交的源码修改，请提交后再构建，以保证三个版本使用同一份源码。")
-    if not args.cloud_only:
-        build_windows()
+    count = int(command(["git", "rev-list", "--count", "HEAD"]).decode().strip())
+    version = f"{datetime.now(timezone.utc).year % 100}.{count // 256}.{count % 256}"
+    package = None if args.cloud_only else build_windows(version)
     branch, commit = publish_source(args.repo, base)
-    wait_for_packages(args.repo, branch, commit, args.no_wait)
+    if package:
+        prepare_windows_release(args.repo, commit, version, package)
+    api(args.repo, "actions/workflows/build-integrated.yml/dispatches", {
+        "ref": branch, "inputs": {"windows": "true" if args.cloud_only else "false", "version": "v" + version},
+    })
+    print("已手动发起云端打包；该打包结果不作为分支合并条件。", flush=True)
+    wait_for_packages(args.repo, branch, commit, args.no_wait, cloud_windows=args.cloud_only)
 
 
 if __name__ == "__main__":
