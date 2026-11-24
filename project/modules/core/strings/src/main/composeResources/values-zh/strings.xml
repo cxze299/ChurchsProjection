@@ -4296,4 +4296,11 @@
     <string name="shortcut_description_hold_all_screens">将每个屏幕保持在最后一帧</string>
     <string name="shortcut_description_release_all_screens">释放每个保持的屏幕</string>
     <string name="bible_append_passages">连续上屏</string>
+    <string name="bible_clear_passages">清除经文</string>
+    <string name="projection_toolbar_screen">投屏屏幕</string>
+    <string name="projection_toolbar_clear_display">清除画面</string>
+    <string name="projection_toolbar_preview_settings">预览设置</string>
+    <string name="projection_toolbar_clear_text">清除文字</string>
+    <string name="projection_toolbar_restore_text">恢复文字</string>
+    <string name="projection_toolbar_clear_layers">清除图层</string>
 </resources>

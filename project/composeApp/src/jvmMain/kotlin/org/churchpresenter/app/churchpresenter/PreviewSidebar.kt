@@ -31,6 +31,15 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.style.TextOverflow
+import org.churchpresenter.strings.generated.resources.projection_toolbar_screen
+import org.churchpresenter.strings.generated.resources.projection_toolbar_clear_display
+import org.churchpresenter.strings.generated.resources.projection_toolbar_preview_settings
+import org.churchpresenter.strings.generated.resources.projection_toolbar_clear_text
+import org.churchpresenter.strings.generated.resources.projection_toolbar_restore_text
+import org.churchpresenter.strings.generated.resources.projection_toolbar_clear_layers
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
@@ -326,7 +335,25 @@ internal object WindowedSidebarDialogs : SidebarDialogs {
 /** Where the sidebar's editors open: in their own windows, unless a test says otherwise. */
 internal val LocalSidebarDialogs = staticCompositionLocalOf<SidebarDialogs> { WindowedSidebarDialogs }
 
-/** The row of buttons over the preview: displays, clear, settings, message, props, macros, clear layers, take. */
+/** Keep toolbar icons aligned and show a short caption below each one. */
+@Composable
+private fun SidebarActionCaption(label: String, content: @Composable () -> Unit) {
+    Column(
+        modifier = Modifier.widthIn(min = 48.dp, max = 64.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Box(Modifier.height(40.dp), contentAlignment = Alignment.Center) { content() }
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun SidebarButtons(
@@ -344,63 +371,77 @@ internal fun SidebarButtons(
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         var choosing by remember { mutableStateOf(false) }
-        Box {
-            TooltipIconButton(
-                painter = rememberVectorPainter(Icons.Default.Monitor),
-                text = stringResource(Res.string.hymn_quick_screen),
-                onClick = { choosing = true },
-                buttonSize = 36.dp,
-                modifier = Modifier.guideTarget(GuideTargets.TOGGLE_OUTPUTS),
-                iconTint = if (presenterManager.showPresenterWindow.value)
-                    MaterialTheme.colorScheme.primary
-                else
-                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-            )
-            if (choosing) {
-                val screens = remember {
-                    if (java.awt.GraphicsEnvironment.isHeadless()) emptyList() else
-                        java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment().screenDevices.map {
-                            it.defaultConfiguration.bounds
-                        }
-                }
-                val title = stringResource(Res.string.hymn_quick_screen)
-                val labels = listOf(stringResource(Res.string.hymn_quick_window)) + screens.mapIndexed { i, bounds ->
-                    "$title ${i + 1} · ${bounds.width}×${bounds.height}"
-                }
-                DropdownMenu(expanded = true, onDismissRequest = { choosing = false }) {
-                    labels.forEachIndexed { index, label ->
-                        val projection = appSettings.projectionSettings
-                        val selected = if (index == 0) projection.windowedProjection else
-                            !projection.windowedProjection && projection.quickPlayDisplay == index - 1
-                        DropdownMenuItem(text = { Text(label) }, leadingIcon = {
-                            androidx.compose.material3.RadioButton(selected = selected, onClick = null)
-                        }, onClick = {
-                            choosing = false
-                            val display = (index - 1).takeIf { it >= 0 }
-                            onSettingsChange {
-                                it.copy(projectionSettings = it.projectionSettings.copy(
-                                    windowedProjection = display == null, quickPlayDisplay = display,
-                                ))
+        SidebarActionCaption(stringResource(Res.string.projection_toolbar_screen)) {
+            Box {
+                TooltipIconButton(
+                    painter = rememberVectorPainter(Icons.Default.Monitor),
+                    text = stringResource(Res.string.hymn_quick_screen),
+                    onClick = { choosing = true },
+                    buttonSize = 36.dp,
+                    modifier = Modifier.guideTarget(GuideTargets.TOGGLE_OUTPUTS),
+                    iconTint = if (presenterManager.showPresenterWindow.value)
+                        MaterialTheme.colorScheme.primary
+                    else
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                )
+                if (choosing) {
+                    val screens = remember {
+                        if (java.awt.GraphicsEnvironment.isHeadless()) emptyList() else
+                            java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment().screenDevices.map {
+                                it.defaultConfiguration.bounds
                             }
-                            presenterManager.setShowPresenterWindow(true)
-                        })
+                    }
+                    val title = stringResource(Res.string.hymn_quick_screen)
+                    val labels = listOf(stringResource(Res.string.hymn_quick_window)) + screens.mapIndexed { i, bounds ->
+                        "$title ${i + 1} · ${bounds.width}×${bounds.height}"
+                    }
+                    DropdownMenu(expanded = true, onDismissRequest = { choosing = false }) {
+                        labels.forEachIndexed { index, label ->
+                            val projection = appSettings.projectionSettings
+                            val selected = if (index == 0) projection.windowedProjection else
+                                !projection.windowedProjection && projection.quickPlayDisplay == index - 1
+                            DropdownMenuItem(text = { Text(label) }, leadingIcon = {
+                                androidx.compose.material3.RadioButton(selected = selected, onClick = null)
+                            }, onClick = {
+                                choosing = false
+                                val display = (index - 1).takeIf { it >= 0 }
+                                onSettingsChange {
+                                    it.copy(projectionSettings = it.projectionSettings.copy(
+                                        windowedProjection = display == null, quickPlayDisplay = display,
+                                    ))
+                                }
+                                presenterManager.setShowPresenterWindow(true)
+                            })
+                        }
                     }
                 }
             }
         }
-        TooltipIconButton(
-            painter = painterResource(IconRes.drawable.ic_close),
-            text = stringResource(Res.string.tooltip_clear_display),
-            onClick = onClearDisplay,
-            buttonSize = 36.dp,
-            modifier = Modifier.guideTarget(GuideTargets.CLEAR_OUTPUT),
-            iconTint = MaterialTheme.colorScheme.error
-        )
-        PreviewSettingsButton(appSettings.projectionSettings, onEditPreviewLayout) { updated ->
-            onSettingsChange { s -> s.copy(projectionSettings = updated) }
+        SidebarActionCaption(stringResource(Res.string.projection_toolbar_clear_display)) {
+            TooltipIconButton(
+                painter = painterResource(IconRes.drawable.ic_close),
+                text = stringResource(Res.string.tooltip_clear_display),
+                onClick = onClearDisplay,
+                buttonSize = 36.dp,
+                modifier = Modifier.guideTarget(GuideTargets.CLEAR_OUTPUT),
+                iconTint = MaterialTheme.colorScheme.error
+            )
         }
-        ClearTextButton(presenterManager)
-        ClearLayersButton(presenterManager, appSettings, showControl.devMode, onSettingsChange)
+        SidebarActionCaption(stringResource(Res.string.projection_toolbar_preview_settings)) {
+            PreviewSettingsButton(appSettings.projectionSettings, onEditPreviewLayout) { updated ->
+                onSettingsChange { s -> s.copy(projectionSettings = updated) }
+            }
+        }
+        SidebarActionCaption(stringResource(if (presenterManager.textCleared) {
+            Res.string.projection_toolbar_restore_text
+        } else {
+            Res.string.projection_toolbar_clear_text
+        })) {
+            ClearTextButton(presenterManager)
+        }
+        SidebarActionCaption(stringResource(Res.string.projection_toolbar_clear_layers)) {
+            ClearLayersButton(presenterManager, appSettings, showControl.devMode, onSettingsChange)
+        }
         if (appSettings.projectionSettings.showsProfileSetsButton()) {
             ProfileSetsButton(appSettings.projectionSettings) { updated ->
                 onSettingsChange { s -> s.copy(projectionSettings = updated) }

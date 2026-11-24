@@ -75,6 +75,7 @@ internal class BibleTabScope(
     private val currentIsPresentingState: State<Boolean>,
     val scope: CoroutineScope,
     val shortcuts: ShortcutMap,
+    val onClearVerses: () -> Unit = {},
 ) {
     val translationSelectionKey get() = appSettings.bibleSettings.translationSelectionKey()
     val sttConnected get() = sttManager?.connected?.value == true

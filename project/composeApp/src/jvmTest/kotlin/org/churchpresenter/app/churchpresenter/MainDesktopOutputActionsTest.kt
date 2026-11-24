@@ -40,6 +40,26 @@ import kotlin.test.assertTrue
  */
 class MainDesktopOutputActionsTest {
 
+    @Test
+    fun `clear Bible removes live and preview scripture while keeping the output window state`() {
+        presenter.setPresentingMode(Presenting.BIBLE)
+        presenter.previewBus.manager.setPresentingMode(Presenting.BIBLE)
+        val wasVisible = presenter.showPresenterWindow.value
+        clearBibleProjection(presenter)
+        assertEquals(Presenting.NONE, presenter.slideContent.value)
+        assertEquals(Presenting.NONE, presenter.previewBus.manager.slideContent.value)
+        assertEquals(wasVisible, presenter.showPresenterWindow.value)
+    }
+
+    @Test
+    fun `clear Bible preserves presentations and other preview content`() {
+        presenter.setPresentingMode(Presenting.PRESENTATION)
+        presenter.previewBus.manager.setPresentingMode(Presenting.LYRICS)
+        clearBibleProjection(presenter)
+        assertEquals(Presenting.PRESENTATION, presenter.slideContent.value)
+        assertEquals(Presenting.LYRICS, presenter.previewBus.manager.slideContent.value)
+    }
+
     private lateinit var dir: File
     private lateinit var home: File
     private var realHome: String? = null

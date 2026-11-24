@@ -36,6 +36,7 @@ internal fun MainDesktopScope.BibleTabPane() {
         selectedVerseItemVersion = state.selectedBibleVerseItemVersion,
         selectedVerseItemGoLive = state.selectedBibleVerseItemGoLive,
         onVerseSelected = live.onVerseSelected,
+        onClearVerses = { clearBibleProjection(presenterManager) },
         onInstanceLinkSendVerse = link.sendVerse,
         onInstanceLinkSendBibleHold = link.sendBibleHold,
         onPresenting = live.presenting,

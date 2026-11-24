@@ -54,6 +54,7 @@ class BibleTabScopeActionsTest {
         val presenting = mutableListOf<Presenting>()
         val counted = mutableListOf<Int>()
         var wentLive = 0
+        var cleared = 0
     }
 
     @BeforeTest
@@ -113,6 +114,7 @@ class BibleTabScopeActionsTest {
                         { book, chapter, verse, _, _, _ -> calls.scheduled += "$book $chapter:$verse" }
                     } else null,
                     onVerseSelected = { calls.selected += it },
+                    onClearVerses = { calls.cleared++ },
                     onInstanceLinkSendVerse = if (withCallbacks) {
                         { book, chapter, verse, _, _ -> calls.linked += "$book $chapter:$verse" }
                     } else null,
@@ -159,6 +161,37 @@ class BibleTabScopeActionsTest {
     }
 
     private fun counting(calls: Calls) = BibleVerseStatistics { _, _, _, verse -> calls.counted += verse }
+
+    @Test
+    fun `clearing passages resets accumulation and starts a fresh click selection`() = runComposeUiTest {
+        val calls = Calls()
+        val tab = scope(calls)
+        runOnIdle {
+            tab.ui.appendPassages = true
+            vm.clickVerse(0)
+            tab.publishPassage(vm.getSelectedVerses())
+            assertTrue(tab.ui.appendedPassages.isNotEmpty())
+
+            tab.clearPassages(vm)
+            assertEquals(1, calls.cleared)
+            assertTrue(tab.ui.appendedPassages.isEmpty())
+            assertTrue(tab.ui.appendPassages)
+
+            vm.clickVerse(1)
+            assertFalse(vm.multiVerseEnabled.value)
+            tab.publishPassage(vm.getSelectedVerses())
+            assertEquals(1, tab.ui.appendedPassages.size)
+            assertEquals(vm.getSelectedVerses().map { it.verseNumber }, calls.selected.last().map { it.verseNumber })
+            assertTrue(calls.selected.last().single().verseText.endsWith(vm.getSelectedVerses().single().verseText))
+
+            vm.clickVerse(0)
+            assertTrue(vm.multiVerseEnabled.value)
+            tab.clearPassages(vm)
+            assertFalse(vm.multiVerseEnabled.value)
+            assertEquals(2, calls.cleared)
+            assertTrue(tab.ui.appendedPassages.isEmpty())
+        }
+    }
 
     @Test
     fun `holding with no output still tells the controller`() = runComposeUiTest {
@@ -301,14 +334,14 @@ class BibleTabScopeActionsTest {
     }
 
     @Test
-    fun `going live with a passage counts each verse and remembers the range`() = runComposeUiTest {
+    fun `going live with a passage counts verses and clears selection when requested`() = runComposeUiTest {
         val calls = Calls()
         val tab = scope(calls, statistics = counting(calls))
         vm.selectVerse(0)
         vm.ctrlClickVerse(1)
         vm.ctrlClickVerse(2)
 
-        runOnIdle { tab.goLiveWithHistory(vm) }
+        runOnIdle { tab.goLiveWithHistory(vm, preserveSelection = false) }
 
         assertEquals(listOf(1, 2, 3), calls.counted)
         assertEquals("Genesis 1:1-3", vm.history.first().displayText)
