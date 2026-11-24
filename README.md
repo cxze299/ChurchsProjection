@@ -131,7 +131,7 @@ Every module's suite runs with `./gradlew :<module>:test`.
 - [DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md): workflow, verification commands and contributing.
 - [CODING_STANDARDS.md](CODING_STANDARDS.md): the style rules.
 - [AGENT.md](AGENT.md): architecture, modules, commands, and the screenshot and test rules.
-- [BUILD_INSTALLERS.md](BUILD_INSTALLERS.md) and [QUICK_START_INSTALLERS.md](QUICK_START_INSTALLERS.md): building the installers.
+- [BUILD_INSTALLERS.md](docs/packaging/BUILD_INSTALLERS.md) and [QUICK_START_INSTALLERS.md](docs/packaging/QUICK_START_INSTALLERS.md): building the installers.
 - [GRAPHICS_BACKEND.md](GRAPHICS_BACKEND.md): choosing the GPU backend on a machine, and what it does to screen capture.
 - [COMPANION_API.md](COMPANION_API.md): the REST and WebSocket API the app exposes for the mobile companion.
 

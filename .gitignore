@@ -1,4 +1,19 @@
-scripts/
+# Project scripts are source files; ignore only local Python caches.
+__pycache__/
+*.py[cod]
+
+# Machine-local archives, design drafts and historical test distributions.
+/.local/
+/dist/
+/target/
+/test-app*/
+/docs/branding/logo-concepts/
+/docs_archive/PERSONAL_NOTES.md
+/docs_archive/TODO_CLEANUP.md
+Thumbs.db
+Desktop.ini
+*.tmp
+*.bak
 *.iml
 .kotlin
 .gradle
