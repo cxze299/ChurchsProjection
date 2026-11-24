@@ -1,10 +1,6 @@
 name: Build Integrated App
 
 on:
-  push:
-    branches:
-      - 'builds/**'
-      - 'codex/build-**'
   workflow_dispatch:
 
 permissions:
