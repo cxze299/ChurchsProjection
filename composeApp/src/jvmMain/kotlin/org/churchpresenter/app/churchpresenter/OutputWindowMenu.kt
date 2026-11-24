@@ -41,7 +41,6 @@ import org.jetbrains.compose.resources.stringResource
 internal fun OutputWindowWithMenu(spec: OutputWindowSpec, content: @Composable () -> Unit) {
     var framed by remember(spec.undecorated) { mutableStateOf(!spec.undecorated) }
     var onTop by remember(spec.alwaysOnTop) { mutableStateOf(spec.alwaysOnTop) }
-    var hidden by remember(spec.visible, spec.state) { mutableStateOf(false) }
     var blackedOut by remember { mutableStateOf(false) }
     val toggleFullscreen = {
         framed = !framed
@@ -58,7 +57,7 @@ internal fun OutputWindowWithMenu(spec: OutputWindowSpec, content: @Composable (
     val blackLabel = stringResource(Res.string.output_menu_black)
     key(framed) {
         Window(
-            visible = spec.visible && !hidden,
+            visible = spec.visible,
             title = spec.title,
             icon = painterResource(IconRes.drawable.ic_app_icon),
             onCloseRequest = spec.onClose,
@@ -76,7 +75,7 @@ internal fun OutputWindowWithMenu(spec: OutputWindowSpec, content: @Composable (
                         OutputShortcut.NEXT -> spec.onStep(true)
                         OutputShortcut.PREVIOUS -> spec.onStep(false)
                         OutputShortcut.FULLSCREEN -> toggleFullscreen()
-                        OutputShortcut.HIDE -> hidden = true
+                        OutputShortcut.HIDE -> spec.onClose()
                         OutputShortcut.ON_TOP -> onTop = !onTop
                         OutputShortcut.BLACKOUT -> blackedOut = !blackedOut
                     }
@@ -94,7 +93,7 @@ internal fun OutputWindowWithMenu(spec: OutputWindowSpec, content: @Composable (
                     ContextMenuItem(blackLabel + "  B") { blackedOut = !blackedOut },
                     ContextMenuItem((if (framed) fullscreenLabel else windowLabel) + "  F11", toggleFullscreen),
                     ContextMenuItem((if (onTop) normalLabel else topLabel) + "  T") { onTop = !onTop },
-                    ContextMenuItem(hideLabel + "  Esc") { hidden = true },
+                    ContextMenuItem(hideLabel + "  Esc") { spec.onClose() },
                 )
             }) {
                 Box(Modifier.fillMaxSize()) {

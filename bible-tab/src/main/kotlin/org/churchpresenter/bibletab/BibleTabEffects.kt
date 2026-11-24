@@ -135,7 +135,7 @@ internal fun BibleTabScope.BibleSplitLiveEffects(viewModel: BibleViewModel) {
                     primary.bibleName, primary.bookName, primary.chapter, primary.verseNumber
                 )
             }
-            onVerseSelected(verses)
+            publishPassage(verses)
             onInstanceLinkSendVerse?.invoke(
                 primary.bookName,
                 primary.chapter,
@@ -178,6 +178,7 @@ internal fun BibleTabScope.BibleSelectionEffects(viewModel: BibleViewModel) {
     }
 
     LaunchedEffect(verseSelectionToken) {
+        if (ui.appendPassages) return@LaunchedEffect
         if (viewModel.multiVerseEnabled.value && currentIsPresenting) return@LaunchedEffect
 
         if (splitBrowseMode) return@LaunchedEffect
@@ -202,6 +203,7 @@ internal fun BibleTabScope.BibleSelectionEffects(viewModel: BibleViewModel) {
     }
 
     LaunchedEffect(verses.size) {
+        if (ui.appendPassages) return@LaunchedEffect
         if (!currentIsPresenting && !splitBrowseMode && verses.isNotEmpty()) {
             val selectedVerses = viewModel.getSelectedVerses()
             if (selectedVerses.isNotEmpty()) onVerseSelected(selectedVerses)

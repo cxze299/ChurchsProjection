@@ -23,7 +23,8 @@ def command(args, **kwargs):
 
 
 def api(repo, endpoint, payload=None):
-    args = ["gh", "api", f"repos/{repo}/{endpoint}"]
+    resource = f"repos/{repo}" + (f"/{endpoint}" if endpoint else "")
+    args = ["gh", "api", resource]
     options = {}
     if payload is not None:
         args += ["--method", "POST", "--input", "-"]
@@ -32,17 +33,26 @@ def api(repo, endpoint, payload=None):
         try:
             data = command(args, **options)
             break
-        except RuntimeError:
-            if payload is not None or attempt == 3:
-                raise
+        except RuntimeError as error:
+            if payload is not None or attempt == 3 or "HTTP 404" in str(error):
+                raise RuntimeError(f"GitHub 请求失败：{repo}/{endpoint}\n{error}") from error
             time.sleep(2 ** (attempt + 1))
     return json.loads(data) if data.strip() else {}
 
 
-def publish_source(repo, base_branch):
+def resolve_base(repo, base_branch=None):
+    metadata = api(repo, "")
+    branch = base_branch or metadata["default_branch"]
+    try:
+        sha = api(repo, f"git/ref/heads/{branch}")["object"]["sha"]
+    except RuntimeError as error:
+        raise RuntimeError(f"无法读取基础分支 {repo}:{branch}，请检查 --base-branch 参数。\n{error}") from error
+    return branch, sha
+
+
+def publish_source(repo, base):
     # Publish committed source only: never stage files, include untracked files, or force-push.
     command(["git", "diff", "--quiet", "HEAD", "--"])
-    base = api(repo, f"git/ref/heads/{base_branch}")["object"]["sha"]
     # Keep snapshot ancestry increasing so commit-count versions advance between releases.
     recent = api(repo, "actions/runs?event=push&per_page=30").get("workflow_runs", [])
     previous = next((run for run in recent if run.get("head_branch", "").startswith("codex/build-")), None)
@@ -180,7 +190,7 @@ def wait_for_packages(repo, branch, commit, no_wait):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", default="cxze299/ChurchsProjection")
-    parser.add_argument("--base-branch", default="builds/integrated-20261115")
+    parser.add_argument("--base-branch", help="基础分支；默认使用目标仓库的默认分支")
     parser.add_argument("--cloud-only", action="store_true")
     parser.add_argument("--no-wait", action="store_true")
     args = parser.parse_args()
@@ -188,11 +198,13 @@ def main():
         if not shutil.which(tool):
             raise RuntimeError(f"请先安装 {tool}。")
     command(["gh", "auth", "status"])
+    base_branch, base = resolve_base(args.repo, args.base_branch)
+    print(f"发布仓库：{args.repo}，基础分支：{base_branch}", flush=True)
     if subprocess.run(["git", "diff", "--quiet", "HEAD", "--"], cwd=ROOT).returncode:
         raise RuntimeError("存在未提交的源码修改，请提交后再构建，以保证三个版本使用同一份源码。")
     if not args.cloud_only:
         build_windows()
-    branch, commit = publish_source(args.repo, args.base_branch)
+    branch, commit = publish_source(args.repo, base)
     wait_for_packages(args.repo, branch, commit, args.no_wait)
 
 

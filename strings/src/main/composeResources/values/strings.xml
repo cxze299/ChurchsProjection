@@ -4415,4 +4415,5 @@
     <string name="action_hold_mode_black">Black</string>
     <string name="shortcut_description_hold_all_screens">Hold every screen on its last frame</string>
     <string name="shortcut_description_release_all_screens">Release every held screen</string>
+    <string name="bible_append_passages">Append passages</string>
 </resources>

@@ -284,9 +284,9 @@ internal fun selectDownloadUrl(urls: List<String>): String? {
         os.contains("win") ->
             urls.firstOrNull { it.endsWith(".msi", ignoreCase = true) }
         os.contains("mac") && arch == "aarch64" ->
-            urls.firstOrNull { it.contains("arm64", ignoreCase = true) && it.endsWith(".dmg", ignoreCase = true) }
+            urls.firstOrNull { (it.contains("MSilicon", ignoreCase = true) || it.contains("arm64", ignoreCase = true)) && it.endsWith(".dmg", ignoreCase = true) }
         os.contains("mac") ->
-            urls.firstOrNull { !it.contains("arm64", ignoreCase = true) && it.endsWith(".dmg", ignoreCase = true) }
+            urls.firstOrNull { !it.contains("MSilicon", ignoreCase = true) && !it.contains("arm64", ignoreCase = true) && it.endsWith(".dmg", ignoreCase = true) }
         else ->
             urls.firstOrNull { it.endsWith(".deb", ignoreCase = true) }
     }

@@ -369,7 +369,12 @@ internal fun SidebarButtons(
                 }
                 DropdownMenu(expanded = true, onDismissRequest = { choosing = false }) {
                     labels.forEachIndexed { index, label ->
-                        DropdownMenuItem(text = { Text(label) }, onClick = {
+                        val projection = appSettings.projectionSettings
+                        val selected = if (index == 0) projection.windowedProjection else
+                            !projection.windowedProjection && projection.quickPlayDisplay == index - 1
+                        DropdownMenuItem(text = { Text(label) }, leadingIcon = {
+                            androidx.compose.material3.RadioButton(selected = selected, onClick = null)
+                        }, onClick = {
                             choosing = false
                             val display = (index - 1).takeIf { it >= 0 }
                             onSettingsChange {
