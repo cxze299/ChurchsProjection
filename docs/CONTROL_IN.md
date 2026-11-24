@@ -6,7 +6,7 @@ mappings and outputs do nothing until dev mode is on again. The **MIDI & OSC** d
 from the Macros dialog, whose button sits in the preview sidebar's Dev mode only box.
 
 What this covers: how a lighting desk, Ableton or a stage controller drives the show over MIDI or
-OSC, and how the show sends MIDI or OSC back out. Source: `control-in/src/main/kotlin/org/
+OSC, and how the show sends MIDI or OSC back out. Source: `modules/core/control-in/src/main/kotlin/org/
 churchpresenter/controlin/` -- `Trigger.kt`, `ControlSettings.kt`, `Midi.kt`, `Osc.kt`,
 `Devices.kt`, `ControlHub.kt`. The settings live in `AppSettings.control`.
 

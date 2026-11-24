@@ -17,7 +17,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/omt-linux.yml'
-      - 'omt/**'
+      - 'modules/engines/omt/**'
   workflow_dispatch:
     inputs:
       publish:

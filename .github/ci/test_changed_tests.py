@@ -11,12 +11,12 @@ def reader(files):
 class TestClassesTest(unittest.TestCase):
 
     def test_a_module_test_is_named_by_its_package_line_and_grouped_under_its_task(self):
-        path = "lower-third/src/test/kotlin/org/churchpresenter/lowerthird/LowerThirdTabTest.kt"
+        path = "modules/features/lower-third/src/test/kotlin/org/churchpresenter/lowerthird/LowerThirdTabTest.kt"
         groups = test_classes([path], reader({path: "package org.churchpresenter.lowerthird\n\nclass X"}))
         self.assertEqual({":lower-third:test": ["org.churchpresenter.lowerthird.LowerThirdTabTest"]}, groups)
 
     def test_the_package_line_wins_over_the_directory(self):
-        path = "diagnostics/src/test/kotlin/org/elsewhere/HungTestReporterTest.kt"
+        path = "modules/core/diagnostics/src/test/kotlin/org/elsewhere/HungTestReporterTest.kt"
         groups = test_classes([path], reader({path: "// header\npackage org.churchpresenter.diagnostics\n"}))
         self.assertEqual(["org.churchpresenter.diagnostics.HungTestReporterTest"], groups[":diagnostics:test"])
 
@@ -28,27 +28,27 @@ class TestClassesTest(unittest.TestCase):
     def test_screenshot_suites_helpers_and_main_sources_are_left_out(self):
         paths = [
             "composeApp/src/jvmTest/kotlin/a/b/SongsTabScreenshotTest.kt",
-            "lower-third/src/testFixtures/kotlin/a/b/LowerThirdTabTestSupport.kt",
-            "lower-third/src/test/kotlin/a/b/LowerThirdTabTestSupport.kt",
-            "songs/src/main/kotlin/a/b/SongsTest.kt",
+            "modules/features/lower-third/src/testFixtures/kotlin/a/b/LowerThirdTabTestSupport.kt",
+            "modules/features/lower-third/src/test/kotlin/a/b/LowerThirdTabTestSupport.kt",
+            "modules/features/songs/src/main/kotlin/a/b/SongsTest.kt",
             "README.md",
         ]
         self.assertEqual({}, test_classes(paths, reader({p: "package a.b" for p in paths})))
 
     def test_a_file_without_a_package_is_named_alone_and_classes_are_deduplicated(self):
-        a = "live-show/src/test/kotlin/x/CueTest.kt"
-        b = "live-show/src/test/kotlin/y/CueTest.kt"
+        a = "modules/engines/live-show/src/test/kotlin/x/CueTest.kt"
+        b = "modules/engines/live-show/src/test/kotlin/y/CueTest.kt"
         groups = test_classes([a, b], reader({a: "class CueTest", b: "class CueTest"}))
         self.assertEqual({":live-show:test": ["CueTest"]}, groups)
 
     def test_a_file_named_for_what_it_tests_runs_the_class_it_declares(self):
-        path = "updater/src/test/kotlin/org/churchpresenter/updater/UpdateCheckerTest.kt"
+        path = "modules/features/updater/src/test/kotlin/org/churchpresenter/updater/UpdateCheckerTest.kt"
         text = "package org.churchpresenter.updater\n\nclass IsNewerVersionTest {\n    class InnerTest\n}\n"
         groups = test_classes([path], reader({path: text}))
         self.assertEqual({":updater:test": ["org.churchpresenter.updater.IsNewerVersionTest"]}, groups)
 
     def test_every_test_class_a_file_declares_is_run(self):
-        path = "qa/src/test/kotlin/org/churchpresenter/qa/QATest.kt"
+        path = "modules/features/qa/src/test/kotlin/org/churchpresenter/qa/QATest.kt"
         text = "package org.churchpresenter.qa\nclass QATest\ninternal class QAEdgeTest\nclass Fixture\n"
         groups = test_classes([path], reader({path: text}))
         self.assertEqual(["org.churchpresenter.qa.QAEdgeTest", "org.churchpresenter.qa.QATest"], groups[":qa:test"])
@@ -56,20 +56,20 @@ class TestClassesTest(unittest.TestCase):
     def test_a_file_that_cannot_be_read_is_skipped(self):
         def unreadable(_):
             raise OSError("gone")
-        self.assertEqual({}, test_classes(["qa/src/test/kotlin/a/QATest.kt"], unreadable))
+        self.assertEqual({}, test_classes(["modules/features/qa/src/test/kotlin/a/QATest.kt"], unreadable))
 
     def test_added_modified_and_edited_renames_count_but_an_unchanged_move_does_not(self):
         name_status = "\n".join([
-            "A\tqa/src/test/kotlin/a/NewTest.kt",
-            "M\tqa/src/test/kotlin/a/EditedTest.kt",
-            "R100\tcanvas/src/test/kotlin/a/MovedTest.kt\tcanvas-engine/src/test/kotlin/a/MovedTest.kt",
-            "R087\tcanvas/src/test/kotlin/a/BothTest.kt\tcanvas-engine/src/test/kotlin/a/BothTest.kt",
+            "A\tmodules/features/qa/src/test/kotlin/a/NewTest.kt",
+            "M\tmodules/features/qa/src/test/kotlin/a/EditedTest.kt",
+            "R100\tmodules/features/canvas/src/test/kotlin/a/MovedTest.kt\tmodules/engines/canvas-engine/src/test/kotlin/a/MovedTest.kt",
+            "R087\tmodules/features/canvas/src/test/kotlin/a/BothTest.kt\tmodules/engines/canvas-engine/src/test/kotlin/a/BothTest.kt",
         ])
         self.assertEqual(
             [
-                "qa/src/test/kotlin/a/NewTest.kt",
-                "qa/src/test/kotlin/a/EditedTest.kt",
-                "canvas-engine/src/test/kotlin/a/BothTest.kt",
+                "modules/features/qa/src/test/kotlin/a/NewTest.kt",
+                "modules/features/qa/src/test/kotlin/a/EditedTest.kt",
+                "modules/engines/canvas-engine/src/test/kotlin/a/BothTest.kt",
             ],
             changed_paths(name_status),
         )

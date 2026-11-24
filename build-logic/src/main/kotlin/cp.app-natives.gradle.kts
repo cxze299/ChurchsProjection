@@ -173,7 +173,7 @@ val signBundledFfmpeg = tasks.register("signBundledFfmpeg") {
     val identity = macSigningProps.getProperty("identityName", "")
     val keychain = macSigningProps.getProperty("keychain", "")
     val ffmpeg = layout.projectDirectory.file("src/jvmMain/appResources/macos/ffmpeg").asFile
-    val entitlements = rootProject.file("desktop/macos/ffmpeg.entitlements")
+    val entitlements = rootProject.file("platform/desktop/macos/ffmpeg.entitlements")
 
     onlyIf { org.gradle.internal.os.OperatingSystem.current().isMacOsX && identity.isConfigured() && ffmpeg.isFile }
     // The output is the input, re-signed in place; `--force` makes that idempotent.

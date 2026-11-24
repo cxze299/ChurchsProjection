@@ -1,5 +1,7 @@
 # Local project instructions
 
+- 源码模块按架构层存放在 modules/{core,engines,features,output,integrations}/，新增或移动模块必须同步 config/architecture/module-paths.properties；Gradle 逻辑模块名保持不变，composeApp 固定入口路径保持不变。
+
 - 目录分类以 DIRECTORY_LAYOUT.md 为准；本地试验软件、未采用设计稿和个人笔记存入 .local/ 并保持忽略，正式品牌资源使用 assets/branding/。不得将 Gradle 模块、平台权限文件或必需原生工具当作无关文件清理。
 
 - 构建分支更新后自动将当前提交合并到 cxze299/ChurchsProjection 的 main，无需再次询问；打包结果不作为分支合并条件，不自动合并无关依赖更新分支。

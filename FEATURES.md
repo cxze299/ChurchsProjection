@@ -5,7 +5,7 @@
 > Source paths below are relative to `composeApp/src/jvmMain/kotlin/org/churchpresenter/app/churchpresenter/`
 >
 > Except `data/settings/…` and `data/SettingsManager.kt`, which are shorthand for the `:settings`
-> module: every one of those files sits flat in `settings/src/main/kotlin/org/churchpresenter/settings/`
+> module: every one of those files sits flat in `modules/core/settings/src/main/kotlin/org/churchpresenter/settings/`
 > (package `org.churchpresenter.settings`).
 
 ## Songs & Lyrics
@@ -23,11 +23,11 @@
 - **A background per song** — give a song, or one of its sections, its own colour, gradient, picture, video or camera, separately for full screen and lower third, with a look (dim, blur, opacity) on top — or let it follow the profile's background.
 
 **Source locations:**
-- `songs/` (the `:songs` Gradle module) — `SongsTab.kt` and its panes (`SongListPane.kt` with
+- `modules/features/songs/` (the `:songs` Gradle module) — `SongsTab.kt` and its panes (`SongListPane.kt` with
   `SongListScope.kt`, `SongTableHeader.kt`, `SongListRows.kt`; `SongLyricsPanel.kt`),
   `SongsViewModel.kt`, `SongFolderWatcher.kt`, `SongSearchMatch.kt` (where each search hit matched),
   and `Songs.kt` (the library on disk, `.sps` included)
-- The song editor, also in `songs/`: `EditSongDialog.kt` (the dialog and `EditSongContent`) with
+- The song editor, also in `modules/features/songs/`: `EditSongDialog.kt` (the dialog and `EditSongContent`) with
   `EditSongState.kt`, `EditSongHeader.kt`, `EditSongEditor.kt`, `EditSongLyricsField.kt`,
   `EditSongText.kt`, `SectionBackgroundSlot.kt` and `SongBackgroundButtonState.kt` (the slot the
   app's Background button fills); `SongChordPreview.kt` and `ChordPicker.kt` — the chord preview:
@@ -43,11 +43,11 @@
 - `data/settings/SongSettings.kt`
 - `presenter/…/SongPresenter.kt`, with `SongLook.kt`, `SongFrame.kt`, `SongFitFrame.kt` and `SongSlide*.kt` beside it
 - `profiles/…/SongSettingsTab.kt`
-- `core-models/src/main/kotlin/.../models/songs/LyricSection.kt` (the `:core-models` module)
-- `converter/` (the `:converter` Gradle module, at the repo root) — format converter tool
-- `songlibrary/` (the `:songlibrary` Gradle module) — the Song Library Manager grid; `TranslationComparison.kt` and `ui/CompareTranslations*.kt` — Compare translations
-- `song-chords/` (the `:song-chords` Gradle module) — chord parsing, transposition and chord-sheet import
-- `core-models/` (the `:core-models` Gradle module) — `models.songs`: the song, the `.song` file format and the library folder, shared by the app and the library window
+- `modules/core/core-models/src/main/kotlin/.../models/songs/LyricSection.kt` (the `:core-models` module)
+- `modules/features/converter/` (the `:converter` Gradle module, at the repo root) — format converter tool
+- `modules/features/songlibrary/` (the `:songlibrary` Gradle module) — the Song Library Manager grid; `TranslationComparison.kt` and `ui/CompareTranslations*.kt` — Compare translations
+- `modules/core/song-chords/` (the `:song-chords` Gradle module) — chord parsing, transposition and chord-sheet import
+- `modules/core/core-models/` (the `:core-models` Gradle module) — `models.songs`: the song, the `.song` file format and the library folder, shared by the app and the library window
 
 ## Bible & Scripture
 - **Instant verse display** — browse any of the 66 books and put a verse on screen in seconds.
@@ -64,30 +64,30 @@
 - **Follow along automatically** — connect a live speech-to-text feed and the app listens for spoken Bible references — stated outright or simply the next verse in a passage being read — and stages or goes live with the matching verse on its own, tiered by confidence so only clear matches jump straight to the screen.
 
 **Source locations:**
-- `bible-tab/` (the `:bible-tab` Gradle module) — `BibleTab.kt` and its pieces (`BibleTab*.kt`,
+- `modules/features/bible-tab/` (the `:bible-tab` Gradle module) — `BibleTab.kt` and its pieces (`BibleTab*.kt`,
   `BibleColumns.kt`, `BibleCrossReferences.kt`, `BibleHistoryPanel.kt`, `BibleDetectionPanel.kt`,
   `BibleTranslationOrder.kt`), `BibleViewModel.kt` with its parts in `BibleViewModel*.kt`, the
   cross references (`CrossReferenceRepository.kt`), `VerseSequenceLog.kt`, `BibleBookNames.kt` and
   `BibleBookAbbreviations.kt`
 - `tabs/AppBibleTab.kt` — what a verse going live records; `data/CrossReferenceData.kt` — the bundled
   cross-reference dataset the tab is handed
-- `dictionary/` (the `:dictionary` Gradle module) — the Strong's dictionary tab (`DictionaryTab.kt` and
+- `modules/features/dictionary/` (the `:dictionary` Gradle module) — the Strong's dictionary tab (`DictionaryTab.kt` and
   its panes), `DictionaryViewModel`, the interlinear index and the bundled Strong's/interlinear data;
   `:server`'s `StrongsDictionaryRepository.kt` serves the same data to the companion API
 - `presenter/…/dictionary/presenter/DictionaryPresenter.kt` — the dictionary card on the output
 - `profiles/…/ProfileDictionaryPage.kt`, `profiles/…/DictionaryPart.kt` — how the dictionary card looks on each output, edited on Profiles → Dictionary
 - `bible-tab/…/BibleEngineClient.kt` — auto-follow speech detection client
-- `bible/` (the `:bible` Gradle module) — `Bible.kt`, `BibleBook.kt`, `BibleSearch.kt`,
+- `modules/core/bible/` (the `:bible` Gradle module) — `Bible.kt`, `BibleBook.kt`, `BibleSearch.kt`,
   `BibleVerse.kt`, `BibleTranslationNames.kt` and the `.spb` format helpers in `SpbFormat.kt`
-- `bible-formats/` (the `:bible-formats` Gradle module) — the download catalogues and the `.spb` converters behind them
-- `bible-formats/src/main/kotlin/.../catalog/` — `EBibleSource` (eBible.org, USFX), `ZefaniaSource` + `ZefaniaRepositoryIndex`, `BebliaSource` + `BebliaCatalogIndex`
+- `modules/engines/bible-formats/` (the `:bible-formats` Gradle module) — the download catalogues and the `.spb` converters behind them
+- `modules/engines/bible-formats/src/main/kotlin/.../catalog/` — `EBibleSource` (eBible.org, USFX), `ZefaniaSource` + `ZefaniaRepositoryIndex`, `BebliaSource` + `BebliaCatalogIndex`
 - `bible-tab/…/catalog/BibleCatalogViewModel.kt`, `bible-tab/…/catalog/BibleCatalogBrowserDialog.kt` — download browser UI
-- `bible-formats/src/main/kotlin/.../UsfxToSpbConverter.kt`, `XmlToSpbConverter.kt` — the conversions
+- `modules/engines/bible-formats/src/main/kotlin/.../UsfxToSpbConverter.kt`, `XmlToSpbConverter.kt` — the conversions
 - `data/settings/BibleSettings.kt`, `data/settings/BibleEngineSettings.kt`
 - `presenter/…/BiblePresenter.kt`, with `BibleLook.kt`, `BibleFrame.kt`, `BibleSlide.kt`, `BibleLayouts.kt` and `PresenterBackdrop.kt` beside it
 - `profiles/…/BibleSettingsTab.kt`
-- `core-models/src/main/kotlin/.../models/bible/SelectedVerse.kt` (the `:core-models` module)
-- `bible-engine/` (the `:bible-engine` Gradle module, at the repo root) — Bible Lookup Engine (speech-to-reference detection)
+- `modules/core/core-models/src/main/kotlin/.../models/bible/SelectedVerse.kt` (the `:core-models` module)
+- `modules/engines/bible-engine/` (the `:bible-engine` Gradle module, at the repo root) — Bible Lookup Engine (speech-to-reference detection)
 - `shared-ui/…/utils/TrainingDataLogger.kt`, `LiveHistoryLogger.kt` (the `:shared-ui` module) — the session logs in
   `~/.churchpresenter/bible-stt-logs/`, named after the STT session id (read from STT's
   `/api/health` on connect and from its socket payloads) or else the app's start time, opened by one `{"type":"session"}` header
@@ -108,7 +108,7 @@
 - `slides/…/tabs/PresentationTab.kt` (the `:slides` module) — main UI; its pieces in `PresentationTabScope.kt`, `PresentationTopBar.kt`, `PresentationControlsBar.kt`, `PresentationBody.kt`
 - `slides/…/viewmodel/PresentationViewModel.kt`
 - `live-output/…/PresentationPlayer.kt` (the app), `slides-engine/…/presenter/PresentationPresenter.kt` and `output-api/…/slides/presenter/PresentationFrame.kt` — animated playback
-- `presentation-engine/` (the `:presentation-engine` Gradle module, at the repo root) — PPTX/Keynote parsing, timing and animation engine
+- `modules/engines/presentation-engine/` (the `:presentation-engine` Gradle module, at the repo root) — PPTX/Keynote parsing, timing and animation engine
 - `data/settings/PresentationSettings.kt`
 - `:server`'s `CompanionServer.kt` — slide API for mobile (background rendering)
 
@@ -142,9 +142,9 @@
 - **Animated Bible lower third** — opt in to a Lottie band for scripture: the band slides, wipes, unrolls or fades in on Go Live, each verse types, scrolls like a ticker, fades or slides in as you step through a passage, and everything animates out on Escape. Design it in the built-in Bible band generator, with your Bible fonts, sizes and colors filled in live, for one or two languages.
 
 **Source locations:**
-- `lower-third/` (the `:lower-third` Gradle module) — the tab (`LowerThird.kt` and its pieces in
+- `modules/features/lower-third/` (the `:lower-third` Gradle module) — the tab (`LowerThird.kt` and its pieces in
   `LowerThird*.kt`)
-- `lower-third-engine/` (the `:lower-third-engine` Gradle module) — `LowerThirdSequencer.kt`, and under
+- `modules/engines/lower-third-engine/` (the `:lower-third-engine` Gradle module) — `LowerThirdSequencer.kt`, and under
   `render/` the ATEM render cache (`LottieRenderCache.kt` with `LottieRenderSizes.kt`,
   `LottieCacheFiles.kt`, `ArgbRle.kt`), the off-screen renderer, `LottieFonts` and the bundled fonts
 - `tabs/AppLowerThirdTab.kt` — the app's wrapper, which supplies the preview output and its picker
@@ -152,14 +152,14 @@
 - `lottieGenerator/.../lottie/TextShaping.kt` — the Text shaping setting every Lottie player reads from the file
 - `presenter/…/BibleLottieBand.kt`, `presenter/…/BibleLottieTemplate.kt`, `presenter/…/BibleLottieTextFit.kt`, `presenter/…/BibleBandClock.kt` — the Bible band at run time; driven from `live-output/…/PresenterTransitionEffects.kt`
 - `profiles/…/BibleLottieBandPicker.kt` — the template picker, the Bible tab's Lower Third Animation section and the generator window
-- `lottieGenerator/src/main/kotlin/.../band/` (the `:lottieGenerator` module) — the Bible band generator
+- `modules/engines/lottieGenerator/src/main/kotlin/.../band/` (the `:lottieGenerator` module) — the Bible band generator
 
 ## Announcements & Timers
 - **On-screen announcements** — show text anywhere on screen with a wide range of slide and scroll animations, custom colors, speed and looping, for a set number of seconds or until cleared (`live-output/…/AnnouncementExpiry.kt`). The next song line or verse takes one put over it down. The tab is laid out around a full-height preview in the output's own shape, with the text and the timer side by side and their position, background and animation under the preview.
 - **Countdown timers** — count down to a duration or to a specific clock time, with custom colors and an end-of-countdown message — perfect for "service starts in…".
 
 **Source locations:**
-- `announcements/` (the `:announcements` Gradle module) — `AnnouncementsTab.kt` and its pieces
+- `modules/features/announcements/` (the `:announcements` Gradle module) — `AnnouncementsTab.kt` and its pieces
   (`Announcements*.kt`), `AnnouncementsViewModel.kt` with its timer parts in `AnnouncementsTimerParts.kt`
 - `tabs/AppAnnouncementsTab.kt` — the app's wrapper: the live output, the stage monitors and the
   preview-output picker; `live-output/…/PresenterAnnouncementsOutput.kt` — the tab's `AnnouncementsOutput`
@@ -179,7 +179,7 @@
 - `web/…/tabs/WebTab.kt` (the `:web` module) — web browser UI; its pieces in `WebTabScope.kt`, `WebToolbar.kt`, `WebPreview.kt`; the app fills in the live output and the preview picker in `tabs/AppWebTab.kt`
 - `canvas/…/CanvasTab.kt` (the `:canvas` module) — scene compositor UI; its pieces in `CanvasTabScope.kt`, `CanvasLeftPanel.kt`, `CanvasAddSourceMenu.kt`, `CanvasCenterPanel.kt`
 - `canvas/…/SceneViewModel.kt`, its source edits in `SceneViewModelSources.kt`
-- `core-models/src/main/kotlin/.../models/scene/SceneModels.kt` (the `:core-models` module) — including a scene's second layout and which one an output draws
+- `modules/core/core-models/src/main/kotlin/.../models/scene/SceneModels.kt` (the `:core-models` module) — including a scene's second layout and which one an output draws
 - `canvas-engine/…/SceneCanvas.kt`, `SceneSourceRenderer.kt` (with `SceneTextSources.kt`, `SceneClockSource.kt`, `SceneDeviceSources.kt`) (the `:canvas-engine` module); the editors are `canvas/…/SourcePropertiesPanel.kt`
 - `canvas/…/CanvasSizeMenu.kt`, `CanvasPlacement.kt` — a scene's size and layouts, and layers left off the canvas
 - `canvas-engine/…/SharedBrowserFrameCache.kt` (with `BrowserProcesses.kt`, `CdpPages.kt`), `SharedCameraFrameCache.kt`
@@ -199,8 +199,8 @@
 - **Two languages your way** — stacked, side by side, or interleaved with each line followed by its translation; either language first; sharing a box or each in its own; the translation in its own size, capitals, weight and slant.
 
 **Source locations:**
-- `stt/` (the `:stt` Gradle module) — `STTTab.kt` (with `STTTabParts.kt`)
-- `stt-engine/` (the `:stt-engine` Gradle module) — `STTManager.kt` (with `STTTranscript.kt` and the
+- `modules/features/stt/` (the `:stt` Gradle module) — `STTTab.kt` (with `STTTabParts.kt`)
+- `modules/engines/stt-engine/` (the `:stt-engine` Gradle module) — `STTManager.kt` (with `STTTranscript.kt` and the
   Help Dev `STTCapture.kt`)
 - `tabs/AppSTTTab.kt` — the app's wrapper, which supplies the live mode and the caption settings dialog
 - `data/settings/STTSettings.kt`
@@ -226,7 +226,7 @@
 - `presenter/…/qa/presenter/QAPresenter.kt` — the question and the QR code on the output; the QR image itself is `generateQRCodeBitmap` in `:shared-ui`
 - `profiles/…/ProfileOverlayPages.kt` — the question and QR look, edited on Profiles → Q&A
 - `dialogs/QARemoteDialog.kt` — links, public access, rate limit and the QR message
-- `core-models/src/main/kotlin/.../models/qa/Question.kt` (the `:core-models` module)
+- `modules/core/core-models/src/main/kotlin/.../models/qa/Question.kt` (the `:core-models` module)
 
 ## Service Planning
 - **Drag-and-drop schedules** — build your whole service from songs, scripture, slides, media, lower thirds, announcements and websites.
@@ -234,9 +234,9 @@
 - **Stay organized** — color-coded labels, per-item notes, quick reordering, recents and full undo/redo; Add Item stays pinned below the run of show however long it grows.
 
 **Source locations:**
-- `schedule/src/main/kotlin/org/churchpresenter/schedule/ScheduleTab.kt` — main UI (the `:schedule` module)
-- `schedule/src/main/kotlin/org/churchpresenter/schedule/ScheduleViewModel.kt`, plus its `ScheduleViewModel*.kt` extensions
-- `core-models/src/main/kotlin/.../models/schedule/ScheduleItem.kt` (the `:core-models` module)
+- `modules/features/schedule/src/main/kotlin/org/churchpresenter/schedule/ScheduleTab.kt` — main UI (the `:schedule` module)
+- `modules/features/schedule/src/main/kotlin/org/churchpresenter/schedule/ScheduleViewModel.kt`, plus its `ScheduleViewModel*.kt` extensions
+- `modules/core/core-models/src/main/kotlin/.../models/schedule/ScheduleItem.kt` (the `:core-models` module)
 - `profiles/…/FileManager.kt`
 - `dialogs/AddLabelDialog.kt`
 
@@ -248,9 +248,9 @@
 - **Planning Center import** — bring a Planning Center Services plan's songs, media and order of service straight into the Schedule, with its songs matched against your library. Each church uses its own free PCO developer credentials; nothing is written back.
 
 **Source locations:**
-- `calendar/` (the `:calendar` Gradle module) — the Calendar Manager window, its model and the PDF export
+- `modules/features/calendar/` (the `:calendar` Gradle module) — the Calendar Manager window, its model and the PDF export
 - `server-ui/…/CalendarEnrollQrDialog.kt`, `server-ui/…/CalendarSyncCard.kt`, `:server`'s `CalendarRelayAccess.kt` — pairing a phone and syncing through the relay
-- `planning-center/` (the `:planning-center` Gradle module) — the Planning Center client, and under
+- `modules/features/planning-center/` (the `:planning-center` Gradle module) — the Planning Center client, and under
   `ui/` the import window (`PlanningCenterImportDialog.kt`, `PlanningCenterImportViewModel.kt`)
 - `PlanningCenterImportWiring.kt` — the app's wiring: the OAuth client, the windows, the song editor
   and the slide count; `planning-center/…/PlanningCenterPrimaryBible.kt` and
@@ -283,9 +283,9 @@
 - `live-output/…/DeckLinkComposeOutput.kt`
 - `live-output/…/BrowserSourceVideoRenderer.kt`, `presenter/…/LocalTransparentBlanking.kt` — Browser Source output
 - `live-output/…/ComposeScenePump.kt`, `live-output/…/OffscreenOutputContent.kt` — the off-screen render both virtual outputs share
-- `ndi/` (the `:ndi` Gradle module) — NDI itself: `NdiRuntime`, `NdiLibrary`/`JnaNdiLibrary`, `NdiSender` and `NdiOutputMode`
+- `modules/engines/ndi/` (the `:ndi` Gradle module) — NDI itself: `NdiRuntime`, `NdiLibrary`/`JnaNdiLibrary`, `NdiSender` and `NdiOutputMode`
 - `live-output/…/NdiVideoRenderer.kt`, `live-output/…/NdiManager.kt`, `live-output/…/settings/ProjectionNdiCard.kt` — the app-side wiring and its settings card
-- `omt/` (the `:omt` Gradle module) — OMT itself: `OmtRuntime`, `OmtLibrary`/`JnaOmtLibrary`, `OmtSender`, `OmtReceiver`, `OmtDiscovery`
+- `modules/engines/omt/` (the `:omt` Gradle module) — OMT itself: `OmtRuntime`, `OmtLibrary`/`JnaOmtLibrary`, `OmtSender`, `OmtReceiver`, `OmtDiscovery`
 - `live-output/…/OmtVideoRenderer.kt`, `live-output/…/OmtOutputRegistry.kt`, `live-output/…/OmtManager.kt`, `live-output/…/settings/ProjectionOmtCard.kt` — the app-side OMT wiring and its settings card
 - `gradle/omt-builds.properties`, `.github/workflows/omt-linux.yml`, `THIRD_PARTY_OMT.md` — where the bundled OMT libraries come from, and their licence
 - `media/…/data/StockMediaClient.kt`, `media/…/dialogs/StockMediaBrowserDialog.kt`, `media/…/viewmodel/StockMediaViewModel.kt`, `data/settings/StockPhotoSettings.kt`
@@ -356,11 +356,11 @@
 - **Run each screen from its settings** — its address and health, TV on and off over HDMI, restart, shut down and factory reset; **Update** updates the whole screen, Chromium and the system included, from the signed release.
 
 **Source locations:**
-- `signage/` (the `:signage` Gradle module) — `SignageTab.kt`, `SignageScreenCards.kt`,
+- `modules/features/signage/` (the `:signage` Gradle module) — `SignageTab.kt`, `SignageScreenCards.kt`,
   `ScreenSettingsDialog.kt` with `ScreenSettingsEdit.kt` and `ScreenSettingsWiring.kt`, `LinkDialog.kt`,
   `ScreenUpdateLine.kt`, `SignageController.kt`, `ScreenControls.kt` (pairing, updates, power and the
   TV), `ManifestBuilder.kt`
-- `signage-core/` — the wire types (a copy of the player's own), `KioskPin.kt` and the hub of paired
+- `modules/core/signage-core/` — the wire types (a copy of the player's own), `KioskPin.kt` and the hub of paired
   screens
 - `:server`'s `SignageRoutes.kt`
 - The player itself: the `ChurchPresenter/ChurchPresenter-Signage` repository
@@ -371,13 +371,13 @@
 - **Bitfocus Companion** — trigger lower thirds, ATEM keys and any content from a Stream Deck, either with ready-made HTTP buttons or a native Companion Satellite connection with live status right in the app.
 
 **Source locations:**
-- `atem/` (the `:atem` Gradle module, at the repo root) — the ATEM protocol client itself: `AtemClient`, `AtemConnectionManager`, `AtemFrameEncoder`, `AtemUploadStatus`
+- `modules/engines/atem/` (the `:atem` Gradle module, at the repo root) — the ATEM protocol client itself: `AtemClient`, `AtemConnectionManager`, `AtemFrameEncoder`, `AtemUploadStatus`
 - `:server`'s `AtemBridge.kt` — the app-side wiring between that client, `AtemSettings` and the lower third
-- `obs/` (the `:obs` Gradle module, at the repo root) — `OBSWebSocketManager`, `obsSceneFor` (`ObsSceneSelection.kt`) and `OBSSettingsTab`; `ObsSceneWiring.kt` in the app
-- `companion-surface/` (the `:companion-surface` Gradle module) — `CompanionSurfaceTab.kt`, `CompanionSatelliteViewModel.kt`, `CompanionSurfacePanel.kt`, `CompanionConnectionChipRow.kt`: the surface in the tab and the sidebars
-- `companion-satellite/` (the `:companion-satellite` Gradle module) — native Companion Satellite protocol client
+- `modules/features/obs/` (the `:obs` Gradle module, at the repo root) — `OBSWebSocketManager`, `obsSceneFor` (`ObsSceneSelection.kt`) and `OBSSettingsTab`; `ObsSceneWiring.kt` in the app
+- `modules/features/companion-surface/` (the `:companion-surface` Gradle module) — `CompanionSurfaceTab.kt`, `CompanionSatelliteViewModel.kt`, `CompanionSurfacePanel.kt`, `CompanionConnectionChipRow.kt`: the surface in the tab and the sidebars
+- `modules/engines/companion-satellite/` (the `:companion-satellite` Gradle module) — native Companion Satellite protocol client
 - `data/settings/AtemSettings.kt`, `data/settings/OBSSettings.kt`, `data/settings/CompanionSatelliteSettings.kt`
-- `lower-third/` (the `:lower-third` Gradle module) — `AtemSettingsTab`, the ATEM settings page
+- `modules/features/lower-third/` (the `:lower-third` Gradle module) — `AtemSettingsTab`, the ATEM settings page
 - `companion-surface/…/CompanionSatelliteSettingsTab.kt`
 
 ## Reporting & Licensing
@@ -387,7 +387,7 @@
 - **Tidy the numbers** — remove a single song or verse from the selected period, or clear everything; both ask first.
 
 **Source locations:**
-- `statistics/` (the `:statistics` Gradle module) — `StatisticsManager.kt`, `StatisticsQueries.kt` (the CCLI lookup and the CSV/XLS exports)
+- `modules/features/statistics/` (the `:statistics` Gradle module) — `StatisticsManager.kt`, `StatisticsQueries.kt` (the CCLI lookup and the CSV/XLS exports)
 - `statistics/…/CCLIReportDialog.kt` — the statistics window itself, with `CCLIReportRange.kt`, `CCLIReportTables.kt` and `CCLIReportActivity.kt`
 - `statistics/…/StatisticsPeriod.kt` — the period presets shared by its pills and its date pickers
 
@@ -405,22 +405,22 @@
 
 **Source locations:**
 - `shared-ui/…/language/Language.kt`, `shared-ui/…/language/LanguageProvider.kt`
-- `theme/` (the `:theme` Gradle module, at the repo root) — `Theme.kt`, `ThemeManager.kt`, `ThemeCustomization.kt`, `SemanticColors.kt`, `AppThemeWrapper.kt`
+- `modules/core/theme/` (the `:theme` Gradle module, at the repo root) — `Theme.kt`, `ThemeManager.kt`, `ThemeCustomization.kt`, `SemanticColors.kt`, `AppThemeWrapper.kt`
 - `dialogs/CustomizeThemeDialog.kt`, `dialogs/CustomizeThemePreview.kt`, `dialogs/ThemeCustomizationChoice.kt`, `ui/theme/ThemeCustomizationSettings.kt` — the Customize Theme window, its preview, what it hands back, and the settings it is read from
 - `data/settings/CustomThemeColors.kt` (the `:settings` module) — the optional per-role colours
 - `app-settings/…/SetupWizardDialog.kt` and the `SetupWizard*.kt` steps beside it, `app-settings/…/SetupSummary.kt`
-- `helper/` (the `:helper` Gradle module) — the lamp, its requests, tips and display setup; `HelperWiring.kt` carries its actions out; `shared-ui/…/guide/` tags the controls it points at
-- `helper/…/pack/`, `wick-pack/` — the downloadable Wick pack: its source, the built `pack.json`, and how the app checks, fetches and caches it
+- `modules/features/helper/` (the `:helper` Gradle module) — the lamp, its requests, tips and display setup; `HelperWiring.kt` carries its actions out; `shared-ui/…/guide/` tags the controls it points at
+- `helper/…/pack/`, `tools/wick-pack/` — the downloadable Wick pack: its source, the built `pack.json`, and how the app checks, fetches and caches it
 - `helper/…/report/`, `WickChatSender.kt` — Send this chat: the masking and the Contact Us request
-- `helper/…/intent/semantic/`, `helper/src/main/resources/wick/` — the sentence model (`MiniLmEncoder`), the catalog generated from the codebase that it matches against, and `SemanticIntentResolver`; `helper/tools/export_minilm.py`, `THIRD_PARTY_MINILM.md` — where the bundled model comes from, and its licence
+- `helper/…/intent/semantic/`, `modules/features/helper/src/main/resources/wick/` — the sentence model (`MiniLmEncoder`), the catalog generated from the codebase that it matches against, and `SemanticIntentResolver`; `modules/features/helper/tools/export_minilm.py`, `THIRD_PARTY_MINILM.md` — where the bundled model comes from, and its licence
 - `dialogs/KeyboardShortcutsDialog.kt`, `dialogs/ShortcutBindingRow.kt`, `dialogs/ShortcutCapture.kt`, `dialogs/ShortcutCategoryRail.kt` — the shortcut list and rebinding
 - `composables/LabeledTab.kt`, `app-settings/…/TabLabelsRow.kt` — tab label styles
-- `crossword-tab/…/CrosswordTab.kt`, `crossword-tab/…/data/CrosswordData.kt` (the `:crossword-tab` module) — a hidden tab (←→←→); `crossword/` (the `:crossword` Gradle module) is its authoring tool and the encoded puzzles
+- `crossword-tab/…/CrosswordTab.kt`, `crossword-tab/…/data/CrosswordData.kt` (the `:crossword-tab` module) — a hidden tab (←→←→); `modules/features/crossword/` (the `:crossword` Gradle module) is its authoring tool and the encoded puzzles
 - `dialogs/OptionsDialog.kt`
 - `data/SettingsManager.kt`, `data/settings/AppSettings.kt`, `data/settings/WindowLayoutSettings.kt`
 - `app-settings/…/AutoStartManager.kt`
-- `updater/` (the `:updater` Gradle module) — `UpdateChecker.kt`, the update window (`UpdateAvailableDialog.kt`) and the installer download
-- `diagnostics/` (the `:diagnostics` Gradle module) — `CrashReporter`: crash logs and the Sentry bridge
+- `modules/features/updater/` (the `:updater` Gradle module) — `UpdateChecker.kt`, the update window (`UpdateAvailableDialog.kt`) and the installer download
+- `modules/core/diagnostics/` (the `:diagnostics` Gradle module) — `CrashReporter`: crash logs and the Sentry bridge
 
 ## Free & Open
 - **Free and open-source** — released under the GNU GPL v3. No subscriptions, no per-seat fees.

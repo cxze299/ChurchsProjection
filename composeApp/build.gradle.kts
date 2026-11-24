@@ -454,8 +454,8 @@ compose.desktop {
                 // These REPLACE the Compose plugin's default-entitlements.plist rather than adding
                 // to it — the files restate its three keys for that reason. Read the comments in
                 // them before editing either.
-                entitlementsFile.set(rootProject.file("desktop/macos/churchpresenter.entitlements"))
-                runtimeEntitlementsFile.set(rootProject.file("desktop/macos/churchpresenter-runtime.entitlements"))
+                entitlementsFile.set(rootProject.file("platform/desktop/macos/churchpresenter.entitlements"))
+                runtimeEntitlementsFile.set(rootProject.file("platform/desktop/macos/churchpresenter-runtime.entitlements"))
 
                 // ── macOS Code Signing ────────────────────────────────────────
                 val macIdentity = macSigningProps.getProperty("identityName", "")
@@ -471,7 +471,7 @@ compose.desktop {
                     // Notarization is handled directly in CI via xcrun notarytool + xcrun stapler
                     // (the built-in Gradle notarizeDmg task omits --password from the command line)
                 } else {
-                    logger.lifecycle("macOS signing SKIPPED  (fill identityName in desktop/macos/signing.properties)")
+                    logger.lifecycle("macOS signing SKIPPED  (fill identityName in platform/desktop/macos/signing.properties)")
                 }
             }
 

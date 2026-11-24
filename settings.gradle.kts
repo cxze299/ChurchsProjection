@@ -243,3 +243,11 @@ include(":server-ui")
 // The app's dialogs and small windows -- About, Contact Us, keyboard shortcuts, the remote and
 // show-control dialogs. Depended on by :composeApp.
 include(":dialogs")
+
+// Preserve logical project names while grouping physical sources by architecture layer.
+val modulePaths = java.util.Properties().apply {
+    file("config/architecture/module-paths.properties").inputStream().use { load(it) }
+}
+rootProject.children.forEach { module ->
+    modulePaths.getProperty(module.name)?.let { module.projectDir = file(it) }
+}

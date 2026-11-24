@@ -19,6 +19,7 @@ branch), or one git cannot resolve -- or when a file every module is built from 
 import argparse
 import subprocess
 import sys
+from module_layout import MODULE_PATHS
 
 # Files every module is configured from: the version catalogue, the root build, build-logic's
 # convention plugins (which own the JaCoCo floors and `useJUnitPlatform()`), and the wrapper. A
@@ -27,12 +28,12 @@ import sys
 # Deliberately NOT here: settings.gradle.kts (it changes to `include(...)` a new module, which cannot
 # affect the others, and :composeApp runs on every push anyway), config/detekt/ (no test reads it,
 # and Detekt runs unfiltered), and the workflows.
-SHARED_FILES = {"build.gradle.kts", "gradle/libs.versions.toml"}
+SHARED_FILES = {"build.gradle.kts", "gradle/libs.versions.toml", "config/architecture/module-paths.properties"}
 SHARED_DIRS = ("gradle/wrapper/", "build-logic/")
 
 # Inputs a module reads from outside its own directory without a project dependency, so the graph
 # cannot show them. :crossword-tab copies the encoded puzzles :crossword writes, at build time.
-EXTRA_INPUTS = {":crossword-tab": ("crossword/encoded/",)}
+EXTRA_INPUTS = {":crossword-tab": ("modules/features/crossword/encoded/",)}
 
 NO_BASE = ("", "0" * 40)
 
@@ -56,6 +57,9 @@ def changed_files(base):
 
 
 def module_of(path, graph):
+    for name, directory in MODULE_PATHS.items():
+        if path.startswith(directory + "/") and ":" + name in graph:
+            return ":" + name
     top = path.split("/", 1)[0]
     module = ":" + top
     return module if module in graph else None

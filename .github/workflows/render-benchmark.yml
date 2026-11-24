@@ -22,14 +22,14 @@ name: Render benchmark
 on:
   pull_request:
     paths:
-      - 'live-output/**'
-      - 'presenter/**'
-      - 'slides-engine/**'
-      - 'media-engine/**'
-      - 'canvas-engine/**'
-      - 'lower-third-engine/**'
-      - 'web-engine/**'
-      - 'stt-engine/**'
+      - 'modules/output/live-output/**'
+      - 'modules/engines/presenter/**'
+      - 'modules/engines/slides-engine/**'
+      - 'modules/engines/media-engine/**'
+      - 'modules/engines/canvas-engine/**'
+      - 'modules/engines/lower-third-engine/**'
+      - 'modules/engines/web-engine/**'
+      - 'modules/engines/stt-engine/**'
       - 'composeApp/src/jvmTest/kotlin/org/churchpresenter/app/churchpresenter/benchmark/**'
       - 'composeApp/benchmarks/ci/**'
       - '.github/workflows/render-benchmark.yml'

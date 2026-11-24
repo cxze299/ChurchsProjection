@@ -45,18 +45,18 @@ jcefmaven_build_meta.json.template
 /org/
 /uk/
 *.class
-native/decklink/*.obj
-native/decklink/*.lib
-native/decklink/*.exp
-native/decklink/*.tlb
-native/decklink/*.dll
-native/decklink/DeckLinkAPI_h.h
-native/decklink/DeckLinkAPI_i.c
-native/decklink/build/
+platform/native/decklink/*.obj
+platform/native/decklink/*.lib
+platform/native/decklink/*.exp
+platform/native/decklink/*.tlb
+platform/native/decklink/*.dll
+platform/native/decklink/DeckLinkAPI_h.h
+platform/native/decklink/DeckLinkAPI_i.c
+platform/native/decklink/build/
 
 
 # Crossword .xwp files — owned by the :crossword module, synced into :crossword-tab by Gradle at build time
-crossword-tab/src/main/resources/crossword/
+modules/features/crossword-tab/src/main/resources/crossword/
 
 # Credential / config files
 firebase-config.json
@@ -84,27 +84,27 @@ composeApp/src/jvmMain/appResources/*/omt/
 # Roborazzi writes each theme's half here before stacking them into the committed golden.
 # Scratch: cleaned up after every run, and never something to commit.
 composeApp/screenshots/.parts/
-shared-ui/screenshots/.parts/
-slides/screenshots/.parts/
-media/screenshots/.parts/
-songs/screenshots/.parts/
-bible-tab/screenshots/.parts/
-schedule/screenshots/.parts/
-canvas/screenshots/.parts/
-presenter/screenshots/.parts/
-profiles/screenshots/.parts/
-companion-surface/screenshots/.parts/
-announcements/screenshots/.parts/
-calendar/screenshots/.parts/
-lower-third/screenshots/.parts/
-qa/screenshots/.parts/
-dictionary/screenshots/.parts/
-songlibrary/screenshots/.parts/
-stt/screenshots/.parts/
-lottieGenerator/screenshots/.parts/
-obs/screenshots/.parts/
-crossword-tab/screenshots/.parts/
-dialogs/screenshots/.parts/
+modules/core/shared-ui/screenshots/.parts/
+modules/features/slides/screenshots/.parts/
+modules/features/media/screenshots/.parts/
+modules/features/songs/screenshots/.parts/
+modules/features/bible-tab/screenshots/.parts/
+modules/features/schedule/screenshots/.parts/
+modules/features/canvas/screenshots/.parts/
+modules/engines/presenter/screenshots/.parts/
+modules/integrations/profiles/screenshots/.parts/
+modules/features/companion-surface/screenshots/.parts/
+modules/features/announcements/screenshots/.parts/
+modules/features/calendar/screenshots/.parts/
+modules/features/lower-third/screenshots/.parts/
+modules/features/qa/screenshots/.parts/
+modules/features/dictionary/screenshots/.parts/
+modules/features/songlibrary/screenshots/.parts/
+modules/features/stt/screenshots/.parts/
+modules/engines/lottieGenerator/screenshots/.parts/
+modules/features/obs/screenshots/.parts/
+modules/features/crossword-tab/screenshots/.parts/
+modules/integrations/dialogs/screenshots/.parts/
 screenshots-compare/
 
 # Local planning notes
