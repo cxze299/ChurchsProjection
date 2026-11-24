@@ -1,0 +1,124 @@
+name: Compare and merge builds to main
+
+on:
+  push:
+    branches:
+      - 'builds/**'
+      - 'codex/build-**'
+
+permissions:
+  actions: write
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: auto-merge-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compare-and-merge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+    steps:
+      - name: Check out branch history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Compare branch with main and open a pull request
+        id: compare
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ github.ref_name }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          git fetch --quiet origin \
+            +refs/heads/main:refs/remotes/origin/main \
+            "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH"
+          ahead="$(git rev-list --count "origin/main..origin/$BRANCH")"
+          if [ "$ahead" -eq 0 ]; then
+            echo "No commits to compare with main."
+            exit 0
+          fi
+
+          pr="$(gh pr list --repo "$REPOSITORY" --base main --head "$BRANCH" --state open --json number --jq '.[0].number // empty')"
+          if [ -z "$pr" ]; then
+            title="$(git log -1 --format=%s "origin/$BRANCH")"
+            gh pr create \
+              --repo "$REPOSITORY" \
+              --base main \
+              --head "$BRANCH" \
+              --title "$title" \
+              --body "Automated comparison of $BRANCH with main. The branch is merged after its test workflow succeeds and repository merge requirements are met."
+            pr="$(gh pr list --repo "$REPOSITORY" --base main --head "$BRANCH" --state open --json number --jq '.[0].number')"
+          fi
+          echo "number=$pr" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse "origin/$BRANCH")" >> "$GITHUB_OUTPUT"
+
+      - name: Run the test workflow for this branch
+        if: steps.compare.outputs.number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ github.ref_name }}
+          EXPECTED_SHA: ${{ steps.compare.outputs.sha }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          started="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          gh workflow run test.yml --repo "$REPOSITORY" --ref "$BRANCH"
+
+          run_id=""
+          for attempt in $(seq 1 30); do
+            run_id="$(gh run list \
+              --repo "$REPOSITORY" \
+              --workflow test.yml \
+              --branch "$BRANCH" \
+              --event workflow_dispatch \
+              --limit 20 \
+              --json databaseId,headSha,createdAt \
+              | jq -r --arg sha "$EXPECTED_SHA" --arg started "$started" \
+                '[.[] | select(.headSha == $sha and .createdAt >= $started)] | first | .databaseId // empty')"
+            [ -n "$run_id" ] && break
+            sleep 10
+          done
+          if [ -z "$run_id" ]; then
+            echo "Could not find the dispatched test run for $EXPECTED_SHA." >&2
+            exit 1
+          fi
+
+          for attempt in $(seq 1 95); do
+            result="$(gh run view "$run_id" --repo "$REPOSITORY" --json status,conclusion)"
+            status="$(jq -r '.status' <<< "$result")"
+            if [ "$status" = completed ]; then
+              conclusion="$(jq -r '.conclusion' <<< "$result")"
+              if [ "$conclusion" != success ]; then
+                echo "Test workflow finished with conclusion: $conclusion" >&2
+                exit 1
+              fi
+              break
+            fi
+            if [ "$attempt" -eq 95 ]; then
+              echo "Timed out waiting for the test workflow." >&2
+              exit 1
+            fi
+            sleep 60
+          done
+
+      - name: Enable merge after checks pass
+        if: steps.compare.outputs.number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ github.ref_name }}
+          EXPECTED_SHA: ${{ steps.compare.outputs.sha }}
+          PR: ${{ steps.compare.outputs.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          remote_sha="$(git ls-remote origin "refs/heads/$BRANCH" | cut -f1)"
+          pr_sha="$(gh pr view "$PR" --repo "$REPOSITORY" --json headRefOid --jq '.headRefOid')"
+          if [ "$remote_sha" != "$EXPECTED_SHA" ] || [ "$pr_sha" != "$EXPECTED_SHA" ]; then
+            echo "The source branch changed during checks; leaving the pull request open for the next push." >&2
+            exit 1
+          fi
+          gh pr merge "$PR" --repo "$REPOSITORY" --auto --squash

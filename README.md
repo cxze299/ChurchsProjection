@@ -1,4 +1,11 @@
-# ChurchPresenter
+# ChurchsProjection
+
+ChurchsProjection is independently maintained by cxze299, based on
+[ChurchPresenter](https://github.com/ChurchPresenter/ChurchPresenter).
+It adds scripture quick projection, hymn search, configurable shortcuts and resource directories,
+and coordinated Windows and macOS packaging. See [ATTRIBUTION.md](ATTRIBUTION.md) for source attribution.
+
+This project retains the upstream GPL-3.0 license and copyright notices.
 
 Everything a church needs to put words on the screen — songs, scripture, slides, video, captions and
 broadcast graphics — in one free, open-source desktop app for Windows, macOS and Linux.
@@ -21,7 +28,7 @@ its own if the machine does not have one.
 There are no submodules, so a plain clone is everything you need:
 
 ```shell
-git clone https://github.com/ChurchPresenter/ChurchPresenter
+git clone https://github.com/cxze299/ChurchsProjectionown.git
 ```
 
 ### Build and run
