@@ -221,7 +221,7 @@ internal class BibleTabScope(
         }
 
         if (selectedVerses.isNotEmpty()) {
-            onVerseSelected(selectedVerses)
+            publishPassage(selectedVerses)
         }
         primaryVerse?.let { v ->
             onInstanceLinkSendVerse?.invoke(v.bookName, v.chapter, v.verseNumber, v.verseText, v.verseRange)
@@ -342,6 +342,8 @@ internal class BibleLiveNavState {
 /** The history panel, detection list and search field state the tab remembers. */
 @Stable
 internal class BibleTabUiState {
+    var appendPassages by mutableStateOf(false)
+    var appendedPassages: List<List<SelectedVerse>> = emptyList()
     var historyExpanded by mutableStateOf(true)
     var selectedHistoryIdx by mutableStateOf(-1)
     var selectedDetectionIdx by mutableStateOf(0)

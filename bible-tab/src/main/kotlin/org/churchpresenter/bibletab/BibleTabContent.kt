@@ -429,6 +429,12 @@ private fun BibleTabScope.BibleTabVerseHeader(viewModel: BibleViewModel, showLab
         },
         onAddToSchedule = { scheduleCurrentVerse(viewModel) },
         onGoLive = { goLiveWithHistory(viewModel); focusRequester.requestFocus() },
+        appendPassages = ui.appendPassages,
+        onAppendPassagesToggle = {
+            ui.appendPassages = !ui.appendPassages
+            ui.appendedPassages = emptyList()
+            focusRequester.requestFocus()
+        },
     )
 }
 

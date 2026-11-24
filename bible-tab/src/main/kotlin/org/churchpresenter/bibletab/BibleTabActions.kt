@@ -81,7 +81,7 @@ internal fun BibleTabScope.liveVerseClicked(viewModel: BibleViewModel, verseNum:
                 primary.chapter,
                 primary.verseNumber,
             )
-            onVerseSelected(shown)
+            publishPassage(shown)
             onInstanceLinkSendVerse?.invoke(
                 primary.bookName,
                 primary.chapter,

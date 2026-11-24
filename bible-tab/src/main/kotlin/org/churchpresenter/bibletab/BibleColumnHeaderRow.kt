@@ -1,5 +1,7 @@
 package org.churchpresenter.bibletab
 
+import org.churchpresenter.strings.generated.resources.bible_append_passages
+
 import androidx.compose.foundation.layout.Box
 import org.churchpresenter.sharedui.guide.guideTarget
 import org.churchpresenter.sharedui.guide.GuideTargets
@@ -82,6 +84,8 @@ internal fun BibleVerseHeader(
     onAddToSchedule: () -> Unit,
     onGoLive: () -> Unit,
     showLabel: Boolean = true,
+    appendPassages: Boolean = false,
+    onAppendPassagesToggle: () -> Unit = {},
 ) {
     val holdLiveStr = stringResource(Res.string.hold_live)
     val verseSelectionHint = stringResource(Res.string.bible_verse_selection_hint)
@@ -113,6 +117,12 @@ internal fun BibleVerseHeader(
         }
 
         HoldLivePill(holdAvailable, holdLive, holdLiveStr, verseSelectionHint, onHoldLiveToggle)
+
+        RaisedFilterChip(
+            selected = appendPassages,
+            onClick = onAppendPassagesToggle,
+            label = { Text(stringResource(org.churchpresenter.strings.generated.resources.Res.string.bible_append_passages)) },
+        )
 
         TranslationControls(
             translations, storageDirectory, translationSelectionKey, onSwapTranslations, onMoveTranslation,
