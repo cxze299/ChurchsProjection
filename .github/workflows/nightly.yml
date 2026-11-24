@@ -121,9 +121,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # The same version the installers were built with (appVersion() in build-logic's AppBuild.kt).
-          YEAR=$(date +%y)
-          COMMITS=$(git rev-list --count HEAD)
-          VERSION="${YEAR}.$((COMMITS / 256)).$((COMMITS % 256))"
+          VERSION=$(python3 project/scripts/release_version.py)
           DATE=$(date -u +%Y-%m-%d)
           SHORT_SHA=$(git rev-parse --short HEAD)
           BASE=$(gh release list --exclude-pre-releases --exclude-drafts --limit 1 \

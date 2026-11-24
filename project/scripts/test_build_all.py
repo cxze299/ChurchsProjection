@@ -3,6 +3,24 @@ import unittest
 from unittest.mock import patch
 
 import build_all
+from release_version import next_version, normalize_version
+
+
+class ReleaseVersionTest(unittest.TestCase):
+    def test_first_release_starts_at_one_zero_zero(self):
+        self.assertEqual("1.0.0", next_version(["v26.18.22", "nightly", "v1.0.0-beta"]))
+
+    def test_next_release_increments_highest_matching_tag(self):
+        self.assertEqual("1.0.11", next_version(["v1.0.2", "v1.0.10", "v26.18.22", "v1.1.99"]))
+
+    def test_two_segment_versions_are_normalized_for_installers(self):
+        self.assertEqual("1.0.0", normalize_version("v1.0"))
+        self.assertEqual("1.0.3", normalize_version("v1.0.3"))
+        self.assertEqual("1.0.1", next_version(["v1.0"]))
+
+    def test_invalid_versions_are_rejected(self):
+        with self.assertRaises(ValueError):
+            normalize_version("nightly")
 
 
 class ApiRetryTest(unittest.TestCase):

@@ -10,6 +10,7 @@ import sys
 import tempfile
 import time
 from datetime import datetime, timezone
+from release_version import next_version
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -212,8 +213,9 @@ def main():
     print(f"发布仓库：{args.repo}，基础分支：{base_branch}", flush=True)
     if subprocess.run(["git", "diff", "--quiet", "HEAD", "--", ":/"], cwd=ROOT).returncode:
         raise RuntimeError("存在未提交的源码修改，请提交后再构建，以保证三个版本使用同一份源码。")
-    count = int(command(["git", "rev-list", "--count", "HEAD"]).decode().strip())
-    version = f"{datetime.now(timezone.utc).year % 100}.{count // 256}.{count % 256}"
+    tags = api(args.repo, "git/matching-refs/tags/v1.0")
+    version = next_version(tag["ref"].rsplit("/", 1)[-1] for tag in tags)
+    print(f"本次构建版本：{version}", flush=True)
     package = None if args.cloud_only else build_windows(version)
     branch, commit = publish_source(args.repo, base)
     if package:

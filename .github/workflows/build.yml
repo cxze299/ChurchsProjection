@@ -20,7 +20,7 @@ on:
         type: boolean
         default: true
       version:
-        description: 'Release version (e.g. v1.2.3) — leave empty to auto-generate from commit count'
+        description: 'Release version (e.g. v1.0.0) — leave empty for the next 1.0 release'
         required: false
         type: string
         default: ''
@@ -62,7 +62,6 @@ on:
         default: false
 
 env:
-  ORG_GRADLE_PROJECT_churchPresenterVersion: ${{ inputs.version }}
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 permissions:
@@ -70,7 +69,6 @@ permissions:
 
 jobs:
   version:
-    if: ${{ inputs.release }}
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.VERSION }}
@@ -85,25 +83,16 @@ jobs:
         env:
           INPUT_VERSION: ${{ inputs.version }}
         run: |
-          if [ -n "$INPUT_VERSION" ]; then
-            VERSION="$INPUT_VERSION"
-            # Auto-add v prefix if missing
-            [[ "$VERSION" != v* ]] && VERSION="v$VERSION"
-          else
-            YEAR=$(date +%y)
-            COMMITS=$(git rev-list --count HEAD)
-            MAJOR=$YEAR
-            MINOR=$((COMMITS / 256))
-            PATCH=$((COMMITS % 256))
-            VERSION="v${MAJOR}.${MINOR}.${PATCH}"
-          fi
+          VERSION="v$(python3 project/scripts/release_version.py --version "$INPUT_VERSION")"
           echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Version: $VERSION"
 
   build-windows:
+    needs: version
     if: ${{ inputs.windows }}
     runs-on: windows-latest
     env:
+      ORG_GRADLE_PROJECT_churchPresenterVersion: ${{ needs.version.outputs.version }}
       WINDOWS_SIGNING_ENABLED: ${{ secrets.WINDOWS_CERTIFICATE_PFX != '' && 'true' || 'false' }}
     steps:
       - name: Checkout
@@ -222,9 +211,11 @@ jobs:
           retention-days: 7
 
   build-macos:
+    needs: version
     if: ${{ inputs.macos_arm64 }}
     runs-on: macos-15
     env:
+      ORG_GRADLE_PROJECT_churchPresenterVersion: ${{ needs.version.outputs.version }}
       MACOS_SIGNING_ENABLED: ${{ secrets.MACOS_CERTIFICATE_P12 != '' && 'true' || 'false' }}
     steps:
       - name: Checkout
@@ -410,10 +401,10 @@ jobs:
           fi
           echo "Notarization complete"
 
-      - name: Rename macOS DMG (add MACOS-MSilicon label)
+      - name: Rename macOS DMG (add MACOS-M-Silicon label)
         run: |
           for f in project/composeApp/build/compose/binaries/main/dmg/*.dmg; do
-            mv "$f" "${f%.dmg}-MACOS-MSilicon.dmg"
+            mv "$f" "${f%.dmg}-MACOS-M-Silicon.dmg"
           done
 
       - name: Upload artifact
@@ -434,9 +425,11 @@ jobs:
           fi
 
   build-macos-x64:
+    needs: version
     if: ${{ inputs.macos_x64 }}
     runs-on: macos-15-intel
     env:
+      ORG_GRADLE_PROJECT_churchPresenterVersion: ${{ needs.version.outputs.version }}
       MACOS_SIGNING_ENABLED: ${{ secrets.MACOS_CERTIFICATE_P12 != '' && 'true' || 'false' }}
     steps:
       - name: Checkout
@@ -647,9 +640,11 @@ jobs:
           fi
 
   build-linux:
+    needs: version
     if: ${{ inputs.linux }}
     runs-on: ubuntu-latest
     env:
+      ORG_GRADLE_PROJECT_churchPresenterVersion: ${{ needs.version.outputs.version }}
       LINUX_SIGNING_ENABLED: ${{ secrets.LINUX_GPG_PRIVATE_KEY != '' && 'true' || 'false' }}
     steps:
       - name: Checkout
