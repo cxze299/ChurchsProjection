@@ -1,6 +1,6 @@
 # 三平台一键构建
 
-在 Windows 本机双击根目录的 `Build-All.cmd`，或在 PowerShell 执行：
+完整工程位于仓库的 `project/` 中。在 Windows 本机双击 `project\Build-All.cmd`，或先进入 `project/` 后在 PowerShell 执行：
 
 ```powershell
 .\scripts\Build-All.ps1

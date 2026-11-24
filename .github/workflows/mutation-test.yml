@@ -50,7 +50,7 @@ jobs:
           cache-read-only: true
 
       - name: Mutation testing
-        run: ./gradlew :song-chords:pitest :live-show:pitest :core-models:pitest :schedule:pitest --continue
+        run: ./project/gradlew -p project :song-chords:pitest :live-show:pitest :core-models:pitest :schedule:pitest --continue
 
       - name: Mutation score
         if: ${{ !cancelled() }}
@@ -58,7 +58,7 @@ jobs:
         run: |
           import glob, os, xml.etree.ElementTree as ET
           rows = []
-          for path in sorted(glob.glob("modules/*/*/build/reports/pitest/mutations.xml")):
+          for path in sorted(glob.glob("project/modules/*/*/build/reports/pitest/mutations.xml")):
               module = path.split("/build/")[0].split("/")[-1]
               mutations = ET.parse(path).getroot().findall("mutation")
               killed = sum(1 for m in mutations if m.get("detected") == "true")
@@ -78,4 +78,4 @@ jobs:
           name: pitest-reports
           if-no-files-found: ignore
           retention-days: 14
-          path: 'modules/*/*/build/reports/pitest/'
+          path: 'project/modules/*/*/build/reports/pitest/'

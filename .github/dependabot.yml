@@ -5,7 +5,7 @@
 version: 2
 updates:
   - package-ecosystem: gradle
-    directory: /
+    directory: /project
     schedule:
       interval: weekly
     # Low, so a backlog held behind the limit never arrives as a wall of PRs at once.

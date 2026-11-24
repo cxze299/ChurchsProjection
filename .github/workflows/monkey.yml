@@ -5,7 +5,7 @@ name: Monkey
 # was fixed, and one new seed a week (the ISO year and week, e.g. 202642), which reaches paths the
 # others never do. Every seed runs even when one fails, and each one's action log is uploaded, so a
 # failure is read off the log and replayed with its seed:
-#   ./gradlew :composeApp:monkeyTest -PmonkeySeed=<seed> -PmonkeySteps=<steps>
+#   ./project/gradlew -p project :composeApp:monkeyTest -PmonkeySeed=<seed> -PmonkeySteps=<steps>
 #
 # Weekly, on main, Monday 05:00 UTC -- between the mutation run (04:00) and the render benchmark
 # (06:00); each runs on its own machine, so the times only keep the week readable. A scheduled week
@@ -97,13 +97,13 @@ jobs:
           FAILED=""
           for RUN in $RUNS; do
             S=${RUN%%:*}; N=${RUN##*:}
-            if ./gradlew :composeApp:monkeyTest "-PmonkeySeed=$S" "-PmonkeySteps=$N"; then
+            if ./project/gradlew -p project :composeApp:monkeyTest "-PmonkeySeed=$S" "-PmonkeySteps=$N"; then
               RESULT=passed
             else
               RESULT=failed; FAILED="$FAILED $S"
             fi
-            cp composeApp/build/reports/monkey/monkey.log "monkey-runs/seed-$S.log" 2>/dev/null || true
-            cp -r composeApp/build/test-results/monkeyTest "monkey-runs/seed-$S-results" 2>/dev/null || true
+            cp project/composeApp/build/reports/monkey/monkey.log "monkey-runs/seed-$S.log" 2>/dev/null || true
+            cp -r project/composeApp/build/test-results/monkeyTest "monkey-runs/seed-$S-results" 2>/dev/null || true
             echo "- seed \`$S\`, $N steps: **$RESULT**" >> "$GITHUB_STEP_SUMMARY"
           done
           echo "failed=$FAILED" >> "$GITHUB_OUTPUT"
@@ -140,7 +140,7 @@ jobs:
               echo
               echo "### Seed \`$S\`: the last 40 actions"
               echo
-              echo "Replay: \`./gradlew :composeApp:monkeyTest -PmonkeySeed=$S -PmonkeySteps=1500\`"
+              echo "Replay: \`./project/gradlew -p project :composeApp:monkeyTest -PmonkeySeed=$S -PmonkeySteps=1500\`"
               echo
               grep -oh 'failure message="[^"]*"' monkey-runs/seed-$S-results/TEST-*.xml 2>/dev/null \
                 | head -n 1 | sed -e 's/^failure message="//' -e 's/"$//' -e 's/^/> /' || true

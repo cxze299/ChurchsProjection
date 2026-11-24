@@ -78,13 +78,13 @@ jobs:
 
       - name: Run the service
         id: soak
-        run: ./gradlew :composeApp:soakTest "-PsoakMinutes=${{ github.event.inputs.minutes || '240' }}"
+        run: ./project/gradlew -p project :composeApp:soakTest "-PsoakMinutes=${{ github.event.inputs.minutes || '240' }}"
 
       - name: Summary
         if: ${{ !cancelled() }}
         run: |
-          if [ -f composeApp/build/reports/soak/soak.md ]; then
-            cat composeApp/build/reports/soak/soak.md >> "$GITHUB_STEP_SUMMARY"
+          if [ -f project/composeApp/build/reports/soak/soak.md ]; then
+            cat project/composeApp/build/reports/soak/soak.md >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Upload the report
@@ -93,8 +93,8 @@ jobs:
         with:
           name: soak-report
           path: |
-            composeApp/build/reports/soak/
-            composeApp/build/test-results/soakTest/
+            project/composeApp/build/reports/soak/
+            project/composeApp/build/test-results/soakTest/
           retention-days: 30
           if-no-files-found: warn
 
@@ -112,9 +112,9 @@ jobs:
           LABEL="soak-failure"
           gh label create "$LABEL" --color B60205 \
             --description "The weekly soak found a leak, a stall or a hang on main" 2>/dev/null || true
-          REPORT=composeApp/build/reports/soak/soak.md
-          STALL=composeApp/build/reports/soak/soak-stall.txt
-          HANG=composeApp/build/test-results/soakTest/hung-test-dump.txt
+          REPORT=project/composeApp/build/reports/soak/soak.md
+          STALL=project/composeApp/build/reports/soak/soak-stall.txt
+          HANG=project/composeApp/build/test-results/soakTest/hung-test-dump.txt
           {
             echo "The weekly soak failed on \`${GITHUB_SHA:0:9}\` (${GITHUB_SHA})."
             echo

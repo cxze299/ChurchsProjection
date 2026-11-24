@@ -1,5 +1,17 @@
 # 项目目录分类
 
+完整工程已统一迁入仓库的 `project/`。除特别说明外，下文路径均相对该工程目录。
+
+| 仓库根目录 | 用途 |
+|---|---|
+| `project/` | 全部工程文件、源码、文档、构建配置及本地缓存 |
+| `.github/` | 必须位于仓库根目录的 Actions、Issue 模板及仓库首页 |
+| `.githooks/` | Git 提交钩子 |
+| `.git/` | 本地 Git 仓库数据，不作为项目文件提交 |
+
+Windows 构建入口：`D:\churchpre\project\Build-All.cmd`。
+软件入口：`D:\churchpre\project\composeApp\build\compose\binaries\main\app\ChurchPresenter\ChurchPresenter.exe`。
+
 模块已按现有架构层实际迁入 `modules/`。逻辑 Gradle 名称保持不变，完整物理路径由 `config/architecture/module-paths.properties` 统一定义。
 
 ## 源码分层
@@ -21,14 +33,14 @@
 | `platform/native/` | 必需原生库与工具 |
 | `tools/wick-pack/` | 独立辅助工具 |
 | `build-logic/`、`gradle/` | 构建约定、版本目录与 Wrapper |
-| `.github/`、`.githooks/`、`scripts/`、`config/` | 自动化、构建入口和架构规范 |
+| `scripts/`、`config/` | 工程构建入口、辅助脚本和架构规范；仓库自动化见上表 |
 | `assets/branding/` | 正式标志和仓库品牌资源 |
 | `docs/` | 架构专题、`packaging/` 打包说明、`archive/legacy/` 历史规范 |
 | `.local/archive/design/` | 未采用设计稿，本地归档、Git 忽略 |
 | `.local/distributables/` | 历史临时软件，本地归档、Git 忽略 |
 | `.local/notes/` | 个人笔记，Git 忽略 |
 
-## 根目录文件与用途
+## 工程根目录（project/）文件与用途
 
 根目录现有文件均与项目有关；按工具发现规则、授权要求和日常入口保留以下文件：
 

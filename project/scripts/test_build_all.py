@@ -34,7 +34,10 @@ class SourcePublishingTest(unittest.TestCase):
             return {"sha": "commit"}
 
         def fake_command(args, **kwargs):
+            if args[0:2] == ["git", "diff"]:
+                self.assertIn(":/", args)
             if args[0:2] == ["git", "ls-tree"]:
+                self.assertIn("--full-tree", args)
                 return b"100644 blob blob\tapp.kt\0"
             if args[0:2] == ["git", "rev-parse"]:
                 return b"tree\n"

@@ -13,7 +13,7 @@ Two shared libraries per platform, placed side by side in the application's `omt
 
 For Windows and macOS they are taken unmodified from the publisher's binary release. The publisher
 ships none for Linux, so the Linux pair is built from their source by
-[`.github/workflows/omt-linux.yml`](../../.github/workflows/omt-linux.yml), unmodified except in how
+[`.github/workflows/omt-linux.yml`](../../../.github/workflows/omt-linux.yml), unmodified except in how
 `libvmx` is compiled — its shared code is built without AVX2 instructions, so that it runs on
 processors without AVX2 (it needs LZCNT, as the publisher's own builds do). Which release, which commits and the SHA-256
 each archive is verified against are recorded in
