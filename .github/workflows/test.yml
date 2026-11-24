@@ -29,14 +29,8 @@ name: Tests
 #
 # Change detection compares the queue branch with `merge_group.base_sha` -- main as it stood when the
 # group formed -- which is exactly the set of files the queued pull requests changed.
+# Full checks remain available on demand; package builds gate automatic merges.
 on:
-  push:
-    branches: [main]
-  # Draft pull requests run nothing; `ready_for_review` is what runs the checks once one is marked
-  # ready. The first step of `test` decides, from the PR's live state -- see the note there.
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
-  merge_group:
   workflow_dispatch:
 
 env:

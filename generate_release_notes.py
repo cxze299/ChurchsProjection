@@ -154,9 +154,9 @@ def main():
     if build_windows:
         print(f"- **Windows:** ChurchPresenter-{version}-WINDOWS-x64.msi")
     if build_macos_arm:
-        print(f"- **macOS (Apple Silicon / M-series):** ChurchPresenter-{version}-MACOS-arm64.dmg")
+        print(f"- **macOS (Apple Silicon / M-series):** ChurchPresenter-{version}-MACOS-MSilicon.dmg")
     if build_macos_x64:
-        print(f"- **macOS (Intel):** ChurchPresenter-{version}-MACOS-x64.dmg")
+        print(f"- **macOS (Intel):** ChurchPresenter-{version}-MACOS-Intel.dmg")
     if build_linux:
         print(f"- **Linux (Ubuntu 22.04, Debian 12, Linux Mint 21 or newer):** churchpresenter_{version}_amd64-DEBIAN-x64.deb")
 

@@ -409,10 +409,10 @@ jobs:
           fi
           echo "Notarization complete"
 
-      - name: Rename macOS DMG (add MACOS-arm64 label)
+      - name: Rename macOS DMG (add MACOS-MSilicon label)
         run: |
           for f in composeApp/build/compose/binaries/main/dmg/*.dmg; do
-            mv "$f" "${f%.dmg}-MACOS-arm64.dmg"
+            mv "$f" "${f%.dmg}-MACOS-MSilicon.dmg"
           done
 
       - name: Upload artifact
@@ -622,10 +622,10 @@ jobs:
           fi
           echo "Notarization complete"
 
-      - name: Rename macOS DMG (add MACOS-x64 label)
+      - name: Rename macOS DMG (add MACOS-Intel label)
         run: |
           for f in composeApp/build/compose/binaries/main/dmg/*.dmg; do
-            mv "$f" "${f%.dmg}-MACOS-x64.dmg"
+            mv "$f" "${f%.dmg}-MACOS-Intel.dmg"
           done
 
       - name: Upload artifact
