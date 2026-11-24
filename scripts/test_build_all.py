@@ -43,7 +43,7 @@ class SourcePublishingTest(unittest.TestCase):
             return b""
 
         with patch.object(build_all, "api", side_effect=fake_api), patch.object(build_all, "command", side_effect=fake_command):
-            branch, commit = build_all.publish_source("owner/repo", "builds/base")
+            branch, commit = build_all.publish_source("owner/repo", "base")
         self.assertTrue(branch.startswith("codex/build-"))
         self.assertEqual("commit", commit)
         self.assertEqual(["git/commits", "git/refs"], [path for path, _ in writes])
@@ -62,7 +62,7 @@ class SourcePublishingTest(unittest.TestCase):
 
         with patch.object(build_all, "api", side_effect=fake_api), patch.object(build_all, "command", side_effect=fake_command):
             with self.assertRaisesRegex(RuntimeError, "源码校验失败"):
-                build_all.publish_source("owner/repo", "builds/base")
+                build_all.publish_source("owner/repo", "base")
 
 
 class PackageRetryTest(unittest.TestCase):
@@ -72,7 +72,7 @@ class PackageRetryTest(unittest.TestCase):
         def fake_api(repo, path, payload=None):
             run = {"id": 1, "head_sha": "commit", "html_url": "https://github.com/o/r/actions/runs/1",
                    "status": "completed", "conclusion": "cancelled"}
-            if path.startswith("actions/runs?"):
+            if path.startswith("actions/workflows/build-integrated.yml/runs?"):
                 return {"workflow_runs": [run]}
             if path == "actions/runs/1":
                 return run

@@ -1,11 +1,16 @@
 name: Build Integrated App
 
 on:
-  push:
-    branches:
-      - 'builds/**'
-      - 'codex/build-**'
   workflow_dispatch:
+    inputs:
+      windows:
+        description: 'Also build Windows in Actions (normally built locally)'
+        type: boolean
+        default: false
+      version:
+        description: 'Version supplied by the local CMD build'
+        type: string
+        default: ''
 
 permissions:
   contents: write
@@ -14,7 +19,8 @@ jobs:
   packages:
     uses: ./.github/workflows/build.yml
     with:
-      windows: true
+      windows: ${{ inputs.windows }}
+      version: ${{ inputs.version }}
       macos_arm64: true
       macos_x64: true
       linux: false

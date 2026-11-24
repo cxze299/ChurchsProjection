@@ -50,60 +50,13 @@ jobs:
               --base main \
               --head "$BRANCH" \
               --title "$title" \
-              --body "Automated comparison of $BRANCH with main. The branch is merged after its package build workflow succeeds and repository merge requirements are met."
+              --body "Automated comparison of $BRANCH with main. Package builds are started manually and do not gate this source merge. Repository merge requirements still apply."
             pr="$(gh pr list --repo "$REPOSITORY" --base main --head "$BRANCH" --state open --json number --jq '.[0].number')"
           fi
           echo "number=$pr" >> "$GITHUB_OUTPUT"
           echo "sha=$(git rev-parse "origin/$BRANCH")" >> "$GITHUB_OUTPUT"
 
-      - name: Wait for the existing three-platform build
-        if: steps.compare.outputs.number != ''
-        env:
-          GH_TOKEN: ${{ github.token }}
-          BRANCH: ${{ github.ref_name }}
-          EXPECTED_SHA: ${{ steps.compare.outputs.sha }}
-          REPOSITORY: ${{ github.repository }}
-        run: |
-          set -euo pipefail
-
-          run_id=""
-          for attempt in $(seq 1 30); do
-            run_id="$(gh run list \
-              --repo "$REPOSITORY" \
-              --workflow build-integrated.yml \
-              --branch "$BRANCH" \
-              --event push \
-              --limit 20 \
-              --json databaseId,headSha,createdAt \
-              | jq -r --arg sha "$EXPECTED_SHA" \
-                '[.[] | select(.headSha == $sha)] | first | .databaseId // empty')"
-            [ -n "$run_id" ] && break
-            sleep 10
-          done
-          if [ -z "$run_id" ]; then
-            echo "Could not find the package build run for $EXPECTED_SHA." >&2
-            exit 1
-          fi
-
-          for attempt in $(seq 1 95); do
-            result="$(gh run view "$run_id" --repo "$REPOSITORY" --json status,conclusion)"
-            status="$(jq -r '.status' <<< "$result")"
-            if [ "$status" = completed ]; then
-              conclusion="$(jq -r '.conclusion' <<< "$result")"
-              if [ "$conclusion" != success ]; then
-                echo "Package build workflow finished with conclusion: $conclusion" >&2
-                exit 1
-              fi
-              break
-            fi
-            if [ "$attempt" -eq 95 ]; then
-              echo "Timed out waiting for the package build workflow." >&2
-              exit 1
-            fi
-            sleep 60
-          done
-
-      - name: Enable merge after checks pass
+      - name: Merge the current source revision
         if: steps.compare.outputs.number != ''
         env:
           GH_TOKEN: ${{ github.token }}

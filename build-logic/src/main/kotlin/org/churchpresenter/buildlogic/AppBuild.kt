@@ -20,6 +20,7 @@ val versionYear: Int = Calendar.getInstance().get(Calendar.YEAR) % 100
  * limits each version segment to 0-255.
  */
 fun Project.appVersion(): String {
+    providers.gradleProperty("churchPresenterVersion").orNull?.takeIf { it.isNotBlank() }?.let { return it.removePrefix("v") }
     val commits = gitCommitCount()
     return "$versionYear.${commits / 256}.${commits % 256}"
 }
