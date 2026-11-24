@@ -5,8 +5,8 @@ one-off error stories — those belong in git commits and in the tests that enco
 carry one sentence of *why*; the story of how it was learned stays in git.
 
 General style rules (imports, string resources, Material 3, type names, cleanup) live in
-`CODING_STANDARDS.md`, which CLAUDE.md also loads. `DEVELOPMENT_GUIDE.md` (workflow, contributing,
-verification greps), `FEATURES.md` (feature → source map) and `README.md` (onboarding) are read on
+`docs/development/CODING_STANDARDS.md`, which CLAUDE.md also loads. `docs/development/DEVELOPMENT_GUIDE.md` (workflow, contributing,
+verification greps), `docs/product/FEATURES.md` (feature → source map) and `README.md` (onboarding) are read on
 demand.
 
 ## Code Standards
@@ -64,7 +64,7 @@ demand.
 
 ### Debugging and logging
 - Diagnostics go through `Log.info`/`warn`/`error` (`:diagnostics`), never `println` or
-  `System.err` — `bash cleanup_check.sh` counts both. A warning or error also lands in the crash
+  `System.err` — `bash scripts/cleanup_check.sh` counts both. A warning or error also lands in the crash
   report's breadcrumb trail.
 - Keep debug logs until the fix is confirmed; ask before removing if unsure. Remove them once done.
 
@@ -98,7 +98,7 @@ main.kt → MainDesktop.kt → tabs/* + PresenterManager (:live-output)
 - `MainDesktop.kt` is the root composable; `Presenting` (in `:shared-ui`) is the live-content enum.
 - New user-facing strings go in `modules/core/strings/src/main/composeResources/values/strings.xml` — the
   `:strings` module.
-- Per-feature source locations are listed in `FEATURES.md`.
+- Per-feature source locations are listed in `docs/product/FEATURES.md`.
 
 ## Modules
 
@@ -224,7 +224,7 @@ a layer — into an engine module, or into `:shared-ui` or `:core-models` when i
 **`config/architecture/allowed-edges.txt` is empty, and stays that way**: it is where a forbidden
 edge would be recorded, the check fails on an entry that is no longer a forbidden edge, and nothing
 writes the file. **Never add a line to it without asking** — an edge that seems to need one is a
-sign that something belongs a layer down (DEVELOPMENT_GUIDE.md, "Adding a module"). A new module gets its layer in `layers.properties`; the check fails
+sign that something belongs a layer down (docs/development/DEVELOPMENT_GUIDE.md, "Adding a module"). A new module gets its layer in `layers.properties`; the check fails
 on one that has none.
 
 ### Live-safe output paths — nothing blocks the event thread
@@ -294,7 +294,7 @@ only — measure with the excludes removed before quoting it.
 # NEVER run :composeApp:detektBaseline — it writes a baseline that absorbs your own new findings
 ./gradlew :composeApp:check            # compile + all unit tests
 ./gradlew :composeApp:jacocoTestReport # coverage → build/reports/jacoco/jacocoTestReport/html/
-bash cleanup_check.sh                  # repo code-quality report
+bash scripts/cleanup_check.sh                  # repo code-quality report
 ./gradlew :composeApp:renderBenchmark  # off-screen render times per content type, 1080p and 4K — see composeApp/benchmarks/
 ./gradlew :composeApp:renderBenchmark -PrecordRenderBaseline    # re-record the reference-Mac baseline, composeApp/benchmarks/
 ./gradlew :composeApp:renderBenchmark -PrecordCiRenderBaseline  # write composeApp/benchmarks/ci/ (CI's own: record via render-benchmark.yml, not locally)
@@ -307,8 +307,8 @@ bash cleanup_check.sh                  # repo code-quality report
 
 ./gradlew :song-chords:pitest          # mutation score (also :live-show, :core-models, :schedule); weekly in mutation-test.yml
 
-bash test-changed.sh                   # ONLY the suites your change touches — seconds, not minutes
-bash test-changed.sh --dry-run         # print the selection and the gradle command, run nothing
+bash scripts/test-changed.sh                   # ONLY the suites your change touches — seconds, not minutes
+bash scripts/test-changed.sh --dry-run         # print the selection and the gradle command, run nothing
 
 # Screenshots → <module>/screenshots/<section>/ (COMMITTED; one folder per test class)
 ./gradlew :composeApp:recordRoborazziJvm :shared-ui:recordRoborazziJvm --tests '*ScreenshotTest*'

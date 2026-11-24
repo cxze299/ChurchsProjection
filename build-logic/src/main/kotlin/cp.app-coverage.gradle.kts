@@ -39,7 +39,7 @@ fun coverableAppClasses() = fileTree(layout.buildDirectory.dir("classes/kotlin/j
             // headless and has no terminating state to assert on.
             exclude("**/KonamiEasterEggDialogKt*")
             // A hidden easter egg (unlocked via the same Konami-style arrow sequence, MainDesktop.kt)
-            // rather than a documented feature in FEATURES.md — out of scope for the app's coverage
+            // rather than a documented feature in docs/product/FEATURES.md — out of scope for the app's coverage
             // metrics regardless of how well tested it happens to be.
             exclude("**/CrosswordTabKt*")
 

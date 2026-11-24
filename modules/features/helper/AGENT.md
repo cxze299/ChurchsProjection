@@ -76,7 +76,7 @@ typos. Without the model, the helper is its rules alone.
 
 - **One model file, replaced in place.** `modules/features/helper/tools/export_minilm.py` writes `wick/minilm-l6.bin`
   (int8, ~23 MB), `wick/vocab.txt` and the parity fixtures from a pinned revision; re-running
-  overwrites them. Never keep a second model beside it. `THIRD_PARTY_MINILM.md` is its licence notice.
+  overwrites them. Never keep a second model beside it. `docs/legal/THIRD_PARTY_MINILM.md` is its licence notice.
 - **The catalog is generated from the codebase, and committed.** `wick/catalog.tsv` holds every chip,
   every multi-word `*Topics.kt` phrase the rules understand, every `guideTarget(…)` control's own labels,
   every Settings page's labels, every tab and every shortcut, each with its vector. Never edit it by hand:

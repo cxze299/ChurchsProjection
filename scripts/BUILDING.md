@@ -3,7 +3,7 @@
 在 Windows 本机双击根目录的 `Build-All.cmd`，或在 PowerShell 执行：
 
 ```powershell
-.\Build-All.ps1
+.\scripts\Build-All.ps1
 ```
 
 - 需要 Python 3、Git、GitHub CLI 和 JDK 21。先执行 `gh auth login`，登录具有仓库写入及 Actions 权限的账号。
@@ -15,7 +15,7 @@
 - 构建分支自动合并到 main 不依赖任何打包结果；打包失败不阻止源码合并。
 - macOS 使用 GitHub 的 Mac runner，本机无需安装 Xcode。没有配置 Apple 签名和公证凭据时，产物未签名、未公证。
 
-可选的显式全云端构建：`.\Build-All.ps1 -CloudOnly`。
-触发后不等待云端结果：`.\Build-All.ps1 -NoWait`（云端仍会在全部构建成功后自动发布 Release）。
+可选的显式全云端构建：`.\scripts\Build-All.ps1 -CloudOnly`。
+触发后不等待云端结果：`.\scripts\Build-All.ps1 -NoWait`（云端仍会在全部构建成功后自动发布 Release）。
 
 本机如需额外的 Gradle 仓库配置，可设置 `CHURCHPRESENTER_GRADLE_INIT` 为本机 init script 路径；脚本不会将该配置上传。

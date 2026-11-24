@@ -19,7 +19,7 @@ import kotlin.test.Test
 import kotlin.test.assertTrue
 
 /**
- * `COMPANION_API.md` is the contract companion apps, Bitfocus modules and scripts are written
+ * `docs/api/COMPANION_API.md` is the contract companion apps, Bitfocus modules and scripts are written
  * against, so it has to name everything the server answers. This reads the routes from the running
  * server's own routing tree and every WebSocket event and command constant, and fails on any the
  * document does not mention — a new route ships with its documentation or not at all.
@@ -33,7 +33,7 @@ class ApiDocumentedTest {
 
     private val doc: String by lazy {
         generateSequence(File("").absoluteFile) { it.parentFile }
-            .map { File(it, "COMPANION_API.md") }
+            .map { File(it, "docs/api/COMPANION_API.md") }
             .first { it.isFile }
             .readText()
     }
@@ -76,7 +76,7 @@ class ApiDocumentedTest {
 
         val missing = routes.filter { "`$it`" !in doc }
 
-        assertTrue(missing.isEmpty(), "COMPANION_API.md does not document:\n${missing.joinToString("\n")}")
+        assertTrue(missing.isEmpty(), "docs/api/COMPANION_API.md does not document:\n${missing.joinToString("\n")}")
     }
 
     @Test
@@ -89,6 +89,6 @@ class ApiDocumentedTest {
 
         val missing = values.filter { (_, value) -> "`$value`" !in doc }
 
-        assertTrue(missing.isEmpty(), "COMPANION_API.md does not document:\n${missing.joinToString("\n")}")
+        assertTrue(missing.isEmpty(), "docs/api/COMPANION_API.md does not document:\n${missing.joinToString("\n")}")
     }
 }

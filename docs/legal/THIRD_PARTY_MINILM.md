@@ -10,7 +10,7 @@ that nothing is downloaded at run time. This file is the disclosure that shippin
 - `modules/features/helper/src/main/resources/wick/vocab.txt` — its WordPiece vocabulary, unmodified
 - `modules/features/helper/src/main/resources/wick/LICENSE-all-MiniLM-L6-v2.txt` — the Apache License 2.0
 
-Both files are written by [`modules/features/helper/tools/export_minilm.py`](modules/features/helper/tools/export_minilm.py) from
+Both files are written by [`modules/features/helper/tools/export_minilm.py`](../../modules/features/helper/tools/export_minilm.py) from
 `sentence-transformers/all-MiniLM-L6-v2` at revision `1110a243fdf4706b3f48f1d95db1a4f5529b4d41`.
 
 ## Changes made

@@ -68,7 +68,7 @@ It takes `:core-models`, `:settings`, `:shared-ui` (its usage events and text he
 - **Compare a key or password with `MessageDigest.isEqual`**, never `==`/`!=`.
 - **A new route or WebSocket event ships documented.** `ApiDocumentedTest` reads every route from the
   running server's routing tree, and every `Constants.WS_EVENT_*`/`WS_CMD_*` value, and fails on any
-  missing from `COMPANION_API.md` — a route as `` `METHOD /path` `` (`` `WS /path` `` for a socket),
+  missing from `docs/api/COMPANION_API.md` — a route as `` `METHOD /path` `` (`` `WS /path` `` for a socket),
   exactly as Ktor registers it, with its auth and dev-mode status in the Route Index.
 
 ## Commands

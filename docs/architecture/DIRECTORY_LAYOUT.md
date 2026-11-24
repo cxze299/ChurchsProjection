@@ -28,7 +28,35 @@
 | `.local/distributables/` | 历史临时软件，本地归档、Git 忽略 |
 | `.local/notes/` | 个人笔记，Git 忽略 |
 
-## 构建与维护
+## 根目录文件与用途
+
+根目录现有文件均与项目有关；按工具发现规则、授权要求和日常入口保留以下文件：
+
+| 文件 | 保留原因 |
+|---|---|
+| `README.md` | 项目首页，指向分类后的文档 |
+| `CHANGELOG.md` | 更新记录 |
+| `LICENSE`、`LICENSE.txt` | 项目授权文件，保留现有副本及引用兼容 |
+| `AGENTS.md`、`AGENT.md`、`CLAUDE.md` | 自动发现的开发代理指令与规范 |
+| `Build-All.cmd` | 本机一键构建入口，调用 scripts 内脚本 |
+| `build.gradle.kts`、`settings.gradle.kts`、`gradle.properties` | Gradle 根工程配置 |
+| `gradlew`、`gradlew.bat` | Gradle Wrapper 启动器 |
+| `.gitignore` | 项目忽略规则 |
+
+已归类文件：
+
+| 目录 | 内容 |
+|---|---|
+| `docs/README.md` | 全部文档索引 |
+| `docs/architecture/` | 目录布局说明 |
+| `docs/development/` | 编码规范、开发指南 |
+| `docs/product/` | 功能说明、路线图 |
+| `docs/api/` | Companion 接口文档 |
+| `docs/platform/` | 图形后端说明 |
+| `docs/legal/` | 来源引用、FFmpeg / MiniLM / OMT 第三方声明 |
+| `scripts/` | PowerShell 构建脚本、质量检查、增量测试、发布说明生成 |
+
+## 构建与维护规则
 
 - `Build-All.cmd`、Gradle Wrapper 和根目录构建配置仍在原位置。
 - 固定入口：`composeApp/build/compose/binaries/main/app/ChurchPresenter/ChurchPresenter.exe`。

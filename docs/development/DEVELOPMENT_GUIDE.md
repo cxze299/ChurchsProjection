@@ -2,7 +2,7 @@
 
 > Workflow, verification and contributing. The style rules themselves are in
 > [CODING_STANDARDS.md](CODING_STANDARDS.md); agent-specific rules, architecture and the test rules
-> are in [AGENT.md](AGENT.md).
+> are in [AGENT.md](../../AGENT.md).
 >
 > Last updated: 2026-09-29
 
@@ -10,7 +10,7 @@
 
 ## 🎯 Zero Tolerance Policy
 
-The following are **NOT** acceptable in any commit (each is explained in CODING_STANDARDS.md):
+The following are **NOT** acceptable in any commit (each is explained in docs/development/CODING_STANDARDS.md):
 
 ❌ Wildcard imports (`import ... .*`)
 ❌ Hardcoded UI strings (`Text("Save")`)
@@ -57,11 +57,11 @@ A string that stops being referenced is deleted in the same change, from `values
 ### Before every commit
 
 ```bash
-bash cleanup_check.sh          # wildcard, Material 2, prints, FQN, unused-code counts; exits non-zero on failure
+bash scripts/cleanup_check.sh          # wildcard, Material 2, prints, FQN, unused-code counts; exits non-zero on failure
 ./gradlew :composeApp:detekt   # CI's first gate — run it last
 ```
 
-`cleanup_check.sh` checks `composeApp/src/` in full and every module of the build for wildcard
+`scripts/cleanup_check.sh` checks `composeApp/src/` in full and every module of the build for wildcard
 imports, Material 2, prints and fully qualified names (listing only the modules with a finding),
 then compiles everything for the unused-code counts. Run each touched module's `detekt` as well.
 
@@ -120,7 +120,7 @@ comm -23 \
   `bible-engine` `tools/`, `lottieGenerator` `DumpStyleReview`) — printing is their purpose.
 - `println` in `bible-engine`'s standalone launch (`Main.kt`, `AppConfig.kt`) and behind its
   `verboseLog` flag — the engine's own console output; the app runs it in-process with the flag
-  off. `cleanup_check.sh` skips exactly these and the `tools/` packages.
+  off. `scripts/cleanup_check.sh` skips exactly these and the `tools/` packages.
 - Hardcoded `"%"` suffixes on dynamic values — the percent sign is identical in every supported
   locale.
 
@@ -134,10 +134,10 @@ as pending above.
 1. **Plan strings first** — add them to `values/strings.xml`.
 2. **Plan constants** — add them to the right `Constants` object.
 3. **Write the code** — string resources and constants, explicit imports, Material 3.
-4. **Test** — `bash test-changed.sh` in the inner loop, `./gradlew :composeApp:check` before you
+4. **Test** — `bash scripts/test-changed.sh` in the inner loop, `./gradlew :composeApp:check` before you
    commit.
 5. **Clean up** — remove what the change made unused, including string resources.
-6. **Verify** — `bash cleanup_check.sh`, then `./gradlew :composeApp:detekt` last.
+6. **Verify** — `bash scripts/cleanup_check.sh`, then `./gradlew :composeApp:detekt` last.
 7. **Commit** — on a branch, with clean, standards-compliant code.
 
 ---
@@ -171,7 +171,7 @@ try {
    JetBrains Runtime 21 pinned in `gradle/jbr-builds.properties`, which it downloads itself
    (issue #969).
 3. Run `./gradlew :composeApp:run` to verify the build works.
-4. Read this guide, CODING_STANDARDS.md and AGENT.md before making changes.
+4. Read this guide, docs/development/CODING_STANDARDS.md and AGENT.md before making changes.
 
 ### Never commit directly to `main`
 
@@ -183,7 +183,7 @@ you; to set it by hand: `git config core.hooksPath .githooks`.
 ### Running the tests, per platform
 
 The app's own suite is `./gradlew :composeApp:check` and needs only **JDK 21**. In the inner loop,
-`bash test-changed.sh` runs only the suites that name what you changed — a heuristic that cannot see
+`bash scripts/test-changed.sh` runs only the suites that name what you changed — a heuristic that cannot see
 through a symbol three layers down or know a composable moved pixels in an unrelated screenshot
 suite, so run the full `check` before you commit.
 
@@ -229,7 +229,7 @@ wrapper:
 
 `:composeApp:check` does **not** reach any of them. CI runs each as its own step, only when the
 change touched that module, a module it depends on (from `./gradlew moduleGraph`) or the shared build
-files; `bash test-changed.sh` names the module tasks a change implies.
+files; `bash scripts/test-changed.sh` names the module tasks a change implies.
 
 ### Adding a module
 
@@ -267,7 +267,7 @@ frame to whatever the card is wired to. To do a deliberate hardware pass on a ma
 ### Pull request guidelines
 
 - Keep PRs focused on a single feature or fix.
-- Follow CODING_STANDARDS.md; add string resources for any new UI text.
+- Follow docs/development/CODING_STANDARDS.md; add string resources for any new UI text.
 - Re-record the screenshots of any state you changed (AGENT.md, "Screenshots").
 - Run the verification commands before submitting.
 

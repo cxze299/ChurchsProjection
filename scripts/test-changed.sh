@@ -2,11 +2,11 @@
 #
 # Runs only the jvmTest classes plausibly affected by what you have changed.
 #
-#   ./test-changed.sh                 # working tree + everything since origin/main
-#   ./test-changed.sh --staged-only   # index + working tree only, ignore the branch history
-#   ./test-changed.sh --dry-run       # print the gradle command, run nothing
-#   ./test-changed.sh --deep          # follow one extra hop through jvmMain callers
-#   ./test-changed.sh --no-fallback   # report and exit 0 rather than running the full suite
+#   ./scripts/test-changed.sh                 # working tree + everything since origin/main
+#   ./scripts/test-changed.sh --staged-only   # index + working tree only, ignore the branch history
+#   ./scripts/test-changed.sh --dry-run       # print the gradle command, run nothing
+#   ./scripts/test-changed.sh --deep          # follow one extra hop through jvmMain callers
+#   ./scripts/test-changed.sh --no-fallback   # report and exit 0 rather than running the full suite
 #
 # This is an INNER-LOOP tool. It selects tests by name and by whole-word symbol references, which
 # is a heuristic — run the full `./gradlew :composeApp:check` before you commit. What it misses:

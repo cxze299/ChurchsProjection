@@ -104,7 +104,7 @@ From the repo root, on the root wrapper:
 ```
 
 `dumpTiming`, `dumpKeynote` and `makeSampleDeck` are CLI diagnostics — their `println`s are their
-purpose, and are exempt from the no-debug-print rule (see `DEVELOPMENT_GUIDE.md`'s decision log).
+purpose, and are exempt from the no-debug-print rule (see `docs/development/DEVELOPMENT_GUIDE.md`'s decision log).
 The test task forwards `-DupdateGolden` for the golden-file suites; regenerate a golden only for an
 intentional behavior change, and commit it with that change.
 

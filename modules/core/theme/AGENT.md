@@ -26,7 +26,7 @@ that string, so a future package move has to update it by hand; both tests fail 
 **A color literal belongs in this module or nowhere.** The module depends on Compose and on
 nothing of the app's own, so nothing here can start reading a setting, a file or a ViewModel — that
 is what keeps the palette a palette. A `Color(0xFF…)` anywhere else in the codebase is a finding
-(see `DEVELOPMENT_GUIDE.md`'s zero-tolerance list).
+(see `docs/development/DEVELOPMENT_GUIDE.md`'s zero-tolerance list).
 
 Corollaries:
 

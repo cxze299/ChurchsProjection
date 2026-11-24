@@ -17,7 +17,7 @@ import org.churchpresenter.sharedui.utils.UsageEvent
 import org.churchpresenter.sharedui.utils.UsageEvents
 
 /*
- * A page drawn on a phone or tablet's canvas, put live from the device — see `COMPANION_API.md`,
+ * A page drawn on a phone or tablet's canvas, put live from the device — see `docs/api/COMPANION_API.md`,
  * Drawing. Going live is a project request to the operator, put to them with the same prompt; once
  * allowed, the device's later pages replace the one on screen until anything else takes it.
  */

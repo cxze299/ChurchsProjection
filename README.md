@@ -7,7 +7,7 @@
 ChurchsProjection is independently maintained by cxze299, based on
 [ChurchPresenter](https://github.com/ChurchPresenter/ChurchPresenter).
 It adds scripture quick projection, hymn search, configurable shortcuts and resource directories,
-and coordinated Windows and macOS packaging. See [ATTRIBUTION.md](ATTRIBUTION.md) for source attribution.
+and coordinated Windows and macOS packaging. See [ATTRIBUTION.md](docs/legal/ATTRIBUTION.md) for source attribution.
 
 This project retains the upstream GPL-3.0 license and copyright notices.
 
@@ -15,7 +15,7 @@ Everything a church needs to put words on the screen — songs, scripture, slide
 broadcast graphics — in one free, open-source desktop app for Windows, macOS and Linux.
 On Linux it installs from a `.deb` on Ubuntu 22.04, Debian 12, Linux Mint 21 or newer.
 
-It is a Compose Multiplatform app on the JVM. [FEATURES.md](FEATURES.md) lists every feature and
+It is a Compose Multiplatform app on the JVM. [FEATURES.md](docs/product/FEATURES.md) lists every feature and
 where its source lives.
 
 ---
@@ -69,7 +69,7 @@ change how the app reports itself for update checks, crash reporting, or usage a
 ```shell
 ./gradlew :composeApp:check    # compile and every unit test of the app
 ./gradlew :settings:test       # one module's own suite; the same for any module below
-bash test-changed.sh           # only the suites your change touches
+bash scripts/test-changed.sh           # only the suites your change touches
 ```
 
 ### The bundled ffmpeg
@@ -85,13 +85,13 @@ Compose never signs anything under `appResources`, and notarization rejects the 
 
 A target with no URL configured is not an error: the app then falls back to whatever ffmpeg is
 installed on the machine, and Settings → Projection → Camera Capture says which one it is using.
-Licensing and the written offer of source are in [THIRD_PARTY_FFMPEG.md](THIRD_PARTY_FFMPEG.md).
+Licensing and the written offer of source are in [THIRD_PARTY_FFMPEG.md](docs/legal/THIRD_PARTY_FFMPEG.md).
 
 ---
 
 ## Project layout
 
-Source modules are grouped under `modules/` by architecture layer; platform files live under `platform/`. See [DIRECTORY_LAYOUT.md](DIRECTORY_LAYOUT.md) for the full map. Gradle task names and the `composeApp` output path stay unchanged.
+Source modules are grouped under `modules/` by architecture layer; platform files live under `platform/`. See [DIRECTORY_LAYOUT.md](docs/architecture/DIRECTORY_LAYOUT.md) for the full map. Gradle task names and the `composeApp` output path stay unchanged.
 
 [`composeApp/`](./composeApp/src) is the app itself: all of its code is in
 [`jvmMain`](./composeApp/src/jvmMain/kotlin) and its tests in [`jvmTest`](./composeApp/src/jvmTest/kotlin).
@@ -128,19 +128,19 @@ Every module's suite runs with `./gradlew :<module>:test`.
 
 ## Documentation
 
-[DOCS_README.md](DOCS_README.md) indexes every document. The ones most people want:
+[Documentation index](docs/README.md) indexes every document. The ones most people want:
 
-- [DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md): workflow, verification commands and contributing.
-- [CODING_STANDARDS.md](CODING_STANDARDS.md): the style rules.
+- [DEVELOPMENT_GUIDE.md](docs/development/DEVELOPMENT_GUIDE.md): workflow, verification commands and contributing.
+- [CODING_STANDARDS.md](docs/development/CODING_STANDARDS.md): the style rules.
 - [AGENT.md](AGENT.md): architecture, modules, commands, and the screenshot and test rules.
 - [BUILD_INSTALLERS.md](docs/packaging/BUILD_INSTALLERS.md) and [QUICK_START_INSTALLERS.md](docs/packaging/QUICK_START_INSTALLERS.md): building the installers.
-- [GRAPHICS_BACKEND.md](GRAPHICS_BACKEND.md): choosing the GPU backend on a machine, and what it does to screen capture.
-- [COMPANION_API.md](COMPANION_API.md): the REST and WebSocket API the app exposes for the mobile companion.
+- [GRAPHICS_BACKEND.md](docs/platform/GRAPHICS_BACKEND.md): choosing the GPU backend on a machine, and what it does to screen capture.
+- [COMPANION_API.md](docs/api/COMPANION_API.md): the REST and WebSocket API the app exposes for the mobile companion.
 
 ### Before every commit
 
 ```bash
-bash cleanup_check.sh          # wildcard imports, Material 2, prints, fully qualified names, unused code
+bash scripts/cleanup_check.sh          # wildcard imports, Material 2, prints, fully qualified names, unused code
 ./gradlew :composeApp:detekt   # CI's first gate; run it last
 ```
 
@@ -149,5 +149,5 @@ bash cleanup_check.sh          # wildcard imports, Material 2, prints, fully qua
 ## License
 
 GPL-3.0. See [LICENSE.txt](LICENSE.txt). The bundled ffmpeg and OMT libraries and Wick's sentence
-model carry their own terms: [THIRD_PARTY_FFMPEG.md](THIRD_PARTY_FFMPEG.md),
-[THIRD_PARTY_OMT.md](THIRD_PARTY_OMT.md), [THIRD_PARTY_MINILM.md](THIRD_PARTY_MINILM.md).
+model carry their own terms: [THIRD_PARTY_FFMPEG.md](docs/legal/THIRD_PARTY_FFMPEG.md),
+[THIRD_PARTY_OMT.md](docs/legal/THIRD_PARTY_OMT.md), [THIRD_PARTY_MINILM.md](docs/legal/THIRD_PARTY_MINILM.md).

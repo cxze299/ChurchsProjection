@@ -186,7 +186,7 @@
 - `canvas-engine/…/NdiFrameCache.kt`, `canvas/…/NdiSourceDirectory.kt` — receiving NDI sources onto the canvas, and finding them
 - `canvas-engine/…/OmtFrameCache.kt`, `canvas/…/SceneOmtEditor.kt`, `canvas-engine/…/ReceivedFrameCache.kt` — receiving OMT sources onto the canvas, choosing one, and the capture loop both protocols share; `canvas-engine/…/NetworkInputs.kt` is how the canvas reaches the app's NDI and OMT libraries
 - `shared-ui/…/utils/FfmpegBinary.kt`, `live-output/…/settings/ProjectionFfmpegCard.kt` — which ffmpeg cameras are opened with: the bundled one, an override, or whatever is installed
-- `gradle/ffmpeg-builds.properties`, `THIRD_PARTY_FFMPEG.md` — where the bundled ffmpeg comes from, and its licence
+- `gradle/ffmpeg-builds.properties`, `docs/legal/THIRD_PARTY_FFMPEG.md` — where the bundled ffmpeg comes from, and its licence
 - `canvas-engine/…/ScenePresenter.kt`, `web-engine/…/presenter/WebsitePresenter.kt` (the `:web-engine` module: JCEF, `CefManager`, the embedded browser)
 - `data/settings/WebBookmark.kt`
 
@@ -287,7 +287,7 @@
 - `live-output/…/NdiVideoRenderer.kt`, `live-output/…/NdiManager.kt`, `live-output/…/settings/ProjectionNdiCard.kt` — the app-side wiring and its settings card
 - `modules/engines/omt/` (the `:omt` Gradle module) — OMT itself: `OmtRuntime`, `OmtLibrary`/`JnaOmtLibrary`, `OmtSender`, `OmtReceiver`, `OmtDiscovery`
 - `live-output/…/OmtVideoRenderer.kt`, `live-output/…/OmtOutputRegistry.kt`, `live-output/…/OmtManager.kt`, `live-output/…/settings/ProjectionOmtCard.kt` — the app-side OMT wiring and its settings card
-- `gradle/omt-builds.properties`, `.github/workflows/omt-linux.yml`, `THIRD_PARTY_OMT.md` — where the bundled OMT libraries come from, and their licence
+- `gradle/omt-builds.properties`, `.github/workflows/omt-linux.yml`, `docs/legal/THIRD_PARTY_OMT.md` — where the bundled OMT libraries come from, and their licence
 - `media/…/data/StockMediaClient.kt`, `media/…/dialogs/StockMediaBrowserDialog.kt`, `media/…/viewmodel/StockMediaViewModel.kt`, `data/settings/StockPhotoSettings.kt`
 - `canvas-engine/…/DeckLinkManager.kt`, `canvas-engine/…/DeckLinkInputGate.kt`, `live-output/…/preview/LivePreviewPanel.kt`, `presenter/…/LoopingVideoBackground.kt`
 - `live-output/…/PresenterManager.kt`, `profiles/…/BackgroundSettingsViewModel.kt`
@@ -412,7 +412,7 @@
 - `modules/features/helper/` (the `:helper` Gradle module) — the lamp, its requests, tips and display setup; `HelperWiring.kt` carries its actions out; `shared-ui/…/guide/` tags the controls it points at
 - `helper/…/pack/`, `tools/wick-pack/` — the downloadable Wick pack: its source, the built `pack.json`, and how the app checks, fetches and caches it
 - `helper/…/report/`, `WickChatSender.kt` — Send this chat: the masking and the Contact Us request
-- `helper/…/intent/semantic/`, `modules/features/helper/src/main/resources/wick/` — the sentence model (`MiniLmEncoder`), the catalog generated from the codebase that it matches against, and `SemanticIntentResolver`; `modules/features/helper/tools/export_minilm.py`, `THIRD_PARTY_MINILM.md` — where the bundled model comes from, and its licence
+- `helper/…/intent/semantic/`, `modules/features/helper/src/main/resources/wick/` — the sentence model (`MiniLmEncoder`), the catalog generated from the codebase that it matches against, and `SemanticIntentResolver`; `modules/features/helper/tools/export_minilm.py`, `docs/legal/THIRD_PARTY_MINILM.md` — where the bundled model comes from, and its licence
 - `dialogs/KeyboardShortcutsDialog.kt`, `dialogs/ShortcutBindingRow.kt`, `dialogs/ShortcutCapture.kt`, `dialogs/ShortcutCategoryRail.kt` — the shortcut list and rebinding
 - `composables/LabeledTab.kt`, `app-settings/…/TabLabelsRow.kt` — tab label styles
 - `crossword-tab/…/CrosswordTab.kt`, `crossword-tab/…/data/CrosswordData.kt` (the `:crossword-tab` module) — a hidden tab (←→←→); `modules/features/crossword/` (the `:crossword` Gradle module) is its authoring tool and the encoded puzzles

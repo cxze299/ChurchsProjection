@@ -22,7 +22,7 @@ their capture loop through `ReceivedFrameCache`.
 
 `libomt` and `libvmx` are MIT, so they go inside the installer — fetched at build time from the pins
 in `gradle/omt-builds.properties` into `composeApp/src/jvmMain/appResources/<os>/omt/`, with their
-licence beside them, exactly as ffmpeg is (`THIRD_PARTY_OMT.md` is the disclosure). The path setting
+licence beside them, exactly as ffmpeg is (`docs/legal/THIRD_PARTY_OMT.md` is the disclosure). The path setting
 is an **override** of the bundled copy, the way `ffmpegPath` is, not a search for something the
 operator has to install.
 

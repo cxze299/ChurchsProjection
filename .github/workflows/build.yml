@@ -863,7 +863,7 @@ jobs:
           PREV_TAG=$(gh release list --limit 5 --json tagName \
             -q '[.[] | select(.tagName != "nightly")][0].tagName // empty' 2>/dev/null || echo "")
           if [ -n "$PREV_TAG" ]; then
-            NOTES=$(python3 generate_release_notes.py "$PREV_TAG" "$VERSION" "${{ inputs.windows && needs.build-windows.result == 'success' }}" "${{ inputs.macos_arm64 && needs.build-macos.result == 'success' }}" "${{ inputs.macos_x64 && needs.build-macos-x64.result == 'success' }}" "${{ inputs.linux && needs.build-linux.result == 'success' }}")
+            NOTES=$(python3 scripts/generate_release_notes.py "$PREV_TAG" "$VERSION" "${{ inputs.windows && needs.build-windows.result == 'success' }}" "${{ inputs.macos_arm64 && needs.build-macos.result == 'success' }}" "${{ inputs.macos_x64 && needs.build-macos-x64.result == 'success' }}" "${{ inputs.linux && needs.build-linux.result == 'success' }}")
           else
             NOTES="Download the installer for your platform below."
           fi
