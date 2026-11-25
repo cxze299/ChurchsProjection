@@ -1,6 +1,7 @@
 """Build the fixed Windows entry and the same source on GitHub's native Mac runners."""
 import argparse
 import base64
+from datetime import datetime
 import json
 import os
 from pathlib import Path
@@ -169,6 +170,7 @@ def wait_for_packages(repo, branch, commit, no_wait, cloud_windows=True):
         raise RuntimeError(f"未检测到构建任务，请检查 https://github.com/{repo}/actions")
     print(f"构建任务：{run['html_url']}", flush=True)
     if no_wait:
+        print("未等待云端构建完成；本次脚本耗时不包含后续云端打包时间。", flush=True)
         return
     retried = set()
     previous = None
@@ -246,9 +248,22 @@ def main():
     wait_for_packages(args.repo, branch, commit, args.no_wait, cloud_windows=args.cloud_only)
 
 
-if __name__ == "__main__":
+def run():
+    started = time.monotonic()
+    print(f"构建脚本开始时间：{datetime.now().astimezone():%Y-%m-%d %H:%M:%S %z}", flush=True)
     try:
         main()
+        return 0
     except (RuntimeError, KeyboardInterrupt) as error:
         print(f"构建已停止：{error}", file=sys.stderr)
-        sys.exit(1)
+        return 1
+    finally:
+        elapsed = max(0, int(time.monotonic() - started))
+        hours, remainder = divmod(elapsed, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        print(f"构建脚本结束时间：{datetime.now().astimezone():%Y-%m-%d %H:%M:%S %z}", flush=True)
+        print(f"构建脚本总耗时：{hours:02d}:{minutes:02d}:{seconds:02d}", flush=True)
+
+
+if __name__ == "__main__":
+    sys.exit(run())
