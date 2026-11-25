@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 """
-Generates categorized release notes for everything that landed since the last GitHub release.
-
-One bullet per pull request, titled the way the PR was titled, plus anything pushed straight to the
-branch. Not one bullet per commit: a release is read by people deciding whether to upgrade, and the
-steps a branch took to get where it got are not that.
+Generates Chinese release notes from changelog additions since the last GitHub release.
+English commit and pull-request titles are not copied into the published description.
 
 Usage: python3 scripts/generate_release_notes.py [from_tag [version [windows macos_arm64 macos_x64 linux [end_ref]]]]
 Platform args are 'true'/'false' strings; omit to include all platforms. `end_ref` names where the
@@ -16,6 +13,7 @@ tagged since then must not cut the notes short.
 import subprocess
 import sys
 import re
+import os
 
 # Ensure UTF-8 output on Windows
 if sys.stdout.encoding != "utf-8":
@@ -43,7 +41,16 @@ NOISE = re.compile(
 )
 
 def run(cmd):
-    return subprocess.check_output(cmd, text=True).strip()
+    return subprocess.check_output(cmd, text=True, encoding="utf-8").strip()
+
+
+def chinese_changelog_entries(from_tag, end_ref):
+    diff = run(["git", "diff", "--no-ext-diff", "--unified=0", from_tag, end_ref, "--",
+                ":(top)project/CHANGELOG.md", ":(top)CHANGELOG.md"])
+    return list(dict.fromkeys(
+        line[3:].strip() for line in diff.splitlines()
+        if line.startswith("+- ") and re.search(r"[\u4e00-\u9fff]", line[3:])
+    ))
 
 def last_release_tag():
     if len(sys.argv) > 1:
@@ -128,20 +135,16 @@ def main():
     else:
         version = latest_tag.lstrip("v") if end_ref != "HEAD" else "unreleased"
 
-    entries = [(t, n) for t, n in landed_entries(from_tag, end_ref) if t and not NOISE.match(t)]
-    commits = list(combine_duplicates(entries))
-
-    buckets = {name: [] for name, _ in CATEGORIES}
-    for msg in commits:
-        buckets[categorize(msg)].append(msg)
-
-    for name, _ in CATEGORIES:
-        items = buckets[name]
-        if items:
-            print(f"**{name}**")
-            for item in items:
-                print(f"- {item}")
-            print()
+    entries = chinese_changelog_entries(from_tag, end_ref)
+    print("**更新内容**")
+    if entries:
+        for item in entries:
+            print(f"- {item}")
+    else:
+        print("- 本版本的详细变更请查看下方源码版本对比。")
+    repo = os.environ.get("GITHUB_REPOSITORY", "cxze299/ChurchsProjection")
+    compare_ref = f"v{version}" if version != "unreleased" else end_ref
+    print(f"\n[查看源码版本对比](https://github.com/{repo}/compare/{from_tag}...{compare_ref})\n")
 
     def flag(i): return len(sys.argv) <= i or sys.argv[i].lower() != 'false'
     build_windows    = flag(3)
@@ -150,15 +153,15 @@ def main():
     build_linux      = flag(6)
 
     print("---")
-    print("Download the installer for your platform below.\n")
+    print("请根据设备类型下载下方对应的安装包。\n")
     if build_windows:
         print(f"- **Windows:** ChurchPresenter-{version}-WINDOWS-x64.msi")
     if build_macos_arm:
-        print(f"- **macOS (Apple Silicon / M-series):** ChurchPresenter-{version}-MACOS-M-Silicon.dmg")
+        print(f"- **macOS（苹果 M 系列芯片）：** ChurchPresenter-{version}-MACOS-M-Silicon.dmg")
     if build_macos_x64:
-        print(f"- **macOS (Intel):** ChurchPresenter-{version}-MACOS-Intel.dmg")
+        print(f"- **macOS（Intel 芯片）：** ChurchPresenter-{version}-MACOS-Intel.dmg")
     if build_linux:
-        print(f"- **Linux (Ubuntu 22.04, Debian 12, Linux Mint 21 or newer):** churchpresenter_{version}_amd64-DEBIAN-x64.deb")
+        print(f"- **Linux（Ubuntu 22.04、Debian 12、Linux Mint 21 或更新版本）：** churchpresenter_{version}_amd64-DEBIAN-x64.deb")
 
 if __name__ == "__main__":
     main()
