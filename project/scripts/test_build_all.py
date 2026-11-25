@@ -1,9 +1,36 @@
 import json
+import io
 import unittest
+from contextlib import redirect_stdout, redirect_stderr
 from unittest.mock import patch
 
 import build_all
 from release_version import next_version, normalize_version
+
+
+class BuildTimingTest(unittest.TestCase):
+    def test_success_reports_start_end_and_elapsed_time(self):
+        output = io.StringIO()
+        with patch.object(build_all, "main"), patch.object(build_all.time, "monotonic", side_effect=[10, 3733]), redirect_stdout(output):
+            self.assertEqual(0, build_all.run())
+        self.assertIn("构建脚本开始时间：", output.getvalue())
+        self.assertIn("构建脚本结束时间：", output.getvalue())
+        self.assertIn("构建脚本总耗时：01:02:03", output.getvalue())
+
+    def test_failure_and_cancellation_still_report_time_and_keep_error_status(self):
+        for error in (RuntimeError("failure"), KeyboardInterrupt()):
+            with self.subTest(error=type(error).__name__):
+                output, errors = io.StringIO(), io.StringIO()
+                with patch.object(build_all, "main", side_effect=error), patch.object(build_all.time, "monotonic", side_effect=[10, 15]), redirect_stdout(output), redirect_stderr(errors):
+                    self.assertEqual(1, build_all.run())
+                self.assertIn("构建已停止：", errors.getvalue())
+                self.assertIn("构建脚本总耗时：00:00:05", output.getvalue())
+
+    def test_no_wait_explains_that_cloud_build_time_is_not_included(self):
+        output = io.StringIO()
+        with patch.object(build_all, "api", return_value={"workflow_runs": [{"head_sha": "commit", "html_url": "https://example.com/run"}]}), redirect_stdout(output):
+            build_all.wait_for_packages("o/r", "branch", "commit", True)
+        self.assertIn("不包含后续云端打包时间", output.getvalue())
 
 
 class ReleaseVersionTest(unittest.TestCase):
