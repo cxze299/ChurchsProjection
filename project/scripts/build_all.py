@@ -152,7 +152,7 @@ def prepare_windows_release(repo, commit, version, package):
     if tag not in {item["tagName"] for item in json.loads(existing)}:
         command(["gh", "release", "create", tag, "--repo", repo, "--target", commit,
                  "--draft", "--title", "ChurchPresenter " + tag,
-                 "--notes", "Windows is built locally; macOS packages are added by the manually dispatched workflow."])
+                 "--notes", "Windows 安装包由本机生成；macOS 安装包将在手动发起的云端构建完成后补充。"])
     command(["gh", "release", "upload", tag, str(package) + f"#ChurchPresenter-{version}-WINDOWS-x64.msi",
              "--repo", repo, "--clobber"])
     print(f"Windows MSI 已上传到 Release 草稿：{tag}", flush=True)

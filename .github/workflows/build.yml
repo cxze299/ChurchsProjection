@@ -860,7 +860,7 @@ jobs:
           if [ -n "$PREV_TAG" ]; then
             NOTES=$(python3 project/scripts/generate_release_notes.py "$PREV_TAG" "$VERSION" "${{ inputs.windows && needs.build-windows.result == 'success' }}" "${{ inputs.macos_arm64 && needs.build-macos.result == 'success' }}" "${{ inputs.macos_x64 && needs.build-macos-x64.result == 'success' }}" "${{ inputs.linux && needs.build-linux.result == 'success' }}" HEAD)
           else
-            NOTES="Download the installer for your platform below."
+            NOTES="请根据设备类型下载下方对应的安装包。"
           fi
           echo "BODY<<EOF" >> "$GITHUB_OUTPUT"
           echo "$NOTES" >> "$GITHUB_OUTPUT"
