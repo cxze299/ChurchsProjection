@@ -371,6 +371,7 @@ private fun BoxScope.BibleVerseTransition(frame: BibleFrame, innerModifier: Modi
  */
 @Composable
 internal fun BibleFrame.VerseBoxes(verses: List<SelectedVerse>, alpha: Float) {
+    if (verses.any { it.continuousPassages.isNotEmpty() }) return
     if (bs.textBoxes.values.none { it.enabled } || verses.isEmpty()) return
     val shown = verses.mapIndexed { index, verse ->
         val item = translationStack.firstOrNull { it.fileName == verse.translationFileName }

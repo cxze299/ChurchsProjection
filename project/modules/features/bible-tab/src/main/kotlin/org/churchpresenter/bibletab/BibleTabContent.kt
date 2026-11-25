@@ -97,7 +97,7 @@ internal fun ColumnScope.BibleTabContent(
             selectedMode = selectedMode,
             onQueryChange = { searchQueryChanged(viewModel, it) },
             onClear = { viewModel.clearSearch(); focusRequester.requestFocus() },
-            onSubmit = { viewModel.submitSmartQuery(); focusRequester.requestFocus() },
+            onSubmit = { submitSearch(viewModel); focusRequester.requestFocus() },
             onFocusChanged = { searchFieldFocused = it },
             onCycleSearchMode = { viewModel.cycleSearchMode(); focusRequester.requestFocus() },
             onScopeSelected = viewModel::updateSelectedScopeIndex,
@@ -121,9 +121,12 @@ internal fun ColumnScope.BibleTabContent(
             }
         }
 
-        viewModel.quickReferenceLabel(searchQuery)?.let { label ->
+        ((if (ui.appendPassages) viewModel.quickPassageLabel(searchQuery) else null)
+            ?: viewModel.quickReferenceLabel(searchQuery))?.let { label ->
             Text(
                 text = label,
+                maxLines = if (ui.appendPassages) 2 else Int.MAX_VALUE,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
@@ -434,6 +437,8 @@ private fun BibleTabScope.BibleTabVerseHeader(viewModel: BibleViewModel, showLab
         onAppendPassagesToggle = {
             ui.appendPassages = !ui.appendPassages
             ui.appendedPassages = emptyList()
+            ui.quickInputBase = null
+            ui.quickInputSuppressedQuery = null
             focusRequester.requestFocus()
         },
     )

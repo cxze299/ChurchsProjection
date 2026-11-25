@@ -42,6 +42,10 @@ internal fun BibleTabScope.switchSearchLive(viewModel: BibleViewModel) {
 
 /** The search text changed: hold the output first when it is about to move a live selection. */
 internal fun BibleTabScope.searchQueryChanged(viewModel: BibleViewModel, query: String) {
+    if (ui.appendPassages && searchMode != BibleSearchMode.TEXT && isQuickPassageInput(query)) {
+        viewModel.updateQuickPassageQuery(query)
+        return
+    }
     holdForSearch(viewModel, query)
     viewModel.onSmartQueryChanged(query)
 }
@@ -78,6 +82,10 @@ private fun BibleTabScope.holdForSearch(viewModel: BibleViewModel, query: String
  * not a reference runs the text search instead, and the next Go Live takes a result.
  */
 private fun BibleTabScope.goLiveFromSearch(viewModel: BibleViewModel) {
+    if (ui.appendPassages && searchMode != BibleSearchMode.TEXT && isQuickPassageInput(searchQuery)) {
+        submitSearch(viewModel)
+        return
+    }
     if (isSearchMode && searchResults.isNotEmpty()) {
         val result = searchResults.getOrElse(ui.highlightedResult) { searchResults.first() }
         val bookIndex = books.indexOf(result.book)

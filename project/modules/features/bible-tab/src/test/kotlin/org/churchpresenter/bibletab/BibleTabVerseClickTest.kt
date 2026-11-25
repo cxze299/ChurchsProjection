@@ -25,11 +25,13 @@ class BibleTabVerseClickTest {
         waitForIdle()
         assertEquals(2, reports.live?.first()?.verseNumber)
         assertFalse(vm.multiVerseEnabled.value)
+        mainClock.advanceTimeBy(600)
         verse(verseThree).performMouseInput { click() }
         waitForIdle()
         assertEquals(listOf(1, 2), vm.selectedVerseIndices.sorted())
         assertTrue(vm.multiVerseEnabled.value)
         assertEquals("2-3", reports.live?.first()?.verseRange)
+        mainClock.advanceTimeBy(600)
         verse(verseTwo).performMouseInput { click() }
         waitForIdle()
         assertFalse(vm.multiVerseEnabled.value)

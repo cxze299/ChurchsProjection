@@ -219,6 +219,10 @@ internal class BibleSlide(val frame: BibleFrame, val verses: List<SelectedVerse>
 internal fun BibleFrame.TextContent(verses: List<SelectedVerse>, innerModifier: Modifier) {
     val slide = BibleSlide(this, verses)
     with(slide) {
+        if (verses.any { it.continuousPassages.isNotEmpty() }) {
+            BibleScrollingPassages(slide, verses, innerModifier)
+            return
+        }
         // Full screen always draws the ordered stack, however many translations there are:
         // each line reads its own style profile and a shared fit scale keeps the whole stack
         // on screen. The lower third keeps its own one/two-language layouts below, because a
@@ -291,7 +295,12 @@ internal fun BibleFrame.TextContent(verses: List<SelectedVerse>, innerModifier: 
  * each run their own search and share this one drawer.
  */
 @Composable
-internal fun BibleSlide.TranslationBlock(verse: SelectedVerse, item: BibleTranslationSettings, fitScale: Float) {
+internal fun BibleSlide.TranslationBlock(
+    verse: SelectedVerse,
+    item: BibleTranslationSettings,
+    fitScale: Float,
+    honorTextBoxes: Boolean = true,
+) {
     val textSize = (item.textFontSize * scaleFactor * fitScale).sp
     val refSize = (item.referenceFontSize * scaleFactor * fitScale).sp
     val textFont = systemFontFamilyOrDefault(item.textFontType)
@@ -308,8 +317,8 @@ internal fun BibleSlide.TranslationBlock(verse: SelectedVerse, item: BibleTransl
     val itemRefPainter =
         rememberTextBackdropPainter(item.referenceBackdropFor(isLowerThird))
     // A boxed half is drawn in its box by the box layer, and leaves this block.
-    val refBoxed = bs.isBoxed(item, BibleStyleElement.REFERENCE, isLowerThird)
-    val textBoxed = bs.isBoxed(item, BibleStyleElement.TEXT, isLowerThird)
+    val refBoxed = honorTextBoxes && bs.isBoxed(item, BibleStyleElement.REFERENCE, isLowerThird)
+    val textBoxed = honorTextBoxes && bs.isBoxed(item, BibleStyleElement.TEXT, isLowerThird)
 
     // The two halves as their own composables, drawn the same wherever the
     // column puts them.
