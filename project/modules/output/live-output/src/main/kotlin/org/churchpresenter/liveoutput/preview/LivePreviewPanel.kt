@@ -91,10 +91,16 @@ fun LivePreviewPanel(
 ) {
     val proj = appSettings.projectionSettings
     val deckLinkCount = DeckLinkManager.knownDevices.collectAsState().value?.size ?: 0
-    val realWindowCount = ((rememberScreenDevices().size - 1) + deckLinkCount).coerceAtLeast(0)
+    val screenCount = rememberScreenDevices().size
+    val quickDisplay = proj.quickPlayDisplay?.takeIf { it in 0 until screenCount }
+    // Match PresenterWindows: a selected monitor uses slot 0, and an independent window
+    // remains an output even when there is no secondary monitor.
+    val realWindowCount = if (quickDisplay != null) 1 else
+        ((screenCount - 1).coerceAtLeast(0) + deckLinkCount)
+            .coerceAtLeast(if (proj.windowedProjection) 1 else 0)
     // Mirror main.kt's dev-fallback: with no real output, preview the dev fallback window(s) so the
     // right-pane preview matches what's actually opened. devWindowCount lets several be previewed.
-    val simulatedCount = simulatedOutputCount(
+    val simulatedCount = if (proj.windowedProjection || quickDisplay != null) 0 else simulatedOutputCount(
         realWindowCount, proj.devWindowCount,
         developmentFallback = !isRelease || DevFlags.forceDevWindow,
         simulateMissing = LocalSimulateMissingOutputs.current,
@@ -116,6 +122,7 @@ fun LivePreviewPanel(
         val entries = previewEntries(
             proj, displayCount, realWindowCount, devWindowedFallback,
             presenterManager, appSettings, serverUrl, qaDisplayUrl, sttManager, onSettingsChange,
+            quickDisplay = quickDisplay,
         )
 
         // With no layout the panel lists every output, one per row. With one, the layout draws the

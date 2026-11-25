@@ -45,6 +45,7 @@ internal fun previewEntries(
     qaDisplayUrl: String,
     sttManager: STTManager?,
     onSettingsChange: ((AppSettings) -> AppSettings) -> Unit,
+    quickDisplay: Int? = null,
 ): List<PreviewEntry> {
     val context = PreviewContext(presenterManager, appSettings, serverUrl, qaDisplayUrl, sttManager, onSettingsChange)
     // A merged picture is previewed once, at its own shape, under its first output; the rest of
@@ -52,25 +53,34 @@ internal fun previewEntries(
     val merges = remember(proj) { proj.liveMerges() }
     val mergedLabel = stringResource(Res.string.preview_merged_label)
     fun PreviewEntry.merged(kind: String, index: Int): PreviewEntry? {
+        if (quickDisplay != null && kind == Constants.PREVIEW_OUTPUT_SCREEN) return this
         val key = Constants.previewOutputKey(kind, index)
         val merge = merges[key] ?: return this
         return if (merge.host != key) null else this
     }
     fun ScreenAssignment.forPreview(kind: String, index: Int): ScreenAssignment =
-        merges[Constants.previewOutputKey(kind, index)]?.let { sizedAs(it) } ?: this
+        if (quickDisplay != null && kind == Constants.PREVIEW_OUTPUT_SCREEN) this else
+            merges[Constants.previewOutputKey(kind, index)]?.let { sizedAs(it) } ?: this
     fun String.forPreview(kind: String, index: Int): String =
-        if (merges.containsKey(Constants.previewOutputKey(kind, index))) "$this $mergedLabel" else this
+        if (!(quickDisplay != null && kind == Constants.PREVIEW_OUTPUT_SCREEN) &&
+            merges.containsKey(Constants.previewOutputKey(kind, index))) "$this $mergedLabel" else this
     return buildList {
         if (presenterManager.previewBus.enabled.value) add(context.previewBusEntry(proj.getAssignment(0)))
         for (i in 0 until displayCount) {
-            val screenAssignment = proj.getAssignment(i)
+            val screenAssignment = proj.getAssignment(i).let { assignment ->
+                if (quickDisplay == null) assignment else assignment.copy(
+                    targetDisplay = quickDisplay, targetType = Constants.TARGET_TYPE_SCREEN,
+                    targetBoundsX = Int.MIN_VALUE, keyTargetDisplay = Constants.KEY_TARGET_NONE,
+                )
+            }
 
             // Skip displays the user set to "None" — but never skip dev-fallback slots (i >=
             // realWindowCount): those are auto-resolved to None only because no hardware exists,
             // yet main.kt still opens a window for them, so they must appear in the preview too.
             val isDevFallbackSlot = devWindowedFallback && i >= realWindowCount
             // A row on a monitor marked "Don't use" opens no window either, so it is skipped the same way.
-            if (!isDevFallbackSlot && proj.drivesNothing(screenAssignment)) continue
+            if (!isDevFallbackSlot && !proj.windowedProjection && quickDisplay == null &&
+                proj.drivesNothing(screenAssignment)) continue
 
             // The operator's name for the monitor, falling back to the numbered default. This
             // panel is the one place they watch all service long, so a booth driving "Foyer TV"
