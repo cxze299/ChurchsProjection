@@ -100,6 +100,7 @@ class BibleTabScopeActionsTest {
         statistics: BibleVerseStatistics? = null,
         stt: STTManager? = null,
         withCallbacks: Boolean = true,
+        quickInputEffects: Boolean = false,
     ): BibleTabScope {
         var built: BibleTabScope? = null
         setContent {
@@ -141,6 +142,7 @@ class BibleTabScopeActionsTest {
                 )
             }
             built = tab
+            if (quickInputEffects) tab.BibleQuickPassageEffect(vm)
             Box(
                 Modifier.size(10.dp).testTag(TAG).focusRequester(focus).focusable()
                     .onPreviewKeyEvent { tab.handleKeyEvent(vm, it) },
@@ -544,6 +546,58 @@ class BibleTabScopeActionsTest {
 
         assertEquals(1, tab.liveNavTargetVerse)
         assertTrue(tab.liveNavPageStep)
+    }
+
+    @Test
+    fun `continuous typing publishes all passages and replaces edits without duplicates`() = runComposeUiTest {
+        val calls = Calls()
+        val tab = scope(calls = calls, quickInputEffects = true)
+        runOnIdle {
+            tab.ui.appendPassages = true
+            tab.searchQueryChanged(vm, "csj 1 1 2yhfy 3 16 17")
+        }
+        waitUntil(timeoutMillis = 5_000) { calls.selected.lastOrNull()?.firstOrNull()?.continuousPassages?.size == 2 }
+        val first = calls.selected.last().first().continuousPassages
+        assertEquals(listOf("Genesis", "John"), first.map { it.first().bookName })
+        assertEquals(listOf("1-2", "16-17"), first.map { it.first().verseRange })
+        runOnIdle { tab.searchQueryChanged(vm, "csj 1 1 3 yhfy 3 16 17") }
+        waitUntil(timeoutMillis = 5_000) { calls.selected.last().first().continuousPassages.first().first().verseRange == "1-3" }
+        assertEquals(2, calls.selected.last().first().continuousPassages.size)
+        val published = calls.selected.size
+        runOnIdle { tab.searchQueryChanged(vm, "csj 1 1 3 yhfy 3") }
+        mainClock.advanceTimeBy(500)
+        waitForIdle()
+        assertEquals(published, calls.selected.size)
+        runOnIdle { tab.clearPassages(vm) }
+        mainClock.advanceTimeBy(500)
+        waitForIdle()
+        assertEquals(1, calls.cleared)
+        assertTrue(tab.ui.appendedPassages.isEmpty())
+    }
+
+    @Test
+    fun `multiple references do not publish while continuous projection is off`() = runComposeUiTest {
+        val calls = Calls()
+        val tab = scope(calls = calls, quickInputEffects = true)
+        runOnIdle { tab.searchQueryChanged(vm, "csj 1 1 2yhfy 3 16 17") }
+        mainClock.advanceTimeBy(500)
+        waitForIdle()
+        assertTrue(calls.selected.isEmpty())
+    }
+
+    @Test
+    fun `clearing before the input delay finishes prevents delayed projection`() = runComposeUiTest {
+        val calls = Calls()
+        val tab = scope(calls = calls, quickInputEffects = true)
+        runOnIdle {
+            tab.ui.appendPassages = true
+            tab.searchQueryChanged(vm, "csj 1 1 2yhfy 3 16 17")
+            tab.clearPassages(vm)
+        }
+        mainClock.advanceTimeBy(1_000)
+        waitForIdle()
+        assertTrue(calls.selected.isEmpty())
+        assertEquals(1, calls.cleared)
     }
 
     private companion object {

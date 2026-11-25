@@ -165,6 +165,7 @@ internal fun BibleTabScope.BibleSplitLiveEffects(viewModel: BibleViewModel) {
 /** Auto-follow, selection publishing, the navigate-away hold, and STT bookkeeping. */
 @Composable
 internal fun BibleTabScope.BibleSelectionEffects(viewModel: BibleViewModel) {
+    if (ui.appendPassages) BibleQuickPassageEffect(viewModel)
     val autoFollowLiveToken by viewModel.autoFollowLiveToken
 
     val autoFollowTokenGate = rememberTokenGate(autoFollowLiveToken)

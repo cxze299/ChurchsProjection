@@ -15,5 +15,7 @@ data class SelectedVerse(
     val verseText: String = "",
     val verseRange: String = "",
     /** Canonical (bible-agnostic) book id for [bookName] within the bible it was resolved from. */
-    val bookId: Int = 0
+    val bookId: Int = 0,
+    /** Ordered references, with the selected translations grouped together for each passage. */
+    val continuousPassages: List<List<SelectedVerse>> = emptyList(),
 )

@@ -345,6 +345,9 @@ internal class BibleLiveNavState {
 internal class BibleTabUiState {
     var appendPassages by mutableStateOf(false)
     var appendedPassages: List<List<SelectedVerse>> = emptyList()
+    var quickInputBase: List<List<SelectedVerse>>? = null
+    var quickInputRequest by mutableStateOf(0)
+    var quickInputSuppressedQuery: String? = null
     var historyExpanded by mutableStateOf(true)
     var selectedHistoryIdx by mutableStateOf(-1)
     var selectedDetectionIdx by mutableStateOf(0)

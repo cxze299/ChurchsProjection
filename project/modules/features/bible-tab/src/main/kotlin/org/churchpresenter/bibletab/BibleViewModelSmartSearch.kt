@@ -140,7 +140,7 @@ internal fun BibleViewModel.navigateToReference(
     }
 }
 
-private fun containsRequestedVerses(chapterVerses: List<String>, ref: SmartReference): Boolean {
+internal fun containsRequestedVerses(chapterVerses: List<String>, ref: SmartReference): Boolean {
     val start = ref.verseStart ?: 1
     val end = ref.verseEnd ?: start
     if (start <= 0 || end < start) return false
