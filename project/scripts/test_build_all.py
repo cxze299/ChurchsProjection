@@ -195,7 +195,7 @@ class ParallelOrchestrationTest(unittest.TestCase):
             build_all.main()
 
         self.assertEqual(
-            ["publish_source", "dispatch_cloud", "build_windows", "upload_windows", "wait_cloud"],
+            ["build_windows", "publish_source", "upload_windows", "dispatch_cloud", "wait_cloud"],
             events,
         )
 

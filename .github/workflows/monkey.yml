@@ -14,9 +14,6 @@ name: Monkey
 # open one). Dispatch it by hand to try one seed: a run by hand never files an issue.
 
 on:
-  schedule:
-    # Mondays 05:00 UTC, on main (a schedule always runs the default branch).
-    - cron: '0 5 * * 1'
   workflow_dispatch:
     inputs:
       seed:

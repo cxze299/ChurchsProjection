@@ -12,9 +12,6 @@ name: Mutation testing
 # for the same reasons as render-benchmark.yml: `test` is the required check, and this needs none
 # of what that job carries.
 on:
-  schedule:
-    # Mondays 04:00 UTC, on main.
-    - cron: '0 4 * * 1'
   workflow_dispatch:
 
 env:
