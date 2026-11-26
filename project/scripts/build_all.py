@@ -124,7 +124,8 @@ def build_windows(version):
         candidates = sorted((Path(env.get("LOCALAPPDATA", "")) / "ChurchPresenterTools").glob("jdk-21*"))
         if candidates:
             env["JAVA_HOME"] = str(candidates[-1])
-    args = [str(ROOT / "gradlew.bat"), "--quiet", "--max-workers=3"]
+    workers = max(4, min(8, (os.cpu_count() or 4) - 1))
+    args = [str(ROOT / "gradlew.bat"), "--quiet", "--parallel", "--build-cache", f"--max-workers={workers}"]
     # Optional machine-local repository/proxy configuration; no machine paths are saved in source.
     if env.get("CHURCHPRESENTER_GRADLE_INIT"):
         args += ["--init-script", env["CHURCHPRESENTER_GRADLE_INIT"]]
@@ -150,12 +151,16 @@ def prepare_windows_release(repo, commit, version, package):
     tag = "v" + version
     existing = command(["gh", "release", "list", "--repo", repo, "--limit", "100", "--json", "tagName"])
     if tag not in {item["tagName"] for item in json.loads(existing)}:
-        command(["gh", "release", "create", tag, "--repo", repo, "--target", commit,
-                 "--draft", "--title", "ChurchPresenter " + tag,
-                 "--notes", "Windows 安装包由本机生成；macOS 安装包将在手动发起的云端构建完成后补充。"])
+        try:
+            command(["gh", "release", "create", tag, "--repo", repo, "--target", commit,
+                     "--draft", "--title", "ChurchPresenter " + tag,
+                     "--notes", "Windows 安装包由本机生成；macOS 安装包将在手动发起的云端构建完成后补充。"])
+        except RuntimeError:
+            # Cloud release job may have created the release concurrently; upload with --clobber below.
+            pass
     command(["gh", "release", "upload", tag, str(package) + f"#ChurchPresenter-{version}-WINDOWS-x64.msi",
              "--repo", repo, "--clobber"])
-    print(f"Windows MSI 已上传到 Release 草稿：{tag}", flush=True)
+    print(f"Windows MSI 已上传到 Release：{tag}", flush=True)
 
 
 def wait_for_packages(repo, branch, commit, no_wait, cloud_windows=True):
@@ -237,14 +242,16 @@ def main():
     tags = api(args.repo, "git/matching-refs/tags/v1.0")
     version = next_version(tag["ref"].rsplit("/", 1)[-1] for tag in tags)
     print(f"本次构建版本：{version}", flush=True)
-    package = None if args.cloud_only else build_windows(version)
+    # Publish source and dispatch macOS cloud runners FIRST so cloud packaging runs in parallel
+    # with the local Windows MSI build rather than waiting behind it.
     branch, commit = publish_source(args.repo, base)
-    if package:
-        prepare_windows_release(args.repo, commit, version, package)
     api(args.repo, "actions/workflows/build-integrated.yml/dispatches", {
         "ref": branch, "inputs": {"windows": "true" if args.cloud_only else "false", "version": "v" + version},
     })
-    print("已手动发起云端打包；该打包结果不作为分支合并条件。", flush=True)
+    print("已先行发起云端打包（与本机 Windows 构建并行执行）；该打包结果不作为分支合并条件。", flush=True)
+    if not args.cloud_only:
+        package = build_windows(version)
+        prepare_windows_release(args.repo, commit, version, package)
     wait_for_packages(args.repo, branch, commit, args.no_wait, cloud_windows=args.cloud_only)
 
 

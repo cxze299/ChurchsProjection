@@ -2,9 +2,14 @@ import org.churchpresenter.buildlogic.isConfigured
 import org.churchpresenter.buildlogic.macJbrPin
 import org.churchpresenter.buildlogic.resolvedJdk21Home
 import org.churchpresenter.buildlogic.signingProps
+import org.jetbrains.compose.desktop.application.tasks.AbstractJPackageTask
 import java.io.File
 import java.security.MessageDigest
 import java.util.Properties
+import java.util.zip.Deflater
+import java.util.zip.ZipEntry
+import java.util.zip.ZipFile
+import java.util.zip.ZipOutputStream
 
 // :composeApp's bundled natives -- ffmpeg and the OMT libraries, fetched against pinned digests and
 // codesigned for notarization -- and the check that the JDK jpackage bundles is self-contained.
@@ -265,10 +270,32 @@ val fetchBundledOmt = tasks.register("fetchBundledOmt") {
             }
         }
         outDir.mkdirs()
+        val lipoSlice = when (target) {
+            "macos-aarch64" -> "arm64"
+            "macos-x86_64" -> "x86_64"
+            else -> null
+        }
         for (entry in entries) {
             val found = File(extractDir, entry).takeIf { it.isFile }
                 ?: error("No '$entry' inside the OMT archive for $target ($url)")
-            found.copyTo(File(outDir, found.name), overwrite = true)
+            val dest = File(outDir, found.name)
+            found.copyTo(dest, overwrite = true)
+            // macOS OMT dylibs ship as universal (arm64 + x86_64, ~18 MB). Each DMG already targets a
+            // single architecture, so thinning drops the unused slice (~9 MB saved per DMG).
+            if (lipoSlice != null && dest.extension == "dylib") {
+                val archsProc = ProcessBuilder("lipo", "-archs", dest.absolutePath)
+                    .redirectErrorStream(true).start()
+                val archs = archsProc.inputStream.bufferedReader().readText().trim().split(Regex("\\s+"))
+                if (archsProc.waitFor() == 0 && archs.size > 1 && lipoSlice in archs) {
+                    val thinFile = File(outDir, "${dest.name}.thin")
+                    val thinProc = ProcessBuilder("lipo", "-thin", lipoSlice, dest.absolutePath, "-output", thinFile.absolutePath)
+                        .redirectErrorStream(true).start()
+                    val thinOut = thinProc.inputStream.bufferedReader().readText()
+                    check(thinProc.waitFor() == 0) { "lipo -thin $lipoSlice failed for ${dest.name}:\n$thinOut" }
+                    thinFile.copyTo(dest, overwrite = true)
+                    thinFile.delete()
+                }
+            }
         }
         if (license.isNotBlank()) {
             val notice = File(extractDir, license).takeIf { it.isFile }
@@ -393,3 +420,190 @@ val checkMacRuntimeSelfContained = tasks.register("checkMacRuntimeSelfContained"
 
 tasks.matching { it.name in setOf("packageDmg", "packageReleaseDmg", "createDistributable", "createReleaseDistributable") }
     .configureEach { dependsOn(checkMacRuntimeSelfContained) }
+
+// ── Shrinking packaged JARs before jpackage / codesign ────────────────────────
+// 1. material-icons-extended-desktop (~36 MB, >11,000 icon classes): scans constant pools across all
+//    other runtime JARs and keeps only the icon classes actually referenced (transitively + inner
+//    classes), shrinking it to ~0.5 MB without ProGuard reflection hazards.
+// 2. sqlite-jdbc (~11.6 MB) & junixsocket-native-common: strips native libraries for foreign OS/arch
+//    targets so each platform installer carries only its own native binary (~12 MB saved).
+@CacheableTask
+abstract class ShrinkPackagedJarsTask : DefaultTask() {
+    @get:Classpath
+    abstract val inputClasspath: ConfigurableFileCollection
+
+    @get:Input
+    abstract val targetKey: Property<String>
+
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
+
+    private val iconClassRegex = Regex("""androidx/compose/material/icons/[A-Za-z0-9_/$]+""")
+
+    private fun extractIconRefs(bytes: ByteArray): Set<String> {
+        val text = String(bytes, Charsets.ISO_8859_1)
+        if (!text.contains("androidx/compose/material/icons/")) return emptySet()
+        return iconClassRegex.findAll(text).mapTo(HashSet()) { it.value }
+    }
+
+    @TaskAction
+    fun shrink() {
+        val out = outputDir.get().asFile.apply { deleteRecursively(); mkdirs() }
+        val allJars = inputClasspath.files.filter { it.isFile && it.extension.equals("jar", ignoreCase = true) }
+        val iconsJar = allJars.firstOrNull { it.name.startsWith("material-icons-extended-desktop") }
+        val sqliteJar = allJars.firstOrNull { it.name.startsWith("sqlite-jdbc-") }
+        val junixJar = allJars.firstOrNull { it.name.startsWith("junixsocket-native-common-") }
+
+        if (iconsJar != null) {
+            val referenced = HashSet<String>()
+            for (jar in allJars) {
+                if (jar == iconsJar || jar.name.startsWith("jcef-natives-")) continue
+                ZipFile(jar).use { zip ->
+                    val entries = zip.entries()
+                    while (entries.hasMoreElements()) {
+                        val entry = entries.nextElement()
+                        if (!entry.isDirectory && entry.name.endsWith(".class")) {
+                            referenced.addAll(extractIconRefs(zip.getInputStream(entry).readBytes()))
+                        }
+                    }
+                }
+            }
+            ZipFile(iconsJar).use { zip ->
+                val classBytes = HashMap<String, ByteArray>()
+                val nonClassEntries = ArrayList<Pair<String, ByteArray>>()
+                val entries = zip.entries()
+                while (entries.hasMoreElements()) {
+                    val entry = entries.nextElement()
+                    if (entry.isDirectory) continue
+                    val bytes = zip.getInputStream(entry).readBytes()
+                    if (entry.name.endsWith(".class")) {
+                        classBytes[entry.name.removeSuffix(".class")] = bytes
+                    } else {
+                        nonClassEntries.add(entry.name to bytes)
+                    }
+                }
+                val byOuter = classBytes.keys.groupBy { it.substringBefore('$') }
+                val keep = HashSet<String>()
+                val queue = ArrayDeque(referenced)
+                while (queue.isNotEmpty()) {
+                    val cur = queue.removeFirst()
+                    val candidates = buildList {
+                        add(cur)
+                        byOuter[cur.substringBefore('$')]?.let { addAll(it) }
+                    }
+                    for (candidate in candidates) {
+                        val bytes = classBytes[candidate] ?: continue
+                        if (keep.add(candidate)) {
+                            for (dep in extractIconRefs(bytes)) {
+                                if (dep !in keep) queue.addLast(dep)
+                            }
+                        }
+                    }
+                }
+                val outIcons = File(out, iconsJar.name)
+                ZipOutputStream(outIcons.outputStream().buffered()).use { zos ->
+                    zos.setLevel(Deflater.BEST_COMPRESSION)
+                    for ((name, bytes) in nonClassEntries) {
+                        zos.putNextEntry(ZipEntry(name).apply { time = 0L })
+                        zos.write(bytes)
+                        zos.closeEntry()
+                    }
+                    for (cls in keep.sorted()) {
+                        zos.putNextEntry(ZipEntry("$cls.class").apply { time = 0L })
+                        zos.write(classBytes.getValue(cls))
+                        zos.closeEntry()
+                    }
+                }
+                logger.lifecycle(
+                    "Shrunk ${iconsJar.name}: kept ${keep.size}/${classBytes.size} icon classes " +
+                        "(${iconsJar.length() / 1024} KB -> ${outIcons.length() / 1024} KB)"
+                )
+            }
+        }
+
+        val target = targetKey.get()
+        if (sqliteJar != null) {
+            val allowedPrefixes = when (target) {
+                "macos-aarch64" -> listOf("org/sqlite/native/Mac/aarch64/")
+                "macos-x86_64" -> listOf("org/sqlite/native/Mac/x86_64/")
+                "windows-x86_64" -> listOf("org/sqlite/native/Windows/x86_64/")
+                "windows-aarch64" -> listOf("org/sqlite/native/Windows/aarch64/")
+                "linux-x86_64" -> listOf("org/sqlite/native/Linux/x86_64/", "org/sqlite/native/Linux-Musl/x86_64/")
+                else -> emptyList()
+            }
+            val outSqlite = File(out, sqliteJar.name)
+            if (allowedPrefixes.isEmpty()) {
+                sqliteJar.copyTo(outSqlite, overwrite = true)
+            } else {
+                filterJarEntries(sqliteJar, outSqlite) { name ->
+                    !name.startsWith("org/sqlite/native/") || allowedPrefixes.any { name.startsWith(it) }
+                }
+                logger.lifecycle(
+                    "Shrunk ${sqliteJar.name} for $target: ${sqliteJar.length() / 1024} KB -> ${outSqlite.length() / 1024} KB"
+                )
+            }
+        }
+
+        if (junixJar != null) {
+            val outJunix = File(out, junixJar.name)
+            val isLinux = target.startsWith("linux-")
+            filterJarEntries(junixJar, outJunix) { name ->
+                when {
+                    !name.startsWith("jni/") && !name.contains("/native/") && !name.endsWith(".so") &&
+                        !name.endsWith(".dll") && !name.endsWith(".jnilib") && !name.endsWith(".dylib") -> true
+                    !isLinux -> false
+                    target == "linux-x86_64" -> name.contains("x86_64-Linux")
+                    else -> name.contains("Linux")
+                }
+            }
+            logger.lifecycle(
+                "Shrunk ${junixJar.name} for $target: ${junixJar.length() / 1024} KB -> ${outJunix.length() / 1024} KB"
+            )
+        }
+    }
+
+    private fun filterJarEntries(source: File, dest: File, keepPredicate: (String) -> Boolean) {
+        ZipFile(source).use { zip ->
+            ZipOutputStream(dest.outputStream().buffered()).use { zos ->
+                zos.setLevel(Deflater.BEST_COMPRESSION)
+                val entries = zip.entries()
+                while (entries.hasMoreElements()) {
+                    val entry = entries.nextElement()
+                    if (entry.isDirectory || !keepPredicate(entry.name)) continue
+                    zos.putNextEntry(ZipEntry(entry.name).apply { time = 0L })
+                    zip.getInputStream(entry).use { it.copyTo(zos) }
+                    zos.closeEntry()
+                }
+            }
+        }
+    }
+}
+
+val shrinkPackagedJars = tasks.register<ShrinkPackagedJarsTask>("shrinkPackagedJars") {
+    description = "Strips unused Material icons and foreign-OS native libraries before jpackage."
+    group = "build"
+    targetKey.set(ffmpegTargetKey())
+    inputClasspath.from(configurations.named("jvmRuntimeClasspath"))
+    inputClasspath.from(tasks.named("jvmJar"))
+    outputDir.set(layout.buildDirectory.dir("shrunk-app-jars"))
+}
+
+val shrunkJarPrefixes = listOf(
+    "material-icons-extended-desktop",
+    "sqlite-jdbc-",
+    "junixsocket-native-common-",
+)
+
+afterEvaluate {
+    tasks.withType<AbstractJPackageTask>().configureEach {
+        dependsOn(shrinkPackagedJars)
+        val originalSources = files.from.toList()
+        val keptOriginals = project.files(originalSources).filter { file ->
+            shrunkJarPrefixes.none { prefix -> file.name.startsWith(prefix) }
+        }
+        val replacementJars = shrinkPackagedJars.map { task ->
+            task.outputDir.asFileTree.matching { include("*.jar") }
+        }
+        files.setFrom(keptOriginals, replacementJars)
+    }
+}

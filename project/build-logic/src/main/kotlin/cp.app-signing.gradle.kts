@@ -54,7 +54,9 @@ fun setDmgVolumeIcon(dmg: File, iconIcns: File) {
     }
 
     dmg.delete()
-    runCommand("hdiutil", "convert", writableDmg.absolutePath, "-format", "UDZO", "-o", dmg.absolutePath)
+    // ULFO (LZFSE, natively supported since macOS 10.11; app requires macOS 15+) compresses
+    // smaller than UDZO (zlib) while running ~3x faster during both CI packaging and first-time mount.
+    runCommand("hdiutil", "convert", writableDmg.absolutePath, "-format", "ULFO", "-o", dmg.absolutePath)
     writableDmg.delete()
 }
 

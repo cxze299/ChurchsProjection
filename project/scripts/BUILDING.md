@@ -10,10 +10,8 @@
 
 - 需要 Python 3、Git、GitHub CLI 和 JDK 21。先执行 `gh auth login`，登录具有仓库写入及 Actions 权限的账号。
 - 构建前退出 ChurchPresenter，并提交当前源码修改。脚本不自动暂存、提交或上传未跟踪文件。
-- 本机使用 `:composeApp:createDistributable` 更新固定软件入口，并使用 `:composeApp:packageMsi` 生成 Windows MSI。
-- 上传已提交源码并校验源码树后，由 CMD 显式手动触发 `build-integrated.yml`，仅在 Actions 构建 macOS M-Silicon 和 Intel 两个包。推送源码本身不触发打包。
-- 脚本等待构建结束，每个平台遇到失败或 runner 容量不足时自动重试一次，并输出各安装包的下载链接。下载 GitHub Actions 产物需要登录 GitHub。
-- Windows MSI 先上传到 Release 草稿；两个 Mac 包成功后加入同一 Release 并正式发布，Mac 失败或取消时保留草稿。三平台使用相同版本号与源码树。
+- 上传已提交源码并校验源码树后，脚本立即触发 `build-integrated.yml`（在 Actions 并行构建 macOS M-Silicon 和 Intel 两个包），同时本机并行执行 `:composeApp:createDistributable` 与 `:composeApp:packageMsi` 生成 Windows 固定软件入口及 MSI 安装包。推送源码本身不触发打包。
+- 本机生成的 Windows MSI 上传到对应版本 Release（草稿或已有 Release）；两个 Mac 包成功后加入同一 Release 并正式发布，三平台使用相同版本号与源码树。
 - 构建分支自动合并到 main 不依赖任何打包结果；打包失败不阻止源码合并。
 - macOS 使用 GitHub 的 Mac runner，本机无需安装 Xcode。没有配置 Apple 签名和公证凭据时，产物未签名、未公证。
 

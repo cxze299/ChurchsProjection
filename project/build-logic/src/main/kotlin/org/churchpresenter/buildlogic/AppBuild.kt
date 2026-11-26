@@ -179,17 +179,6 @@ fun Project.resolvedJdk21Home(): String? = macJbrPin()?.home?.absolutePath ?: tr
     jdk21Paths.firstOrNull { path -> File("$path/bin/java").exists() }
 }
 
-// Detect current OS classifier for JavaFX native binaries
-fun currentOsClassifier(): String {
-    val os = System.getProperty("os.name").lowercase()
-    val arch = System.getProperty("os.arch").lowercase()
-    return when {
-        os.contains("mac") -> if (arch.contains("aarch64")) "mac-aarch64" else "mac"
-        os.contains("win") -> "win"
-        else -> "linux"
-    }
-}
-
 // Detect current OS+arch for JCEF native binaries
 fun currentJcefPlatform(): String {
     val os = System.getProperty("os.name").lowercase()
