@@ -16,6 +16,7 @@ dependencies {
     implementation(projects.icons)
     implementation(projects.coreModels)
     implementation(projects.settings)
+    implementation(projects.presenter)
     implementation(projects.theme)
     implementation(projects.bible)
     implementation(projects.diagnostics)
