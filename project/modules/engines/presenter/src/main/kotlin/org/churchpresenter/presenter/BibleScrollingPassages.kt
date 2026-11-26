@@ -12,6 +12,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -30,11 +33,16 @@ internal fun BibleScrollingPassages(slide: BibleSlide, verses: List<SelectedVers
         val allowed = if (isParallelIntended) maxOf(translationStack.size, 2) else 1
         val visible = verses.take(allowed)
         val passages = verses.firstOrNull { it.continuousPassages.isNotEmpty() }?.continuousPassages.orEmpty()
+        LaunchedEffect(passages) {
+            snapshotFlow { scroll.maxValue }.collectLatest { end ->
+                if (end != Int.MAX_VALUE) scroll.scrollTo(end)
+            }
+        }
         Box(modifier.fillMaxSize().clipToBounds()) {
             Column(
                 modifier = Modifier.fillMaxSize().testTag("continuous_bible_content")
                     .verticalScroll(scroll).padding(end = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(bs.multiTranslationSpacing.dp),
+                verticalArrangement = Arrangement.spacedBy((bs.continuousPassageSpacing ?: bs.multiTranslationSpacing).coerceIn(0, 200).dp),
             ) {
                 passages.forEach { translations ->
                     translations.forEach { verse ->
@@ -45,7 +53,8 @@ internal fun BibleScrollingPassages(slide: BibleSlide, verses: List<SelectedVers
                             val item = translationStack.firstOrNull { it.fileName == verse.translationFileName }
                                 ?: translationStack.getOrNull(index)
                                 ?: BibleTranslationSettings(fileName = verse.translationFileName)
-                            TranslationBlock(verse, item, fitScale = 1f, honorTextBoxes = false)
+                            TranslationBlock(verse, item, fitScale = 1f, honorTextBoxes = false,
+                                lineSpacingPercent = bs.continuousLineSpacingPercent)
                         }
                     }
                 }

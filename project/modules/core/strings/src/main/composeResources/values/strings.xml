@@ -4423,4 +4423,12 @@
     <string name="projection_toolbar_clear_text">Clear text</string>
     <string name="projection_toolbar_restore_text">Restore</string>
     <string name="projection_toolbar_clear_layers">Layers</string>
+    <string name="bible_projection_style_button">Style settings</string>
+    <string name="bible_projection_style_title">Scripture projection style</string>
+    <string name="bible_projection_style_no_translation">Select a Bible translation first.</string>
+    <string name="bible_projection_style_translation">Translation</string>
+    <string name="bible_projection_style_text_size">Text size</string>
+    <string name="bible_projection_style_reference_size">Reference size</string>
+    <string name="bible_projection_style_line_spacing">Line spacing (%, 0 = default)</string>
+    <string name="bible_projection_style_passage_spacing">Passage spacing</string>
 </resources>

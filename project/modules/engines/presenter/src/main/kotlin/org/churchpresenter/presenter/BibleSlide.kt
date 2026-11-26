@@ -300,6 +300,7 @@ internal fun BibleSlide.TranslationBlock(
     item: BibleTranslationSettings,
     fitScale: Float,
     honorTextBoxes: Boolean = true,
+    lineSpacingPercent: Int? = null,
 ) {
     val textSize = (item.textFontSize * scaleFactor * fitScale).sp
     val refSize = (item.referenceFontSize * scaleFactor * fitScale).sp
@@ -352,7 +353,10 @@ internal fun BibleSlide.TranslationBlock(
             fontFamily = textFont,
             fontSize = textSize,
             textAlign = textAlign,
-            style = textStyle(item),
+            style = textStyle(item).let { style ->
+                if (lineSpacingPercent == null) style else
+                    style.copy(lineHeight = (lineSpacingPercent.coerceIn(50, 300) / 100f).em)
+            },
             onTextLayout = itemTextPainter::onTextLayout,
         )
     }

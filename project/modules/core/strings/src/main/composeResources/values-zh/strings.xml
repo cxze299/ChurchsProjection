@@ -4303,4 +4303,12 @@
     <string name="projection_toolbar_clear_text">清除文字</string>
     <string name="projection_toolbar_restore_text">恢复文字</string>
     <string name="projection_toolbar_clear_layers">清除图层</string>
+    <string name="bible_projection_style_button">样式设置</string>
+    <string name="bible_projection_style_title">经文投影样式</string>
+    <string name="bible_projection_style_no_translation">请先选择经文译本。</string>
+    <string name="bible_projection_style_translation">译本</string>
+    <string name="bible_projection_style_text_size">正文字号</string>
+    <string name="bible_projection_style_reference_size">引用字号</string>
+    <string name="bible_projection_style_line_spacing">行距（%，0 为默认）</string>
+    <string name="bible_projection_style_passage_spacing">段间距</string>
 </resources>

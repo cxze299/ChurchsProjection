@@ -184,6 +184,8 @@ data class BibleSettings(
      */
     val allTranslationStyle: BibleTranslationSettings? = null,
     val multiTranslationSpacing: Int = 24,
+    val continuousLineSpacingPercent: Int? = null,
+    val continuousPassageSpacing: Int? = null,
     val multiTranslationDivider: Boolean = false,
 
     /**

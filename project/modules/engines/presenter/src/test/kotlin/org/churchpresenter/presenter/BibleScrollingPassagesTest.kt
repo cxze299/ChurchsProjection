@@ -18,6 +18,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import kotlinx.serialization.json.Json
 import org.churchpresenter.core.models.bible.SelectedVerse
 import org.churchpresenter.settings.AppSettings
@@ -61,11 +62,19 @@ class BibleScrollingPassagesTest {
         val shortStyle = firstLayout().layoutInput.style
         runOnIdle { displayed.value = listOf(combined(40)) }
         waitForIdle()
+        onNodeWithText(passage(39).verseText).assertIsDisplayed()
+        onNodeWithText("启示录 40:1-3").assertIsDisplayed()
+        onNodeWithText(firstText).performScrollTo()
+        waitForIdle()
         onNodeWithText(firstText).assertIsDisplayed()
         onNodeWithTag("continuous_bible_scrollbar").assertIsDisplayed()
         assertEquals(shortStyle.fontSize, firstLayout().layoutInput.style.fontSize)
         assertEquals(shortStyle.fontFamily, firstLayout().layoutInput.style.fontFamily)
         assertEquals(shortStyle.color, firstLayout().layoutInput.style.color)
+        runOnIdle { displayed.value = listOf(combined(41)) }
+        waitForIdle()
+        onNodeWithText(passage(40).verseText).assertIsDisplayed()
+        onNodeWithText(firstText).performScrollTo()
         System.getProperty("churchPresenter.sidebarReviewDir")?.let { path ->
             val file = File(path, "continuous-bible-top.png")
             file.parentFile.mkdirs()
@@ -105,5 +114,39 @@ class BibleScrollingPassagesTest {
         val original = combined(40)
         val encoded = Json.encodeToString(SelectedVerse.serializer(), original)
         assertEquals(original, Json.decodeFromString(SelectedVerse.serializer(), encoded))
+    }
+
+    @Test
+    fun `font size line spacing and paragraph spacing update on the live surface`() = runComposeUiTest {
+        val first = passage(0).copy(verseText = "第一行经文\n第二行经文")
+        val second = passage(1)
+        val combined = first.copy(continuousPassages = listOf(listOf(first), listOf(second)))
+        val style = mutableStateOf(settings)
+        setContent {
+            Box(Modifier.size(800.dp, 450.dp)) {
+                BiblePresenter(selectedVerses = listOf(combined), appSettings = style.value)
+            }
+        }
+        fun layout(): TextLayoutResult {
+            val layouts = mutableListOf<TextLayoutResult>()
+            onNodeWithText(first.verseText).fetchSemanticsNode().config
+                .getOrNull(SemanticsActions.GetTextLayoutResult)?.action?.invoke(layouts)
+            return layouts.first()
+        }
+        val before = layout()
+        runOnIdle {
+            style.value = style.value.copy(bibleSettings = style.value.bibleSettings.copy(continuousLineSpacingPercent = 180)
+                .updateTranslation(0) { it.copy(textFontSize = 76) })
+        }
+        waitForIdle()
+        val after = layout()
+        assertTrue(after.layoutInput.style.fontSize.value > before.layoutInput.style.fontSize.value)
+        assertEquals(1.8.em, after.layoutInput.style.lineHeight)
+        fun gap(): Float = onNodeWithText(second.verseText).fetchSemanticsNode().positionInRoot.y -
+            onNodeWithText(first.verseText).fetchSemanticsNode().positionInRoot.y
+        val oldGap = gap()
+        runOnIdle { style.value = style.value.copy(bibleSettings = style.value.bibleSettings.copy(continuousPassageSpacing = 64)) }
+        waitForIdle()
+        assertTrue(gap() > oldGap)
     }
 }
