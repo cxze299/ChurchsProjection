@@ -14,6 +14,10 @@ Linux 版本通过 `.deb` 安装包安装，适用于 Ubuntu 22.04、Debian 12�
 
 软件采用运行于 JVM 的 Compose Multiplatform 开发。[功能说明](project/docs/product/FEATURES.md)列出了各项功能及其源码位置。
 
+## 协作开发
+
+Codex 与 Antigravity 共同维护本项目。接手任务前先阅读[协作工作档案](agentswork.md)和[项目开发要求](project/AGENTS.md)，再检查相关源码。关键修改完成后同步更新根目录 `agentswork.md`、工程目录 `project/agentswork.md` 和变更记录。
+
 ---
 
 ## 快速开始

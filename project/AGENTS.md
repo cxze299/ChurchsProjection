@@ -19,4 +19,5 @@
 - 禁止为各个功能另建 `test-app*` 等独立软件输出目录。
 - 遵循项目现有 `AGENT.md`，文件读取先定位再局部读取，忽略依赖、编译产物和日志。
 - 终端构建、测试及包管理输出必须保持安静或截断，最多返回 50 行。
-- 本项目由 Codex 与 Antigravity 共同管理，协同工作记录与近期技术改动同步维护在 `agentswork.md`（仓库根目录与 `project/agentswork.md`），每次关键修改完成后同步更新该文件。
+- 本项目由 Codex 与 Antigravity 共同管理。接手任务先读取仓库根目录 `agentswork.md` 及其工程内镜像 `project/agentswork.md` 的相关章节；关键修改后同步更新两份内容。用户最新指令优先于共享档案和仓库说明。
+- 共同工作时登记任务负责人和涉及文件；同一文件的写入、Git 提交与分支切换、同一工程目录的 Gradle 操作按顺序执行。执行方式、模型分工与交接要求见 [agentswork.md](agentswork.md)。
