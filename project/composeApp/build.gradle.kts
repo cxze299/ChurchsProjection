@@ -1,7 +1,6 @@
 import java.time.Duration
 import org.churchpresenter.buildlogic.appVersion
 import org.churchpresenter.buildlogic.currentJcefPlatform
-import org.churchpresenter.buildlogic.currentOsClassifier
 import org.churchpresenter.buildlogic.isConfigured
 import org.churchpresenter.buildlogic.resolvedJdk21Home
 import org.churchpresenter.buildlogic.signingProps
@@ -271,22 +270,11 @@ kotlin {
             // Bundle platform-specific Chromium binaries so no runtime download is needed
             val jcefNativesVersion = "jcef-cffac27+cef-143.0.14+gdd46a37+chromium-143.0.7499.193"
             runtimeOnly("me.friwi:jcef-natives-${currentJcefPlatform()}:$jcefNativesVersion")
-            // JavaFX for WebView (website presenter)
-            val jfxClassifier = currentOsClassifier()
-            val jfxVersion = libs.versions.javafx.get()
-            val jfxModules = listOf("javafx-base", "javafx-graphics", "javafx-media", "javafx-swing", "javafx-controls", "javafx-web")
-            jfxModules.forEach { module ->
-                implementation("org.openjfx:$module:$jfxVersion:$jfxClassifier")
+            // DBus for Linux file chooser integration (only needed on Linux).
+            if (System.getProperty("os.name").lowercase().contains("linux")) {
+                implementation(libs.dbus.java.core)
+                implementation(libs.dbus.java.transport.junixsocket)
             }
-            // Windows-specific: also pull win natives when building on Windows
-            if (jfxClassifier == "win") {
-                jfxModules.forEach { module ->
-                    runtimeOnly("org.openjfx:$module:$jfxVersion:win")
-                }
-            }
-            // DBus for Linux file chooser integration.
-            implementation(libs.dbus.java.core)
-            implementation(libs.dbus.java.transport.junixsocket)
             // FileKit — native OS file dialogs (Windows Explorer dialog, macOS NSOpenPanel). Its
             // native UNIX transport is excluded graph-wide below.
             implementation(libs.filekit.dialogs)
@@ -409,8 +397,36 @@ compose.desktop {
             // These land in Contents/app/resources/ on macOS.
             appResourcesRootDir.set(project.layout.projectDirectory.dir("src/jvmMain/appResources"))
 
-            // Bundle ALL dependency JARs into the distribution — critical for standalone mode
-            includeAllModules = true
+            // Link only the JDK runtime modules the app and its libraries actually use (excluding
+            // javac/ct.sym, javadoc, jshell, jdi, jpackage, hotspot.agent, etc., saving ~95 MB).
+            includeAllModules = false
+            modules(
+                "java.base",
+                "java.datatransfer",
+                "java.desktop",
+                "java.instrument",
+                "java.logging",
+                "java.management",
+                "java.naming",
+                "java.net.http",
+                "java.prefs",
+                "java.rmi",
+                "java.scripting",
+                "java.security.jgss",
+                "java.security.sasl",
+                "java.sql",
+                "java.transaction.xa",
+                "java.xml",
+                "java.xml.crypto",
+                "jdk.accessibility",
+                "jdk.charsets",
+                "jdk.crypto.cryptoki",
+                "jdk.crypto.ec",
+                "jdk.localedata",
+                "jdk.naming.dns",
+                "jdk.unsupported",
+                "jdk.zipfs",
+            )
 
             // No jvmArgs here or in the platform blocks below. The application-level
             // jvmArgs(...) above already carries this list, and it reaches every platform:
@@ -535,6 +551,11 @@ tasks.withType<JavaExec>().configureEach {
 // through :presentation-engine or :converter can bring the lite jar back.
 configurations.configureEach {
     exclude(group = "org.apache.poi", module = "poi-ooxml-lite")
+    // Ktor's Netty engine transitively pulls HTTP/3 QUIC native libraries for 5 OS/arch targets
+    // (~11.6 MB), which CompanionServer (HTTP/1.1 + WebSocket) never uses.
+    exclude(group = "io.netty", module = "netty-codec-native-quic")
+    exclude(group = "io.netty", module = "netty-codec-classes-quic")
+    exclude(group = "io.netty", module = "netty-codec-http3")
     // filekit-dialogs-jvm transitively pulls in dbus-java-transport-native-unixsocket, which
     // conflicts with the junixsocket transport the app uses -- TransportBuilder throws
     // TransportRegistrationException if both UNIX transport providers are on the classpath at once.

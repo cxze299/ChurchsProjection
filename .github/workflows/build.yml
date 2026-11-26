@@ -98,7 +98,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
       - name: Set up JDK 21
         uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
@@ -221,7 +221,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
       - name: Set up JDK 21
         uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
@@ -298,7 +298,12 @@ jobs:
           PLANNING_CENTER_CLIENT_SECRET: ${{ secrets.PLANNING_CENTER_CLIENT_SECRET }}
           CALENDAR_RELAY_URL: ${{ secrets.CALENDAR_RELAY_URL }}
           CALENDAR_RELAY_CONFIG_URL: ${{ secrets.CALENDAR_RELAY_CONFIG_URL }}
-        run: ./project/gradlew -p project --quiet :composeApp:packageDmg
+        run: >-
+          ./project/gradlew -p project --quiet --parallel --build-cache
+          -Dorg.gradle.workers.max=4
+          "-Dorg.gradle.jvmargs=-Xmx2560M -Xms512M -XX:MaxMetaspaceSize=1536M -Dfile.encoding=UTF-8 -XX:+UseParallelGC"
+          "-Dkotlin.daemon.jvmargs=-Xmx2560M -Xms512M -XX:+UseParallelGC"
+          :composeApp:packageFastDmg
 
       - name: Notarize DMG (upload to Apple + wait for approval + staple ticket)
         if: ${{ env.MACOS_SIGNING_ENABLED == 'true' }}
@@ -388,16 +393,16 @@ jobs:
           # The ticket is served from Apple's CDN and can lag the "Accepted" verdict by minutes;
           # stapling too early fails with "Record not found" (exit 65). Retry before giving up.
           STAPLED=false
-          for attempt in $(seq 1 10); do
+          for attempt in $(seq 1 15); do
             if xcrun stapler staple "$DMG"; then
               STAPLED=true
               break
             fi
-            echo "Staple attempt $attempt failed — ticket not yet available, retrying in 30s..."
-            sleep 30
+            echo "Staple attempt $attempt failed — ticket not yet available, retrying in 10s..."
+            sleep 10
           done
           if [ "$STAPLED" != "true" ]; then
-            echo "❌ Could not staple notarization ticket after 10 attempts" && exit 1
+            echo "❌ Could not staple notarization ticket after 15 attempts" && exit 1
           fi
           echo "Notarization complete"
 
@@ -435,7 +440,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
       - name: Set up JDK 21
         uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
@@ -511,7 +516,12 @@ jobs:
           PLANNING_CENTER_CLIENT_SECRET: ${{ secrets.PLANNING_CENTER_CLIENT_SECRET }}
           CALENDAR_RELAY_URL: ${{ secrets.CALENDAR_RELAY_URL }}
           CALENDAR_RELAY_CONFIG_URL: ${{ secrets.CALENDAR_RELAY_CONFIG_URL }}
-        run: ./project/gradlew -p project --quiet :composeApp:packageDmg
+        run: >-
+          ./project/gradlew -p project --quiet --parallel --build-cache
+          -Dorg.gradle.workers.max=4
+          "-Dorg.gradle.jvmargs=-Xmx2560M -Xms512M -XX:MaxMetaspaceSize=1536M -Dfile.encoding=UTF-8 -XX:+UseParallelGC"
+          "-Dkotlin.daemon.jvmargs=-Xmx2560M -Xms512M -XX:+UseParallelGC"
+          :composeApp:packageFastDmg
 
       - name: Notarize DMG (upload to Apple + wait for approval + staple ticket)
         if: ${{ env.MACOS_SIGNING_ENABLED == 'true' }}
@@ -603,16 +613,16 @@ jobs:
           # The ticket is served from Apple's CDN and can lag the "Accepted" verdict by minutes;
           # stapling too early fails with "Record not found" (exit 65). Retry before giving up.
           STAPLED=false
-          for attempt in $(seq 1 10); do
+          for attempt in $(seq 1 15); do
             if xcrun stapler staple "$DMG"; then
               STAPLED=true
               break
             fi
-            echo "Staple attempt $attempt failed — ticket not yet available, retrying in 30s..."
-            sleep 30
+            echo "Staple attempt $attempt failed — ticket not yet available, retrying in 10s..."
+            sleep 10
           done
           if [ "$STAPLED" != "true" ]; then
-            echo "❌ Could not staple notarization ticket after 10 attempts" && exit 1
+            echo "❌ Could not staple notarization ticket after 15 attempts" && exit 1
           fi
           echo "Notarization complete"
 
