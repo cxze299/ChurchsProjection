@@ -298,7 +298,12 @@ jobs:
           PLANNING_CENTER_CLIENT_SECRET: ${{ secrets.PLANNING_CENTER_CLIENT_SECRET }}
           CALENDAR_RELAY_URL: ${{ secrets.CALENDAR_RELAY_URL }}
           CALENDAR_RELAY_CONFIG_URL: ${{ secrets.CALENDAR_RELAY_CONFIG_URL }}
-        run: ./project/gradlew -p project --quiet :composeApp:packageDmg
+        run: >-
+          ./project/gradlew -p project --quiet --parallel --build-cache
+          -Dorg.gradle.workers.max=4
+          "-Dorg.gradle.jvmargs=-Xmx2560M -Xms512M -XX:MaxMetaspaceSize=1536M -Dfile.encoding=UTF-8 -XX:+UseParallelGC"
+          "-Dkotlin.daemon.jvmargs=-Xmx2560M -Xms512M -XX:+UseParallelGC"
+          :composeApp:packageFastDmg
 
       - name: Notarize DMG (upload to Apple + wait for approval + staple ticket)
         if: ${{ env.MACOS_SIGNING_ENABLED == 'true' }}
@@ -511,7 +516,12 @@ jobs:
           PLANNING_CENTER_CLIENT_SECRET: ${{ secrets.PLANNING_CENTER_CLIENT_SECRET }}
           CALENDAR_RELAY_URL: ${{ secrets.CALENDAR_RELAY_URL }}
           CALENDAR_RELAY_CONFIG_URL: ${{ secrets.CALENDAR_RELAY_CONFIG_URL }}
-        run: ./project/gradlew -p project --quiet :composeApp:packageDmg
+        run: >-
+          ./project/gradlew -p project --quiet --parallel --build-cache
+          -Dorg.gradle.workers.max=4
+          "-Dorg.gradle.jvmargs=-Xmx2560M -Xms512M -XX:MaxMetaspaceSize=1536M -Dfile.encoding=UTF-8 -XX:+UseParallelGC"
+          "-Dkotlin.daemon.jvmargs=-Xmx2560M -Xms512M -XX:+UseParallelGC"
+          :composeApp:packageFastDmg
 
       - name: Notarize DMG (upload to Apple + wait for approval + staple ticket)
         if: ${{ env.MACOS_SIGNING_ENABLED == 'true' }}

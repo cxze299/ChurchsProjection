@@ -79,6 +79,89 @@ afterEvaluate {
     tasks.findByName("packageDmg")?.finalizedBy(fixDmgIcon)
 }
 
+// ── Single-pass fast macOS DMG (skips jpackage's slow single-threaded UDZO pass) ──
+// `packageDmg` runs jpackage --type dmg, which spends 3-5 minutes compressing a temporary UDZO DMG
+// only for `fixDmgIcon` to decompress it back to UDRW and recompress it. `packageFastDmg` builds the
+// signed .app via `createDistributable`, stages it with `ditto` (preserving Framework symlinks and
+// code signatures) alongside the /Applications symlink and volume icon, and compresses once via
+// multi-threaded ULFO (LZFSE).
+val macDmgSigningProps = signingProps("macos")
+
+tasks.register("packageFastDmg") {
+    group = "compose desktop"
+    description = "Packages the signed macOS .app directly into an ULFO-compressed DMG in a single pass."
+    dependsOn("createDistributable")
+    onlyIf { org.gradle.internal.os.OperatingSystem.current().isMacOsX }
+
+    val version = appVersion()
+    val appImageRoot = layout.buildDirectory.dir("compose/binaries/main/app")
+    val dmgOutDir = layout.buildDirectory.dir("compose/binaries/main/dmg")
+    val stagingDir = layout.buildDirectory.dir("tmp/fast-dmg-staging")
+    val iconIcns = layout.projectDirectory.file("src/jvmMain/appResources/macos/icon.icns")
+    val identity = macDmgSigningProps.getProperty("identityName", "")
+    val keychain = macDmgSigningProps.getProperty("keychain", "")
+
+    doLast {
+        val appBundle = appImageRoot.get().asFile.listFiles { f -> f.isDirectory && f.extension == "app" }
+            ?.firstOrNull()
+            ?: error("packageFastDmg: no .app bundle found under ${appImageRoot.get().asFile}")
+        val icon = iconIcns.asFile
+        check(icon.exists()) { "packageFastDmg: icon file not found at $icon" }
+
+        val staging = stagingDir.get().asFile.apply { deleteRecursively(); mkdirs() }
+        // `ditto` preserves macOS Framework symlinks (critical for JCEF/Chromium) and code signatures.
+        runCommand("/usr/bin/ditto", appBundle.absolutePath, File(staging, appBundle.name).absolutePath)
+        runCommand("/bin/ln", "-s", "/Applications", File(staging, "Applications").absolutePath)
+
+        val outDir = dmgOutDir.get().asFile.apply { deleteRecursively(); mkdirs() }
+        val writableDmg = File(outDir, "ChurchPresenter-$version-writable.dmg")
+        val finalDmg = File(outDir, "ChurchPresenter-$version.dmg")
+
+        runCommand(
+            "hdiutil", "create",
+            "-volname", "ChurchPresenter",
+            "-srcfolder", staging.absolutePath,
+            "-ov", "-format", "UDRW",
+            writableDmg.absolutePath,
+        )
+        staging.deleteRecursively()
+
+        val attachOutput = ProcessBuilder("hdiutil", "attach", writableDmg.absolutePath, "-nobrowse", "-readwrite", "-noautoopen")
+            .redirectErrorStream(true)
+            .start()
+            .let { process ->
+                val out = process.inputStream.bufferedReader().readText()
+                check(process.waitFor() == 0) { "hdiutil attach failed: $out" }
+                out
+            }
+        val device = attachOutput.lineSequence().first { it.startsWith("/dev/") }.substringBefore('\t').trim()
+        val mountPoint = attachOutput.lineSequence().last { it.contains("/Volumes/") }.substringAfterLast('\t').trim()
+        try {
+            icon.copyTo(File(mountPoint, ".VolumeIcon.icns"), overwrite = true)
+            runCommand("SetFile", "-c", "icnC", "$mountPoint/.VolumeIcon.icns")
+            runCommand("SetFile", "-a", "C", mountPoint)
+        } finally {
+            runCommand("hdiutil", "detach", device)
+        }
+
+        runCommand("hdiutil", "convert", writableDmg.absolutePath, "-format", "ULFO", "-o", finalDmg.absolutePath)
+        writableDmg.delete()
+
+        if (identity.isConfigured()) {
+            val signArgs = buildList {
+                add("codesign")
+                add("--force")
+                add("--sign"); add(identity)
+                add("--timestamp")
+                if (keychain.isNotBlank()) { add("--keychain"); add(keychain) }
+                add(finalDmg.absolutePath)
+            }
+            runCommand(*signArgs.toTypedArray())
+        }
+        logger.lifecycle("Fast DMG packaged: ${finalDmg.name} (${finalDmg.length() / 1_048_576} MB)")
+    }
+}
+
 // ── Windows Code Signing ──────────────────────────────────────────────────────
 // Runs signtool.exe on the packaged .msi / .exe after Compose Desktop packaging.
 // Only executes on Windows with a configured certificate.

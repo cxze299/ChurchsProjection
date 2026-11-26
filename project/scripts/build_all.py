@@ -1,6 +1,7 @@
 """Build the fixed Windows entry and the same source on GitHub's native Mac runners."""
 import argparse
 import base64
+import concurrent.futures
 from datetime import datetime
 import json
 import os
@@ -24,19 +25,20 @@ def command(args, **kwargs):
     return result.stdout
 
 
-def api(repo, endpoint, payload=None):
+def api(repo, endpoint, payload=None, idempotent=False):
     resource = f"repos/{repo}" + (f"/{endpoint}" if endpoint else "")
     args = ["gh", "api", resource]
     options = {}
     if payload is not None:
         args += ["--method", "POST", "--input", "-"]
         options["input"] = json.dumps(payload).encode()
+    can_retry = payload is None or idempotent
     for attempt in range(4):
         try:
             data = command(args, **options)
             break
         except RuntimeError as error:
-            if payload is not None or attempt == 3 or "HTTP 404" in str(error):
+            if not can_retry or attempt == 3 or "HTTP 404" in str(error):
                 raise RuntimeError(f"GitHub 请求失败：{repo}/{endpoint}\n{error}") from error
             time.sleep(2 ** (attempt + 1))
     return json.loads(data) if data.strip() else {}
@@ -87,23 +89,41 @@ def publish_source(repo, base):
         header, path = entry.split(b"\t", 1)
         mode, kind, sha = header.decode().split()
         local[path.decode("utf-8")] = {"mode": mode, "type": kind, "sha": sha}
+    to_upload = []
     changes = []
     for path, item in local.items():
         previous = old.get(path, {})
         if all(previous.get(key) == item[key] for key in ("mode", "type", "sha")):
             continue
         if item["type"] == "blob":
-            content = command(["git", "cat-file", "blob", item["sha"]])
-            blob = api(repo, "git/blobs", {
-                "encoding": "base64", "content": base64.b64encode(content).decode(),
-            })
-            if blob["sha"] != item["sha"]:
-                raise RuntimeError(f"文件校验失败：{path}")
+            to_upload.append((path, item["sha"]))
         changes.append({"path": path, **item})
     for path, item in old.items():
         if path not in local:
             changes.append({"path": path, "mode": item["mode"], "type": item["type"], "sha": None})
-    tree = api(repo, "git/trees", {"base_tree": base_tree, "tree": changes})["sha"] if changes else base_tree
+    if to_upload:
+        unique_blobs = list({sha: path for path, sha in to_upload}.items())
+        total = len(unique_blobs)
+        print(f"正在并发上传 {total} 个变更文件到云端…", flush=True)
+
+        def upload_one(entry):
+            sha, sample_path = entry
+            content = command(["git", "cat-file", "blob", sha])
+            blob = api(repo, "git/blobs", {
+                "encoding": "base64", "content": base64.b64encode(content).decode(),
+            }, idempotent=True)
+            if blob["sha"] != sha:
+                raise RuntimeError(f"文件校验失败：{sample_path}")
+
+        done = 0
+        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+            futures = [pool.submit(upload_one, item) for item in unique_blobs]
+            for fut in concurrent.futures.as_completed(futures):
+                fut.result()
+                done += 1
+                if done == total or done % 25 == 0:
+                    print(f"  已上传 {done}/{total}", flush=True)
+    tree = api(repo, "git/trees", {"base_tree": base_tree, "tree": changes}, idempotent=True)["sha"] if changes else base_tree
     expected = command(["git", "rev-parse", "HEAD^{tree}"]).decode().strip()
     if tree != expected:
         raise RuntimeError("云端源码校验失败，未触发构建。")

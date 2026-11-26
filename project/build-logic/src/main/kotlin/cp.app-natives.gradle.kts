@@ -63,7 +63,7 @@ val fetchBundledFfmpeg = tasks.register("fetchBundledFfmpeg") {
     val entry = ffmpegBuildProps.getProperty("$target.entry", "ffmpeg")
     val osDir = target.substringBefore('-')
     val outFile = layout.projectDirectory.file("src/jvmMain/appResources/$osDir/$entry").asFile
-    val cacheDir = layout.buildDirectory.dir("ffmpeg").get().asFile
+    val cacheDir = File(gradle.gradleUserHomeDir, "caches/churchpresenter-natives/ffmpeg")
 
     // Inputs, so the task re-runs when the pin changes and is up to date when it has not.
     inputs.property("url", url)
@@ -225,7 +225,7 @@ val fetchBundledOmt = tasks.register("fetchBundledOmt") {
     val license = omtBuildProps.getProperty("$target.license", "")
     val osDir = target.substringBefore('-')
     val outDir = layout.projectDirectory.dir("src/jvmMain/appResources/$osDir/omt").asFile
-    val cacheDir = layout.buildDirectory.dir("omt").get().asFile
+    val cacheDir = File(gradle.gradleUserHomeDir, "caches/churchpresenter-natives/omt")
 
     inputs.property("url", url)
     inputs.property("sha256", sha256)
