@@ -63,7 +63,10 @@ private fun BibleViewModel.multiVerseSelection(bookId: Int): List<SelectedVerse>
             }
         }
 
-        val rangeStr = formatVerseRange(verseNumbers)
+        val consecutiveRows = sortedIndices.zipWithNext().all { (first, next) -> next == first + 1 }
+        val rangeStr = if (consecutiveRows && verseNumbers.size > 1) {
+            "${verseNumbers.min()}-${verseNumbers.max()}"
+        } else formatVerseRange(verseNumbers)
 
         if (primaryTexts.isNotEmpty()) {
             verseList.add(

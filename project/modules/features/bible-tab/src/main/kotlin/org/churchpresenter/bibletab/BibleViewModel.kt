@@ -288,12 +288,20 @@ class BibleViewModel(
     }
 
     fun formatVerseRange(numbers: List<Int>): String {
-        if (numbers.isEmpty()) return ""
-        if (numbers.size == 1) return numbers.first().toString()
-        val sorted = numbers.sorted()
-        val isContiguous = sorted.zipWithNext().all { (a, b) -> b == a + 1 }
-        return if (isContiguous) "${sorted.first()}-${sorted.last()}"
-        else sorted.joinToString(",")
+        val sorted = numbers.distinct().sorted()
+        if (sorted.isEmpty()) return ""
+        val ranges = mutableListOf<String>()
+        var start = sorted.first()
+        var end = start
+        for (number in sorted.drop(1)) {
+            if (number.toLong() == end.toLong() + 1) end = number else {
+                ranges += if (start == end) "$start" else "$start-$end"
+                start = number
+                end = number
+            }
+        }
+        ranges += if (start == end) "$start" else "$start-$end"
+        return ranges.joinToString(",")
     }
 
     companion object {

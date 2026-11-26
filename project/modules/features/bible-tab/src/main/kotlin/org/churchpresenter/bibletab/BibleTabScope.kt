@@ -189,8 +189,7 @@ internal class BibleTabScope(
         val selectedVerses = viewModel.getSelectedVerses()
         selectedVerses.firstOrNull()?.let { v ->
             if (viewModel.multiVerseEnabled.value) {
-                val verseNumbers = viewModel.getSelectedVerseNumbers()
-                val rangeStr = viewModel.formatVerseRange(verseNumbers)
+                val rangeStr = v.verseRange
                 viewModel.addToHistory(v.bookName, v.chapter, v.verseNumber, v.verseText, rangeStr)
             } else {
                 viewModel.addToHistory(v.bookName, v.chapter, v.verseNumber, v.verseText)

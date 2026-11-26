@@ -1,6 +1,7 @@
 package org.churchpresenter.app.churchpresenter
 
 import org.churchpresenter.settings.DisplayRect
+import org.churchpresenter.settings.AppSettings
 import org.churchpresenter.settings.ResolvedMerge
 import java.awt.Rectangle
 
@@ -39,6 +40,30 @@ internal fun Rectangle.asDisplayRect(): DisplayRect = DisplayRect(x, y, width, h
 internal const val MIN_MAIN_WINDOW_WIDTH = 800
 
 internal const val MIN_MAIN_WINDOW_HEIGHT = 600
+
+/** Operator panels start closed while retaining their configured widths and other settings. */
+internal fun startupOperatorSettings(settings: AppSettings): AppSettings = settings.copy(
+    windowPlacement = "floating",
+    schedulePanelCollapsed = true,
+    previewPanelCollapsed = true,
+    windowedLayout = settings.windowedLayout.copy(schedulePanelCollapsed = true, previewPanelCollapsed = true),
+    maximizedLayout = settings.maximizedLayout.copy(schedulePanelCollapsed = true, previewPanelCollapsed = true),
+)
+
+/** A centered ordinary window inside the monitor's usable area, including room around its frame. */
+internal fun adaptiveMainWindowBounds(
+    area: DisplayRect,
+    minimumWidth: Int = MIN_MAIN_WINDOW_WIDTH,
+    minimumHeight: Int = MIN_MAIN_WINDOW_HEIGHT,
+): DisplayRect {
+    val maxWidth = (area.width - 32).coerceAtLeast(1)
+    val maxHeight = (area.height - 32).coerceAtLeast(1)
+    val width = (area.width * 0.8).toInt().coerceAtMost(1280)
+        .coerceIn(minimumWidth.coerceAtMost(maxWidth), maxWidth)
+    val height = (area.height * 0.8).toInt().coerceAtMost(800)
+        .coerceIn(minimumHeight.coerceAtMost(maxHeight), maxHeight)
+    return DisplayRect(area.x + (area.width - width) / 2, area.y + (area.height - height) / 2, width, height)
+}
 
 /**
  * The size the main window opens at.

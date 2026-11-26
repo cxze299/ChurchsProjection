@@ -78,7 +78,7 @@ internal class AppRootState(
     val statisticsManager = StatisticsManager()
     val verseSequenceLog = VerseSequenceLog()
     var appSettings by mutableStateOf(settingsManager.loadSettings().let {
-        it.copy(presentationRemoteSettings = it.presentationRemoteSettings.copy(remoteControlEnabled = false))
+        startupOperatorSettings(it).copy(presentationRemoteSettings = it.presentationRemoteSettings.copy(remoteControlEnabled = false))
     })
 
     init {

@@ -60,9 +60,10 @@ class BibleViewModelTest {
     }
 
     @Test
-    fun `a partly contiguous selection is listed in full`() {
-        // 1,2,3,7 is not fully contiguous, so every number is spelled out.
-        assertEquals("1,2,3,7", vm().formatVerseRange(listOf(1, 2, 3, 7)))
+    fun `contiguous groups in a selection use compact ranges`() {
+        assertEquals("1-3,7", vm().formatVerseRange(listOf(1, 2, 3, 7)))
+        assertEquals("5-11,13-18", vm().formatVerseRange((5..11).toList() + (13..18).toList()))
+        assertEquals("5-7,9-10", vm().formatVerseRange(listOf(5, 5, 6, 7, 9, 10, 10)))
     }
 
     @Test

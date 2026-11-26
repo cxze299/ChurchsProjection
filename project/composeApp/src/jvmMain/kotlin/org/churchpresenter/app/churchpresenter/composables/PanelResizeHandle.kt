@@ -15,10 +15,10 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material3.Icon
 import org.churchpresenter.theme.components.KeyIconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -85,7 +85,7 @@ internal fun PanelResizeHandle(
     var dragging by remember { mutableStateOf(false) }
     Box(
         modifier = modifier
-            .width(HANDLE_WIDTH)
+            .width(if (collapsed) 36.dp else HANDLE_WIDTH)
             .fillMaxHeight()
             .padding(vertical = 8.dp)
             .background(
@@ -120,8 +120,15 @@ internal fun PanelResizeHandle(
             Grip(gripColor, Modifier.align(Alignment.TopCenter).padding(top = 8.dp))
             Grip(gripColor, Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp))
         }
-        KeyIconButton(onClick = onToggleCollapsed, modifier = Modifier.wrapContentHeight()) {
+        KeyIconButton(
+            onClick = onToggleCollapsed,
+            modifier = Modifier.size(width = if (collapsed) 32.dp else HANDLE_WIDTH, height = 40.dp),
+            colors = IconButtonDefaults.iconButtonColors(
+                containerColor = if (collapsed) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent,
+            ),
+        ) {
             Icon(
+                modifier = Modifier.size(if (collapsed) 24.dp else 14.dp),
                 painter = icon,
                 contentDescription = contentDescription,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
