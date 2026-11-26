@@ -33,8 +33,11 @@ import java.awt.Cursor
 private const val GRIP_ALPHA = 0.16f
 private const val HOVER_ALPHA = 0.05f
 
-/** The strip's width, and the size of its two grips. */
-private val HANDLE_WIDTH = 16.dp
+/** The strip's width, its toggle button size, and the size of its two grips. */
+private val HANDLE_WIDTH = 36.dp
+private val TOGGLE_BUTTON_WIDTH = 32.dp
+private val TOGGLE_BUTTON_HEIGHT = 40.dp
+private val TOGGLE_ICON_SIZE = 24.dp
 private val GRIP_WIDTH = 3.dp
 private val GRIP_LENGTH = 40.dp
 
@@ -85,7 +88,7 @@ internal fun PanelResizeHandle(
     var dragging by remember { mutableStateOf(false) }
     Box(
         modifier = modifier
-            .width(if (collapsed) 36.dp else HANDLE_WIDTH)
+            .width(HANDLE_WIDTH)
             .fillMaxHeight()
             .padding(vertical = 8.dp)
             .background(
@@ -122,13 +125,13 @@ internal fun PanelResizeHandle(
         }
         KeyIconButton(
             onClick = onToggleCollapsed,
-            modifier = Modifier.size(width = if (collapsed) 32.dp else HANDLE_WIDTH, height = 40.dp),
+            modifier = Modifier.size(width = TOGGLE_BUTTON_WIDTH, height = TOGGLE_BUTTON_HEIGHT),
             colors = IconButtonDefaults.iconButtonColors(
-                containerColor = if (collapsed) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent,
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
             ),
         ) {
             Icon(
-                modifier = Modifier.size(if (collapsed) 24.dp else 14.dp),
+                modifier = Modifier.size(TOGGLE_ICON_SIZE),
                 painter = icon,
                 contentDescription = contentDescription,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant

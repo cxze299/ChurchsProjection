@@ -40,7 +40,7 @@ import org.churchpresenter.settings.AppSettings
 private const val PANEL_COLLAPSE_ANIM_MS = 220
 private val SCHEDULE_MIN_WIDTH = 160.dp
 private val PREVIEW_MIN_WIDTH = 150.dp
-private val HANDLE_WIDTH = 16.dp
+private val HANDLE_WIDTH = 36.dp
 private val MIN_MAIN_WIDTH = 200.dp
 private val PANEL_ABS_MAX_WIDTH = 600.dp
 
