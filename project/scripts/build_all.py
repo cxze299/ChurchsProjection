@@ -178,8 +178,16 @@ def prepare_windows_release(repo, commit, version, package):
         except RuntimeError:
             # Cloud release job may have created the release concurrently; upload with --clobber below.
             pass
-    command(["gh", "release", "upload", tag, str(package) + f"#ChurchPresenter-{version}-WINDOWS-x64.msi",
-             "--repo", repo, "--clobber"])
+    for attempt in range(4):
+        try:
+            command(["gh", "release", "upload", tag, str(package) + f"#ChurchPresenter-{version}-WINDOWS-x64.msi",
+                     "--repo", repo, "--clobber"])
+            break
+        except RuntimeError:
+            if attempt == 3:
+                raise
+            time.sleep(2 ** (attempt + 1))
+    subprocess.run(["git", "fetch", "origin", "--tags", "--quiet"], cwd=ROOT)
     print(f"Windows MSI 已上传到 Release：{tag}", flush=True)
 
 
