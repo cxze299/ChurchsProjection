@@ -262,14 +262,16 @@ def main():
     tags = api(args.repo, "git/matching-refs/tags/v1.0")
     version = next_version(tag["ref"].rsplit("/", 1)[-1] for tag in tags)
     print(f"本次构建版本：{version}", flush=True)
-    package = None if args.cloud_only else build_windows(version)
+    # Publish source and dispatch macOS cloud runners FIRST so cloud packaging runs in parallel
+    # with the local Windows MSI build rather than waiting behind it.
     branch, commit = publish_source(args.repo, base)
-    if package:
-        prepare_windows_release(args.repo, commit, version, package)
     api(args.repo, "actions/workflows/build-integrated.yml/dispatches", {
         "ref": branch, "inputs": {"windows": "true" if args.cloud_only else "false", "version": "v" + version},
     })
-    print("已手动发起云端打包；该打包结果不作为分支合并条件。", flush=True)
+    print("已先行发起云端打包（与本机 Windows 构建并行执行）；该打包结果不作为分支合并条件。", flush=True)
+    if not args.cloud_only:
+        package = build_windows(version)
+        prepare_windows_release(args.repo, commit, version, package)
     wait_for_packages(args.repo, branch, commit, args.no_wait, cloud_windows=args.cloud_only)
 
 
