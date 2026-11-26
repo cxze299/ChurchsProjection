@@ -4431,4 +4431,7 @@
     <string name="bible_projection_style_reference_size">Reference size</string>
     <string name="bible_projection_style_line_spacing">Line spacing (%, 0 = default)</string>
     <string name="bible_projection_style_passage_spacing">Passage spacing</string>
+    <string name="bible_projection_style_sample">Your word is a lamp to my feet\nand a light to my path.</string>
+    <string name="bible_projection_style_sample_book">Psalm</string>
+    <string name="bible_projection_style_sample_next">I have sworn an oath to keep your righteous judgments.</string>
 </resources>

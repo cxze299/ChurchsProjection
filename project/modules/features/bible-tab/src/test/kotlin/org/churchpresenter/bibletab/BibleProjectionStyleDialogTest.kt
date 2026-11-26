@@ -11,6 +11,9 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performMouseInput
+import androidx.compose.ui.test.click
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.v2.runComposeUiTest
@@ -46,12 +49,12 @@ class BibleProjectionStyleDialogTest {
             file.parentFile.mkdirs()
             ImageIO.write(onNodeWithTag("bible_projection_style_dialog").captureToImage().toAwtImage(), "png", file)
         }
-        onNodeWithText("关闭").performClick()
+        onNodeWithText("取消").performClick()
         onNodeWithText("经文投影样式").assertDoesNotExist()
     }
 
     @Test
-    fun `dialog edits apply immediately and remain after closing and serializing`() = runComposeUiTest {
+    fun `dialog previews draft and saves only when applied`() = runComposeUiTest {
         val current = mutableStateOf(settings)
         var dismissed = false
         setContent { MaterialTheme { BibleProjectionStyleDialog(current.value, { change -> current.value = change(current.value) }, { dismissed = true }) } }
@@ -59,22 +62,36 @@ class BibleProjectionStyleDialogTest {
             onNode(hasSetTextAction() and hasAnyAncestor(hasTestTag(tag))).performScrollTo().performTextReplacement(value)
             waitForIdle()
         }
+        onNodeWithTag("bible_projection_text_size_slider").performScrollTo().performMouseInput { click(center) }
+        onNodeWithText("应用").assertIsEnabled()
         replace("bible_projection_text_size", "88")
         replace("bible_projection_reference_size", "42")
         replace("bible_projection_line_spacing", "160")
         replace("bible_projection_passage_spacing", "48")
+        onNodeWithTag("bible_projection_preview").assertExists()
+        assertEquals(settings, current.value)
+        onNodeWithText("应用").performClick()
         val changed = current.value.bibleSettings
         assertEquals(88, changed.translationList().first().textFontSize)
         assertEquals(42, changed.translationList().first().referenceFontSize)
         assertEquals(settings.bibleSettings.translationList()[1], changed.translationList()[1])
         assertEquals(160, changed.continuousLineSpacingPercent)
         assertEquals(48, changed.continuousPassageSpacing)
-        replace("bible_projection_line_spacing", "0")
-        assertEquals(null, current.value.bibleSettings.continuousLineSpacingPercent)
-        onNodeWithText("关闭").performClick()
         assertTrue(dismissed)
         val saved = Json.encodeToString(AppSettings.serializer(), current.value)
         assertEquals(current.value, Json.decodeFromString(AppSettings.serializer(), saved))
+    }
+
+    @Test
+    fun `cancel discards edited projection settings`() = runComposeUiTest {
+        val current = mutableStateOf(settings)
+        setContent {
+            MaterialTheme { BibleProjectionStyleDialog(current.value, { current.value = it(current.value) }, {}) }
+        }
+        onNode(hasSetTextAction() and hasAnyAncestor(hasTestTag("bible_projection_text_size")))
+            .performScrollTo().performTextReplacement("88")
+        onNodeWithText("取消").performClick()
+        assertEquals(settings, current.value)
     }
 
     @Test

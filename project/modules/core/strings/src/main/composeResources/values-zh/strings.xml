@@ -4311,4 +4311,7 @@
     <string name="bible_projection_style_reference_size">引用字号</string>
     <string name="bible_projection_style_line_spacing">行距（%，0 为默认）</string>
     <string name="bible_projection_style_passage_spacing">段间距</string>
+    <string name="bible_projection_style_sample">你的话是我脚前的灯，\n是我路上的光。</string>
+    <string name="bible_projection_style_sample_book">诗篇</string>
+    <string name="bible_projection_style_sample_next">我已起誓，要遵守你公义的典章。</string>
 </resources>
