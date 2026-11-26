@@ -2,6 +2,7 @@ package org.churchpresenter.bibletab
 
 import org.churchpresenter.strings.generated.resources.bible_append_passages
 import org.churchpresenter.strings.generated.resources.bible_clear_passages
+import org.churchpresenter.strings.generated.resources.bible_projection_style_button
 
 import androidx.compose.foundation.layout.Box
 import org.churchpresenter.sharedui.guide.guideTarget
@@ -88,6 +89,7 @@ internal fun BibleVerseHeader(
     appendPassages: Boolean = false,
     onAppendPassagesToggle: () -> Unit = {},
     onClearVerses: () -> Unit = {},
+    onProjectionStyle: () -> Unit = {},
 ) {
     val holdLiveStr = stringResource(Res.string.hold_live)
     val verseSelectionHint = stringResource(Res.string.bible_verse_selection_hint)
@@ -124,6 +126,12 @@ internal fun BibleVerseHeader(
             selected = appendPassages,
             onClick = onAppendPassagesToggle,
             label = { Text(stringResource(org.churchpresenter.strings.generated.resources.Res.string.bible_append_passages)) },
+        )
+
+        RaisedFilterChip(
+            selected = false,
+            onClick = onProjectionStyle,
+            label = { Text(stringResource(Res.string.bible_projection_style_button)) },
         )
 
         RaisedFilterChip(

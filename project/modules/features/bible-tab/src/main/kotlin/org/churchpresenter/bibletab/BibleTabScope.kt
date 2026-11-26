@@ -344,6 +344,7 @@ internal class BibleLiveNavState {
 @Stable
 internal class BibleTabUiState {
     var appendPassages by mutableStateOf(false)
+    var projectionStyleOpen by mutableStateOf(false)
     var appendedPassages: List<List<SelectedVerse>> = emptyList()
     var quickInputBase: List<List<SelectedVerse>>? = null
     var quickInputRequest by mutableStateOf(0)
