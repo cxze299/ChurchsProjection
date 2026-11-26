@@ -20,22 +20,6 @@ name: Render benchmark
 # while no baseline is committed; either uploads `ci-render-baseline`, which a maintainer downloads
 # and commits as the two files in project/composeApp/benchmarks/ci/.
 on:
-  pull_request:
-    paths:
-      - 'project/modules/output/live-output/**'
-      - 'project/modules/engines/presenter/**'
-      - 'project/modules/engines/slides-engine/**'
-      - 'project/modules/engines/media-engine/**'
-      - 'project/modules/engines/canvas-engine/**'
-      - 'project/modules/engines/lower-third-engine/**'
-      - 'project/modules/engines/web-engine/**'
-      - 'project/modules/engines/stt-engine/**'
-      - 'project/composeApp/src/jvmTest/kotlin/org/churchpresenter/app/churchpresenter/benchmark/**'
-      - 'project/composeApp/benchmarks/ci/**'
-      - '.github/workflows/render-benchmark.yml'
-  schedule:
-    # Mondays 06:00 UTC, on main (a schedule always runs the default branch).
-    - cron: '0 6 * * 1'
   workflow_dispatch:
     inputs:
       record_baseline:

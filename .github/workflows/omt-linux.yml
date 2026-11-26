@@ -14,10 +14,6 @@
 name: OMT libraries for Linux
 
 on:
-  pull_request:
-    paths:
-      - '.github/workflows/omt-linux.yml'
-      - 'project/modules/engines/omt/**'
   workflow_dispatch:
     inputs:
       publish:

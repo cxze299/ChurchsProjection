@@ -19,8 +19,6 @@ name: Nightly Build
 # release with its own version tag and is never touched.
 
 on:
-  schedule:
-    - cron: '0 3 * * *'   # 03:00 UTC daily
   workflow_dispatch:
 
 env:

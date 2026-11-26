@@ -12,9 +12,6 @@ name: Soak
 # goes ahead and never files an issue.
 
 on:
-  schedule:
-    # Sundays 22:00 UTC, on main (a schedule always runs the default branch).
-    - cron: '0 22 * * 0'
   workflow_dispatch:
     inputs:
       minutes:
