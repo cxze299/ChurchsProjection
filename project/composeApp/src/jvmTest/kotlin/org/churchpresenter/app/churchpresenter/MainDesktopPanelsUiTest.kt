@@ -104,9 +104,14 @@ class MainDesktopPanelsUiTest {
                 file.parentFile.mkdirs()
                 ImageIO.write(onRoot().captureToImage().toAwtImage(), "png", file)
             }
+            val collapsedWidth = controls[0].fetchSemanticsNode().boundsInRoot.width
+            val collapsedHeight = controls[0].fetchSemanticsNode().boundsInRoot.height
             controls[0].performClick()
             waitForIdle()
             onNodeWithTag("schedule").assertExists()
+            val expandedControl = onAllNodesWithContentDescription(collapse)[0].fetchSemanticsNode().boundsInRoot
+            assertEquals(collapsedWidth, expandedControl.width, "collapsed and expanded toggle button width must match")
+            assertEquals(collapsedHeight, expandedControl.height, "collapsed and expanded toggle button height must match")
             onAllNodesWithContentDescription(expand)[0].performClick()
             waitForIdle()
             assertEquals(false, seen.geometries.last().collapsed)
