@@ -117,7 +117,7 @@ mountains_12532353.jpeg
 mountains_12989715.jpeg
 mountains_13206836.jpeg
 mountains_13372024.jpeg
-mountains_15166817.png
+mountains_15166817.jpg
 mountains_15215323.jpeg
 mountains_15527528.jpeg
 mountains_20019699.jpeg
@@ -142,7 +142,7 @@ mountains_36715722.jpg
 mountains_37911658.jpeg
 mountains_38303464.jpeg
 mountains_38391559.jpg
-mountains_4125919.png
+mountains_4125919.jpg
 mountains_4980917.jpeg
 mountains_5560838.jpeg
 mountains_6076713.jpeg
@@ -204,7 +204,7 @@ ocean_waves_1856183.jpg
 ocean_waves_19262884.jpg
 ocean_waves_19564400.jpeg
 ocean_waves_20120961.jpeg
-ocean_waves_25947275.png
+ocean_waves_25947275.jpg
 ocean_waves_28241153.jpeg
 ocean_waves_28588333.jpeg
 ocean_waves_28641320.jpeg
@@ -217,7 +217,7 @@ ocean_waves_33354906.jpeg
 ocean_waves_34242785.jpeg
 ocean_waves_36562575.jpeg
 ocean_waves_36618428.jpg
-ocean_waves_37436147.png
+ocean_waves_37436147.jpg
 ocean_waves_37603330.jpeg
 ocean_waves_3762310.jpeg
 ocean_waves_38313542.jpeg

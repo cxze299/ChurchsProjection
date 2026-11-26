@@ -169,5 +169,36 @@ class PackageRetryTest(unittest.TestCase):
         self.assertEqual(["actions/jobs/2/rerun"], retries)
 
 
+class ParallelOrchestrationTest(unittest.TestCase):
+    def test_cloud_dispatch_starts_before_local_windows_build(self):
+        events = []
+
+        def fake_api(repo, path, payload=None):
+            if path == "git/matching-refs/tags/v1.0":
+                return [{"ref": "refs/tags/v1.0.4"}]
+            if path == "actions/workflows/build-integrated.yml/dispatches":
+                events.append("dispatch_cloud")
+                return {}
+            return {}
+
+        with patch("sys.argv", ["build_all.py", "--repo", "o/r"]), \
+                patch.object(build_all.shutil, "which", return_value="/usr/bin/tool"), \
+                patch.object(build_all, "command", return_value=b""), \
+                patch.object(build_all.subprocess, "run", return_value=type("R", (), {"returncode": 0})()), \
+                patch.object(build_all, "resolve_base", return_value=("main", "base")), \
+                patch.object(build_all, "ensure_build_branch_idle"), \
+                patch.object(build_all, "publish_source", side_effect=lambda r, b: (events.append("publish_source"), ("codex/build-release", "c1"))[1]), \
+                patch.object(build_all, "api", side_effect=fake_api), \
+                patch.object(build_all, "build_windows", side_effect=lambda v: (events.append("build_windows"), "pkg.msi")[1]), \
+                patch.object(build_all, "prepare_windows_release", side_effect=lambda *a: events.append("upload_windows")), \
+                patch.object(build_all, "wait_for_packages", side_effect=lambda *a, **kw: events.append("wait_cloud")):
+            build_all.main()
+
+        self.assertEqual(
+            ["publish_source", "dispatch_cloud", "build_windows", "upload_windows", "wait_cloud"],
+            events,
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

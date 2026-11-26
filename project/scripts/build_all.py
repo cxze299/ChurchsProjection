@@ -1,6 +1,7 @@
 """Build the fixed Windows entry and the same source on GitHub's native Mac runners."""
 import argparse
 import base64
+import concurrent.futures
 from datetime import datetime
 import json
 import os
@@ -24,19 +25,20 @@ def command(args, **kwargs):
     return result.stdout
 
 
-def api(repo, endpoint, payload=None):
+def api(repo, endpoint, payload=None, idempotent=False):
     resource = f"repos/{repo}" + (f"/{endpoint}" if endpoint else "")
     args = ["gh", "api", resource]
     options = {}
     if payload is not None:
         args += ["--method", "POST", "--input", "-"]
         options["input"] = json.dumps(payload).encode()
+    can_retry = payload is None or idempotent
     for attempt in range(4):
         try:
             data = command(args, **options)
             break
         except RuntimeError as error:
-            if payload is not None or attempt == 3 or "HTTP 404" in str(error):
+            if not can_retry or attempt == 3 or "HTTP 404" in str(error):
                 raise RuntimeError(f"GitHub 请求失败：{repo}/{endpoint}\n{error}") from error
             time.sleep(2 ** (attempt + 1))
     return json.loads(data) if data.strip() else {}
@@ -87,23 +89,41 @@ def publish_source(repo, base):
         header, path = entry.split(b"\t", 1)
         mode, kind, sha = header.decode().split()
         local[path.decode("utf-8")] = {"mode": mode, "type": kind, "sha": sha}
+    to_upload = []
     changes = []
     for path, item in local.items():
         previous = old.get(path, {})
         if all(previous.get(key) == item[key] for key in ("mode", "type", "sha")):
             continue
         if item["type"] == "blob":
-            content = command(["git", "cat-file", "blob", item["sha"]])
-            blob = api(repo, "git/blobs", {
-                "encoding": "base64", "content": base64.b64encode(content).decode(),
-            })
-            if blob["sha"] != item["sha"]:
-                raise RuntimeError(f"文件校验失败：{path}")
+            to_upload.append((path, item["sha"]))
         changes.append({"path": path, **item})
     for path, item in old.items():
         if path not in local:
             changes.append({"path": path, "mode": item["mode"], "type": item["type"], "sha": None})
-    tree = api(repo, "git/trees", {"base_tree": base_tree, "tree": changes})["sha"] if changes else base_tree
+    if to_upload:
+        unique_blobs = list({sha: path for path, sha in to_upload}.items())
+        total = len(unique_blobs)
+        print(f"正在并发上传 {total} 个变更文件到云端…", flush=True)
+
+        def upload_one(entry):
+            sha, sample_path = entry
+            content = command(["git", "cat-file", "blob", sha])
+            blob = api(repo, "git/blobs", {
+                "encoding": "base64", "content": base64.b64encode(content).decode(),
+            }, idempotent=True)
+            if blob["sha"] != sha:
+                raise RuntimeError(f"文件校验失败：{sample_path}")
+
+        done = 0
+        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+            futures = [pool.submit(upload_one, item) for item in unique_blobs]
+            for fut in concurrent.futures.as_completed(futures):
+                fut.result()
+                done += 1
+                if done == total or done % 25 == 0:
+                    print(f"  已上传 {done}/{total}", flush=True)
+    tree = api(repo, "git/trees", {"base_tree": base_tree, "tree": changes}, idempotent=True)["sha"] if changes else base_tree
     expected = command(["git", "rev-parse", "HEAD^{tree}"]).decode().strip()
     if tree != expected:
         raise RuntimeError("云端源码校验失败，未触发构建。")
@@ -124,7 +144,8 @@ def build_windows(version):
         candidates = sorted((Path(env.get("LOCALAPPDATA", "")) / "ChurchPresenterTools").glob("jdk-21*"))
         if candidates:
             env["JAVA_HOME"] = str(candidates[-1])
-    args = [str(ROOT / "gradlew.bat"), "--quiet", "--max-workers=3"]
+    workers = max(4, min(8, (os.cpu_count() or 4) - 1))
+    args = [str(ROOT / "gradlew.bat"), "--quiet", "--parallel", "--build-cache", f"--max-workers={workers}"]
     # Optional machine-local repository/proxy configuration; no machine paths are saved in source.
     if env.get("CHURCHPRESENTER_GRADLE_INIT"):
         args += ["--init-script", env["CHURCHPRESENTER_GRADLE_INIT"]]
@@ -150,12 +171,16 @@ def prepare_windows_release(repo, commit, version, package):
     tag = "v" + version
     existing = command(["gh", "release", "list", "--repo", repo, "--limit", "100", "--json", "tagName"])
     if tag not in {item["tagName"] for item in json.loads(existing)}:
-        command(["gh", "release", "create", tag, "--repo", repo, "--target", commit,
-                 "--draft", "--title", "ChurchPresenter " + tag,
-                 "--notes", "Windows 安装包由本机生成；macOS 安装包将在手动发起的云端构建完成后补充。"])
+        try:
+            command(["gh", "release", "create", tag, "--repo", repo, "--target", commit,
+                     "--draft", "--title", "ChurchPresenter " + tag,
+                     "--notes", "Windows 安装包由本机生成；macOS 安装包将在手动发起的云端构建完成后补充。"])
+        except RuntimeError:
+            # Cloud release job may have created the release concurrently; upload with --clobber below.
+            pass
     command(["gh", "release", "upload", tag, str(package) + f"#ChurchPresenter-{version}-WINDOWS-x64.msi",
              "--repo", repo, "--clobber"])
-    print(f"Windows MSI 已上传到 Release 草稿：{tag}", flush=True)
+    print(f"Windows MSI 已上传到 Release：{tag}", flush=True)
 
 
 def wait_for_packages(repo, branch, commit, no_wait, cloud_windows=True):
@@ -237,14 +262,16 @@ def main():
     tags = api(args.repo, "git/matching-refs/tags/v1.0")
     version = next_version(tag["ref"].rsplit("/", 1)[-1] for tag in tags)
     print(f"本次构建版本：{version}", flush=True)
-    package = None if args.cloud_only else build_windows(version)
+    # Publish source and dispatch macOS cloud runners FIRST so cloud packaging runs in parallel
+    # with the local Windows MSI build rather than waiting behind it.
     branch, commit = publish_source(args.repo, base)
-    if package:
-        prepare_windows_release(args.repo, commit, version, package)
     api(args.repo, "actions/workflows/build-integrated.yml/dispatches", {
         "ref": branch, "inputs": {"windows": "true" if args.cloud_only else "false", "version": "v" + version},
     })
-    print("已手动发起云端打包；该打包结果不作为分支合并条件。", flush=True)
+    print("已先行发起云端打包（与本机 Windows 构建并行执行）；该打包结果不作为分支合并条件。", flush=True)
+    if not args.cloud_only:
+        package = build_windows(version)
+        prepare_windows_release(args.repo, commit, version, package)
     wait_for_packages(args.repo, branch, commit, args.no_wait, cloud_windows=args.cloud_only)
 
 
