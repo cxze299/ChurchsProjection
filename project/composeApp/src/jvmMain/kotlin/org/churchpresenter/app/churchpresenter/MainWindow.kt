@@ -47,7 +47,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.churchpresenter.settings.AppSettings
 import org.churchpresenter.settings.withWindowGeometry
-import org.churchpresenter.app.churchpresenter.utils.windowPlacementFromSettings
+import org.churchpresenter.sharedui.utils.usableScreenArea
+import org.churchpresenter.settings.DisplayRect
+import java.awt.Dimension
 import org.churchpresenter.app.churchpresenter.utils.windowPlacementToSettings
 import org.churchpresenter.app.churchpresenter.utils.startClassWarmUp
 import org.churchpresenter.app.churchpresenter.utils.warmStrings
@@ -139,24 +141,17 @@ internal fun AppRootState.AppWindows(
     onThemeCustomizationChange: (ThemeCustomization) -> Unit,
 ) {
     val screens = rememberScreenDevices()
-    val savedPlacement = windowPlacementFromSettings(appSettings.windowPlacement)
     val primaryBounds = GraphicsEnvironment.getLocalGraphicsEnvironment()
         .defaultScreenDevice.defaultConfiguration.bounds
-    val isFloating = savedPlacement == WindowPlacement.Floating
-    val (startX, startY) = startupWindowPosition(
-        restoreGeometry = shouldRestoreWindowGeometry(isFloating, appSettings.windowX),
-        savedX = appSettings.windowX, savedY = appSettings.windowY,
-        primaryX = primaryBounds.x, primaryY = primaryBounds.y,
-    )
-    val (startWidth, startHeight) = startupWindowSize(
-        isFloating = isFloating,
-        savedWidth = appSettings.windowWidth, savedHeight = appSettings.windowHeight,
-        primaryWidth = primaryBounds.width, primaryHeight = primaryBounds.height,
-    )
+    val area = usableScreenArea(null)?.let {
+        DisplayRect(it.x.value.toInt(), it.y.value.toInt(), it.width.value.toInt(), it.height.value.toInt())
+    } ?: primaryBounds.asDisplayRect()
+    val minimum = scaledMainWindowMinimum(LocalThemeCustomization.current.uiScale, screenMaxUiScale(null))
+    val startBounds = adaptiveMainWindowBounds(area, minimum.width, minimum.height)
     val state = rememberWindowState(
-        placement = savedPlacement,
-        position = WindowPosition(startX.dp, startY.dp),
-        size = DpSize(startWidth.dp, startHeight.dp),
+        placement = WindowPlacement.Floating,
+        position = WindowPosition(startBounds.x.dp, startBounds.y.dp),
+        size = DpSize(startBounds.width.dp, startBounds.height.dp),
     )
 
     if (!appReady) {
@@ -233,7 +228,12 @@ private fun AppRootState.MainWindow(
     ) {
         val uiScale = LocalThemeCustomization.current.uiScale
         LaunchedEffect(uiScale) {
-            window.minimumSize = scaledMainWindowMinimum(uiScale, screenMaxUiScale(window))
+            val minimum = scaledMainWindowMinimum(uiScale, screenMaxUiScale(window))
+            val area = usableScreenArea(window)
+            window.minimumSize = if (area == null) minimum else Dimension(
+                minimum.width.coerceAtMost((area.width.value.toInt() - 32).coerceAtLeast(1)),
+                minimum.height.coerceAtMost((area.height.value.toInt() - 32).coerceAtLeast(1)),
+            )
         }
         LaunchedEffect(Unit) {
             // The first frame the operator sees; the startup benchmark's end point (StartupProbe).

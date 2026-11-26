@@ -17,6 +17,12 @@ import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.assertWidthIsAtLeast
+import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.graphics.toAwtImage
+import androidx.compose.ui.unit.dp
+import java.io.File
+import javax.imageio.ImageIO
 import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.window.WindowPlacement
@@ -84,6 +90,27 @@ class MainDesktopPanelsUiTest {
         }
         waitForIdle()
     }
+
+    @Test
+    fun `startup sidebars stay closed until their larger expand controls are clicked`() =
+        panels(placement = WindowPlacement.Floating, settings = startupOperatorSettings(AppSettings())) { seen ->
+            val controls = onAllNodesWithContentDescription(expand)
+            assertEquals(2, controls.fetchSemanticsNodes().size)
+            controls[0].assertWidthIsAtLeast(24.dp)
+            controls[1].assertWidthIsAtLeast(24.dp)
+            assertTrue(seen.geometries.last().collapsed)
+            System.getProperty("churchPresenter.sidebarReviewDir")?.let { path ->
+                val file = File(path, "startup-collapsed-panels.png")
+                file.parentFile.mkdirs()
+                ImageIO.write(onRoot().captureToImage().toAwtImage(), "png", file)
+            }
+            controls[0].performClick()
+            waitForIdle()
+            onNodeWithTag("schedule").assertExists()
+            onAllNodesWithContentDescription(expand)[0].performClick()
+            waitForIdle()
+            assertEquals(false, seen.geometries.last().collapsed)
+        }
 
     @Test
     fun `collapsing both panels writes the maximized layout when no window is known`() = panels { seen ->
