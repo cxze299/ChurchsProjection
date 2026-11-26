@@ -4,6 +4,8 @@
 
 ### 2026-11-26
 
+- 统一左右边栏在收起与展开状态下的分隔条及按钮尺寸：分隔条宽度统一为 `36.dp`、切换按钮统一为 `32.dp × 40.dp`（使用 `secondaryContainer` 底色）、箭头图标统一为 `24.dp`，并同步更新面板宽度上限预留空间计算。通过 `MainDesktopPanelsUiTest` 与 `PanelResizeHandleTest` 共 16 项界面与拖拽测试验证；后续安装包及固定入口由手动执行 `project/Build-All.cmd` 构建更新。
+- 缩减 Windows 与 macOS 安装包体积并加速三平台手动构建流程：移除未使用的 OpenJFX 依赖与启动预热；新增打包期 JAR 裁剪任务 `shrinkPackagedJars`（按字节码常量池闭包精简 `material-icons-extended-desktop`，并剥离 `sqlite-jdbc` 与 `junixsocket-native-common` 中非当前目标平台的原生库）；排除未使用的 Netty QUIC/HTTP3 原生库；按需配置 JDK 21 运行时模块（包含 `java.se`、`jdk.management`、`jdk.httpserver` 等运行时模块，剔除编译器与调试工具模块）；对内置背景图库进行视觉无损 JPEG 优化（保留截图测试基线图片不变）；macOS 端对 `libomt.dylib` 执行 `lipo -thin` 单架构裁剪，并新增单遍 `ULFO` (LZFSE) 压缩任务 `packageFastDmg` 消除双重 DMG 压缩耗时；`build_all.py` 改为 8 线程并发幂等重试上传变更文件，先行调度云端双 Mac 构建并与本机 Windows 构建并行执行。通过 19 项构建脚本测试与 35 项背景资源库测试验证。
 - 经文引用使用紧凑范围格式：连续段选按起止节号显示，书卷文本中缺少中间节号时保持完整范围；非连续选节合并相邻区间，历史记录采用与投影一致的引用。
 - 主界面每次启动时收起程序单和投影预览边栏，展开箭头及点击区域加大，并使用醒目的按钮底色。
 - 主窗口以居中的普通窗口启动，根据屏幕可用区域自适应尺寸，避开任务栏和系统菜单区域；小屏幕上的窗口及最小尺寸均限制在可用范围内。
