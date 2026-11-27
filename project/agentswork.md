@@ -352,3 +352,17 @@ P12 导出文件和 P8 密钥按照工作流要求编码后配置。证书签名
 | 后续任务来源 | 用户的新需求、实际测试反馈及当前任务中发现的必要问题 |
 
 后续每次交接更新日期、负责人、任务范围、当前分支、验证结果、本机应用状态、各平台发布状态和剩余事项。以 Git 工作目录、当前源码与用户最新指令为工作起点；已完成事项保留在功能和验证索引中，新任务写入当前协作状态。
+
+## 2026-11-27 Rust 歌词解析与 `rust-project/` 原生桌面版完整重写
+
+1. **局部歌词解析模块**：Codex 在 `project/modules/core/song-chords/rust` 添加了多语言段落标题识别与 SPS 文本歌词解析，Windows 上的 2 项 Rust 单元测试通过。
+2. **Codex 全局配置优化（解决长任务中断问题）**：Antigravity 将本机 `C:\Users\Administrator\.codex\config.toml` 中的 `model_reasoning_effort` 从 `"low"` 提升为 `"high"`，并将 `[agents] enabled` 设为 `true`（`max_concurrent_threads_per_session = 4`），由 Antigravity 拆解任务并通过 `codex.exe exec` 并行调度与验收。
+3. **纯原生 Rust 桌面工程 (`D:\churchpre\rust-project`)**：
+   - 按用户选定的技术方案，在仓库根目录新建独立 Cargo Workspace `rust-project/`（与原 Kotlin 工程 `project/` 并存），包含 4 个 crate：
+     - `crates/cp-core`：兼容 `~/.churchpresenter/settings.json` 的配置读写、9 类 `ResourceDirectory` 多目录管理、自定义快捷键模型与核心投影状态模型。
+     - `crates/cp-bible`：`.spb` 圣经解析、跨译本 `BXXXCXXXVXXX` 并行对齐、66 卷中文拼音首字母速投、单段与无限段跨书卷连续经文解析、两次点击段选、紧凑范围引用、连续上屏单节自动去重（28 项测试通过）。
+     - `crates/cp-library`：多音字拼音首字母匹配、前置编号检索、多目录递归扫描、歌本与优先格式排序、`.song` 读写、`.pptx` 文本与图片提取、Word 转 PDF 缓存与 Windows 原生 `Windows.Data.Pdf` 页面渲染（25 项测试通过）。
+     - `crates/cp-app`：基于 `eframe` / `egui` 0.31 的双窗口原生 GUI（主控台 + 多屏/独立投影窗口），加载本机微软雅黑字体与应用图标；左右边栏默认收起，收起与展开状态下分隔条统一宽 `36.dp`、切换按钮 `32.dp × 40.dp`、箭头 `24.dp`；包含经文连续上屏与样式设置窗口、诗歌检索预览、多目录与快捷键设置、右侧 16:9 实时预览及带右键菜单与 `F11`/`B`/`T`/`Esc` 快捷键的独立投影窗口（5 项应用状态测试通过）。
+   - **构建产物与验证结果**：
+     - 全工作区 58 项测试（`cargo test --workspace`）与 `cargo clippy --workspace --all-targets -- -D warnings` 全部 0 警告通过。
+     - 单文件 Release 可执行程序：`D:\churchpre\rust-project\target\release\ChurchPresenter.exe`，体积仅 **`9.67 MB`**（无需捆绑 112 MB JVM 运行时，较原 Kotlin 解压目录 `638.58 MB` 缩减 **98.5%**），本机实测启动正常。

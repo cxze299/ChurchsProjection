@@ -1,0 +1,25 @@
+[package]
+name = "cp-app"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "ChurchPresenter"
+path = "src/main.rs"
+
+[dependencies]
+cp-core = { path = "../cp-core" }
+cp-bible = { path = "../cp-bible" }
+cp-library = { path = "../cp-library" }
+serde_json.workspace = true
+eframe.workspace = true
+egui.workspace = true
+image.workspace = true
+rfd.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = ["Win32_Graphics_Gdi", "Win32_UI_HiDpi"] }
+
+[target.'cfg(not(windows))'.dependencies]
+display-info = "0.5"

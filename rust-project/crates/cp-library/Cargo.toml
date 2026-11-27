@@ -1,0 +1,27 @@
+[package]
+name = "cp-library"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+cp-core = { path = "../cp-core" }
+serde.workspace = true
+regex.workspace = true
+thiserror.workspace = true
+walkdir.workspace = true
+pinyin = { workspace = true, features = ["heteronym"] }
+zip.workspace = true
+roxmltree = "0.20"
+image.workspace = true
+sha2.workspace = true
+lopdf = { version = "0.38", default-features = false }
+encoding_rs = "0.8"
+tempfile = "3"
+indexmap = { version = "2", features = ["serde"] }
+url = "2"
+percent-encoding = "2"
+dunce = "1"
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.58", features = ["Data_Pdf", "Foundation", "Graphics_Imaging", "Storage", "Storage_Streams"] }
