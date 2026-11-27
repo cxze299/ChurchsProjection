@@ -1,13 +1,18 @@
 package org.churchpresenter.slides.viewmodel
 
 import org.churchpresenter.presentationengine.PresentationLoader
+import org.churchpresenter.core.models.songs.HymnInitials
+import org.churchpresenter.core.models.songs.songSearchText
 import java.io.File
 import java.text.Normalizer
 
 internal object HymnQuickPlay {
     private const val OTHER_FORMAT_RANK = 4
-    private val leadingNumber = Regex("^\\s*0*(\\d+)(?=\\D|$)")
-    private val formatSuffix = Regex("(?:^|\\s+|\\.)(?:\\*?\\.)?([a-z0-9]+)$", RegexOption.IGNORE_CASE)
+    private val numberSegment = Regex("[0-9]+")
+    private val leadingNumber = Regex("^\\s*(?:第|[\\[【（(])?\\s*([0-9]+)")
+    private val words = Regex("[\\s\\p{Z}]+")
+    private val formatPrefix = Regex("^(?:\\*?\\.)?([a-z0-9]+)[\\s\\p{Z}]+", RegexOption.IGNORE_CASE)
+    private val formatSuffix = Regex("(?:^|[\\s\\p{Z}]+|\\.)(?:\\*?\\.)?([a-z0-9]+)$", RegexOption.IGNORE_CASE)
     private val powerPointFormats =
         PresentationLoader.POWERPOINT_XML_EXTENSIONS + PresentationLoader.POWERPOINT_BINARY_EXTENSIONS
 
@@ -32,18 +37,31 @@ internal object HymnQuickPlay {
         val suffix = formatSuffix.find(normalizedQuery)?.takeIf {
             it.groupValues[1].lowercase() in PresentationLoader.SUPPORTED_EXTENSIONS
         }
-        val extension = suffix?.groupValues?.get(1)?.lowercase()
-        val text = suffix?.let { normalizedQuery.substring(0, it.range.first).trimEnd() } ?: normalizedQuery
-        val number = text.toIntOrNull()
+        val prefix = formatPrefix.find(normalizedQuery)?.takeIf {
+            it.groupValues[1].lowercase() in PresentationLoader.SUPPORTED_EXTENSIONS
+        }
+        val extension = (suffix ?: prefix)?.groupValues?.get(1)?.lowercase()
+        val text = when {
+            suffix != null -> normalizedQuery.substring(0, suffix.range.first).trimEnd()
+            prefix != null -> normalizedQuery.substring(prefix.range.last + 1)
+            else -> normalizedQuery
+        }
+        val normalizedText = songSearchText(text)
+        val tokens = normalizedText.split(words)
+        val numbers = tokens.filter { numberSegment.matches(it) }.map { it.trimStart('0') }
+        val titleWords = tokens.filterNot { numberSegment.matches(it) }
         val bookPreference = normalize(preferredBook)
         val matches = files.filter { file ->
+            if (extension != null && !file.extension.equals(extension, ignoreCase = true)) return@filter false
             val title = normalize(file.nameWithoutExtension)
-            val matchesName = if (number == null) {
-                title.contains(text, ignoreCase = true) || HymnInitials.matches(title, text)
-            } else {
-                leadingNumber.find(title)?.groupValues?.get(1)?.toIntOrNull() == number
-            }
-            matchesName && (extension == null || file.extension.equals(extension, ignoreCase = true))
+            if (numbers.isNotEmpty() && !numbers.all { number ->
+                    numberSegment.findAll(title).any { it.value.trimStart('0') == number }
+                }) return@filter false
+            if (titleWords.isEmpty() || normalizedText.isEmpty()) return@filter true
+            val searchableTitle = songSearchText(title)
+            searchableTitle.contains(normalizedText, ignoreCase = true) ||
+                HymnInitials.matches(title, titleWords.joinToString("")) ||
+                titleWords.all { searchableTitle.contains(it, ignoreCase = true) }
         }
         val preferredMatches = if (normalizedQuery.isEmpty() && bookPreference.isNotEmpty()) {
             matches.filter { book(it, root, roots) == bookPreference }.ifEmpty { matches }
@@ -61,6 +79,10 @@ internal object HymnQuickPlay {
         }.sortedWith(
             compareBy<File> { !normalize(it.nameWithoutExtension).equals(text, ignoreCase = true) }
                 .thenBy { bookPreference.isNotEmpty() && book(it, root, roots) != bookPreference }
+                .thenBy {
+                    numbers.isNotEmpty() &&
+                        leadingNumber.find(it.nameWithoutExtension)?.groupValues?.get(1)?.trimStart('0') !in numbers
+                }
                 .thenBy { normalize(it.name) }
                 .thenBy { it.absolutePath }
         )

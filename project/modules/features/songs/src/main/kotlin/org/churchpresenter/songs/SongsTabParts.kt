@@ -74,14 +74,8 @@ internal fun SongsTabController.SongsTabEffects(
     val selectedSongItemVersion = schedule.version
     LaunchedEffect(playCounts) { viewModel.setPlayCounts(playCounts) }
 
-    // Reload songs whenever the storage directory changes (e.g. after settings are saved)
-    val isFirstComposition = remember { mutableStateOf(true) }
-    LaunchedEffect(appSettings.songSettings.storageDirectory) {
-        if (isFirstComposition.value) {
-            isFirstComposition.value = false
-        } else {
-            viewModel.updateSettings(appSettings)
-        }
+    LaunchedEffect(appSettings) {
+        viewModel.updateSettings(appSettings)
     }
 
     val selectedSongIndex by viewModel.selectedSongIndex

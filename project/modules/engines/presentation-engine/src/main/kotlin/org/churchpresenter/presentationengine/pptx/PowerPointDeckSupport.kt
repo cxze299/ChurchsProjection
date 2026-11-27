@@ -1,6 +1,7 @@
 package org.churchpresenter.presentationengine.pptx
 
 import org.apache.poi.EncryptedDocumentException
+import org.churchpresenter.presentationengine.fonts.SlideFontRegistry
 import org.apache.poi.hslf.usermodel.HSLFSlideShow
 import org.apache.poi.openxml4j.opc.PackagePart
 import org.apache.poi.sl.usermodel.Placeholder
@@ -54,6 +55,7 @@ internal object PowerPointDeckSupport {
      */
     fun open(file: File, registerFonts: Boolean = true): SlideShow<*, *> {
         PoiLimits.apply()
+        if (registerFonts) SlideFontRegistry.initialize()
         return SlideShowFactory.create(file, null, true)
             .also { if (registerFonts) registerEmbeddedFonts(it) }
             .also { show ->

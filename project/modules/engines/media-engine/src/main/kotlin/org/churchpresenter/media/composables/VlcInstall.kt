@@ -57,6 +57,7 @@ internal fun detectVlcInstallPathFor(
     hasVlcLib: (Path) -> Boolean = ::dirContainsVlcLib,
     /** Whether a path exists at all — only the macOS bundle fallback needs it. */
     pathExists: (Path) -> Boolean = Files::exists,
+    userHome: String = System.getProperty("user.home", ""),
 ): String {
     return when {
         "win" in osName -> {
@@ -68,10 +69,12 @@ internal fun detectVlcInstallPathFor(
             paths.firstOrNull { hasVlcLib(it) }?.toString() ?: ""
         }
         "mac" in osName || "darwin" in osName -> {
-            val libPath = Paths.get("/Applications/VLC.app/Contents/MacOS/lib")
-            if (hasVlcLib(libPath)) libPath.toString()
-            else if (pathExists(Paths.get("/Applications/VLC.app"))) "/Applications/VLC.app"
-            else ""
+            val apps = listOfNotNull(
+                Paths.get("/Applications/VLC.app"),
+                userHome.takeIf { it.isNotBlank() }?.let { Paths.get(it, "Applications", "VLC.app") },
+            )
+            apps.map { it.resolve("Contents/MacOS/lib") }.firstOrNull(hasVlcLib)?.toString()
+                ?: apps.firstOrNull(pathExists)?.toString().orEmpty()
         }
         else -> {
             val libDirs = listOf(

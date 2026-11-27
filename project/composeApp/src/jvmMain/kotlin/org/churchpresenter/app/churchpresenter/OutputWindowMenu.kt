@@ -23,6 +23,8 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.isAltPressed
+import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -55,6 +57,8 @@ internal fun OutputWindowWithMenu(spec: OutputWindowSpec, content: @Composable (
     val nextLabel = stringResource(Res.string.output_menu_next)
     val previousLabel = stringResource(Res.string.output_menu_previous)
     val blackLabel = stringResource(Res.string.output_menu_black)
+    val mac = System.getProperty("os.name", "").startsWith("Mac", ignoreCase = true)
+    val fullscreenKeys = if (mac) "⌃⌘F" else "F11"
     key(framed) {
         Window(
             visible = spec.visible,
@@ -66,9 +70,10 @@ internal fun OutputWindowWithMenu(spec: OutputWindowSpec, content: @Composable (
             resizable = framed,
             alwaysOnTop = onTop,
             onPreviewKeyEvent = { event ->
-                val action = outputShortcut(event.key)
-                val modified = event.isCtrlPressed || event.isAltPressed
-                if (event.type != KeyEventType.KeyDown || modified || action == null) {
+                val action = outputShortcut(
+                    event.key, event.isCtrlPressed, event.isMetaPressed, event.isAltPressed, event.isShiftPressed, mac,
+                )
+                if (event.type != KeyEventType.KeyDown || action == null) {
                     false
                 } else {
                     when (action) {
@@ -91,7 +96,7 @@ internal fun OutputWindowWithMenu(spec: OutputWindowSpec, content: @Composable (
                     ContextMenuItem(nextLabel + "  → / Space") { spec.onStep(true) },
                     ContextMenuItem(previousLabel + "  ← / PageUp") { spec.onStep(false) },
                     ContextMenuItem(blackLabel + "  B") { blackedOut = !blackedOut },
-                    ContextMenuItem((if (framed) fullscreenLabel else windowLabel) + "  F11", toggleFullscreen),
+                    ContextMenuItem((if (framed) fullscreenLabel else windowLabel) + "  " + fullscreenKeys, toggleFullscreen),
                     ContextMenuItem((if (onTop) normalLabel else topLabel) + "  T") { onTop = !onTop },
                     ContextMenuItem(hideLabel + "  Esc") { spec.onClose() },
                 )

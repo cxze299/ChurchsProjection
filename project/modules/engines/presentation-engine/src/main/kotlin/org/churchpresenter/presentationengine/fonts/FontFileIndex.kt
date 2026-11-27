@@ -30,7 +30,8 @@ internal class FontFileIndex(
 
     /** Records [file] under its key, unless a file is already there. */
     fun add(file: File) {
-        files.putIfAbsent(key(file), file)
+        // Lottie needs a raw sfnt file. Resource containers are only used to register AWT faces.
+        if (!file.extension.equals("dfont", ignoreCase = true)) files.putIfAbsent(key(file), file)
     }
 
     /** The file indexed under [key], after the whole scan has run if it has not yet. */
@@ -68,6 +69,6 @@ internal class FontFileIndex(
 
     companion object {
         /** The file types a font directory scan picks up. */
-        val FONT_FILE_EXTENSIONS = setOf("ttf", "otf", "ttc")
+        val FONT_FILE_EXTENSIONS = setOf("ttf", "otf", "ttc", "dfont")
     }
 }

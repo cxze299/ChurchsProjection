@@ -12,6 +12,19 @@ import kotlin.test.assertNull
  * temporarily overriding those properties.
  */
 class UpdateCheckerPlatformTest {
+    @Test
+    fun `current Mac download names distinguish Apple Silicon and Intel`() {
+        val arm = "https://example.org/ChurchPresenter-1.0-MACOS-M-Silicon.dmg"
+        val intel = "https://example.org/ChurchPresenter-1.0-MACOS-Intel.dmg"
+        val legacy = "https://example.org/ChurchPresenter-1.0.dmg"
+        asPlatform("Mac OS X", "arm64")
+        assertEquals(arm, selectDownloadUrl(listOf(intel, arm)))
+        assertEquals("macos_arm64", currentPlatformId())
+        asPlatform("Mac OS X", "x86_64")
+        assertEquals(intel, selectDownloadUrl(listOf(legacy, arm, intel)))
+        assertNull(selectDownloadUrl(listOf(arm)))
+    }
+
 
     private val realOsName: String? = System.getProperty("os.name")
     private val realOsArch: String? = System.getProperty("os.arch")

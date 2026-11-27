@@ -2,6 +2,8 @@ package org.churchpresenter.slides.viewmodel
 
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import org.churchpresenter.core.models.io.isSystemArtifact
+import org.churchpresenter.core.models.io.isSystemDirectory
 import org.churchpresenter.presentationengine.PresentationLoader
 import java.io.File
 import java.io.IOException
@@ -12,10 +14,7 @@ import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 
 internal object PresentationDocumentDiscovery {
-    private val ignoredDirectories = setOf(
-        "node_modules", "dist", "build", ".git", "target", "\$recycle.bin",
-        ".spotlight-v100", ".trashes", ".fseventsd", ".temporaryitems",
-    )
+    private val ignoredDirectories = setOf("node_modules", "dist", "build", ".git", "target")
 
     data class Result(val files: List<File>, val unreadableDirectories: List<File>)
 
@@ -35,7 +34,9 @@ internal object PresentationDocumentDiscovery {
                 }
                 fun configuredPath(path: Path): File = root.resolve(resolved.relativize(path)).toFile()
                 fun ignored(path: Path): Boolean =
-                    path != resolved && path.fileName?.toString()?.lowercase() in ignoredDirectories
+                    path != resolved && path.fileName.toString().let {
+                        isSystemDirectory(it) || it.lowercase() in ignoredDirectories
+                    }
                 Files.walkFileTree(resolved, object : SimpleFileVisitor<Path>() {
                     override fun preVisitDirectory(dir: Path, attrs: BasicFileAttributes): FileVisitResult {
                         context.ensureActive()
@@ -49,7 +50,7 @@ internal object PresentationDocumentDiscovery {
                     override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
                         context.ensureActive()
                         val document = file.toFile()
-                        if (attrs.isRegularFile && !document.name.startsWith("~\$") && !document.name.startsWith("._") &&
+                        if (attrs.isRegularFile && !isSystemArtifact(document.name) &&
                             document.extension.lowercase() in PresentationLoader.SUPPORTED_EXTENSIONS
                         ) {
                             found.putIfAbsent(file, configuredPath(file))

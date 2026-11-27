@@ -10,6 +10,8 @@ dependencies {
     // no composables: this module has no Compose compiler plugin and must not need one.
     implementation(libs.compose.ui)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.pinyin4j)
+    implementation(libs.opencc4j)
 
     testImplementation(kotlin("test"))
     testImplementation(kotlin("reflect"))

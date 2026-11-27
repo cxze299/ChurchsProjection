@@ -10,7 +10,6 @@ plugins {
 }
 
 dependencies {
-    implementation(libs.pinyin4j)
     // The port to the live output this tab declares against.
     api(projects.outputApi)
     implementation(projects.sharedUi)

@@ -218,9 +218,16 @@ class VlcAvailabilityTest {
         val path = detectVlcInstallPathFor("mac os x")
 
         assertTrue(
-            path.isEmpty() || path.startsWith("/Applications/VLC.app"),
+            path.isEmpty() || path.contains("VLC.app"),
             "a mac search returned \"$path\"",
         )
+    }
+
+    @Test
+    fun `a user VLC install is found from the Mac application directory`() {
+        val lib = java.nio.file.Paths.get("/Users/operator/Applications/VLC.app/Contents/MacOS/lib")
+        val actual = detectVlcInstallPathFor("mac os x", hasVlcLib = { it == lib }, userHome = "/Users/operator")
+        assertEquals(lib.toString(), actual)
     }
 
     @Test

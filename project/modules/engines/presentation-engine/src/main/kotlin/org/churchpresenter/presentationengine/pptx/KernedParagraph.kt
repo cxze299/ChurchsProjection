@@ -225,10 +225,9 @@ internal class KernedParagraph(paragraph: TextParagraph<*, *, *>) : DrawTextPara
     ): List<RangeAttribute> {
         val run = placed.run
         val ranges = mutableListOf<RangeAttribute>()
-        fun font(family: String?, from: Int, to: Int) {
-            val font = Font(base + (TextAttribute.FAMILY to (family ?: paragraph.defaultFontFamily)))
-            ranges += RangeAttribute(TextAttribute.FONT, font, placed.begin + from, placed.begin + to)
-        }
+        val attributes = base - TextAttribute.FONT
+        fun font(family: String?) = Font(attributes + (TextAttribute.FAMILY to (family ?: paragraph.defaultFontFamily)))
+        val logical = font(Font.SANS_SERIF)
         var groupBegin = 0
         for (group in FontGroup.getFontGroupRanges(placed.text)) {
             val runFont = run.getFontInfo(group.fontGroup) ?: run.getFontInfo(FontGroup.LATIN)
@@ -236,17 +235,28 @@ internal class KernedParagraph(paragraph: TextParagraph<*, *, *>) : DrawTextPara
             val mappedInfo = fonts.getMappedFont(graphics, runFont)
                 ?: fonts.getMappedFont(graphics, PlainFontInfo(paragraph.defaultFontFamily))
                 ?: fallbackInfo
-            val mapped = fonts.createAWTFont(graphics, mappedInfo, FONT_PROBE_SIZE, run.isBold, run.isItalic)
+            val mapped = font(mappedInfo.typeface)
+            val fallback = font(fallbackInfo.typeface)
             val groupEnd = groupBegin + group.length
-            var partEnd = groupBegin
-            while (partEnd < groupEnd) {
-                var partBegin = partEnd
-                partEnd = nextPart(mapped, placed.text, partBegin, groupEnd, displayed = true)
-                if (partBegin < partEnd) font(mappedInfo.typeface, partBegin, partEnd)
-                partBegin = partEnd
-                partEnd = nextPart(mapped, placed.text, partBegin, groupEnd, displayed = false)
-                if (partBegin < partEnd) font(fallbackInfo.typeface, partBegin, partEnd)
+            fun fontFor(codePoint: Int): Font = when {
+                mapped.canDisplay(codePoint) -> mapped
+                fallback.canDisplay(codePoint) -> fallback
+                else -> logical
             }
+            var partBegin = groupBegin
+            var partFont = fontFor(placed.text.codePointAt(partBegin))
+            var offset = partBegin
+            while (offset < groupEnd) {
+                val codePoint = placed.text.codePointAt(offset)
+                val selected = fontFor(codePoint)
+                if (selected !== partFont) {
+                    ranges += RangeAttribute(TextAttribute.FONT, partFont, placed.begin + partBegin, placed.begin + offset)
+                    partBegin = offset
+                    partFont = selected
+                }
+                offset += Character.charCount(codePoint)
+            }
+            ranges += RangeAttribute(TextAttribute.FONT, partFont, placed.begin + partBegin, placed.begin + groupEnd)
             groupBegin = groupEnd
         }
         return ranges
@@ -286,23 +296,11 @@ private fun LineBreakMeasurer.nextHangingLayout(
 }
 
 /** The size POI probes a font at to ask which characters it can show; any size answers the same. */
-private const val FONT_PROBE_SIZE = 10.0
 
 /** A bullet with no size of its own is as large as its text: 100%. */
 private const val PERCENT = 100.0
 
 private val LINE_BREAKS = Regex("[\\r\\n]")
-
-/** The end of the run of characters from [begin] that [font] can ([displayed]) or cannot show. */
-private fun nextPart(font: Font, text: String, begin: Int, end: Int, displayed: Boolean): Int {
-    var index = begin
-    while (index < end) {
-        val codePoint = text.codePointAt(index)
-        if (font.canDisplay(codePoint) != displayed) break
-        index += Character.charCount(codePoint)
-    }
-    return index
-}
 
 /** A font known only by its typeface — POI's `DrawFontInfo`, which is internal to its package. */
 private class PlainFontInfo(private val name: String) : FontInfo {

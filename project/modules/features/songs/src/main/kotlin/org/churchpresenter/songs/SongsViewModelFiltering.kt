@@ -1,6 +1,9 @@
 package org.churchpresenter.songs
 
 import org.churchpresenter.core.models.songs.SongItem
+import org.churchpresenter.core.models.songs.HymnInitials
+import org.churchpresenter.core.models.songs.songSearchText
+import org.churchpresenter.core.models.songs.containsHan
 import org.churchpresenter.settings.utils.Constants
 import org.churchpresenter.songchords.ChordTransposer
 import org.churchpresenter.sharedui.utils.isHeaderLine
@@ -31,29 +34,32 @@ internal fun SongsViewModel.applyFilters() {
     // come back empty with nothing on screen to explain why — the worst possible moment being
     // mid-service. Only the ends are trimmed; whitespace inside a title is still significant, so
     // "Be Thou  My Vision" and "Be Thou My Vision" remain different queries.
-    val query = searchQueryState.value.trim()
+    val query = songSearchText(searchQueryState.value.trim())
     if (isNumberQuery(query)) {
         // Digits alone are a song number: matching them against titles and lyrics as well
         // would bury song 48 under every hymn with "48" somewhere in its words.
+        val number = query.trimStart('0').ifEmpty { "0" }
         filtered = when (filterTypeState.value) {
-            Constants.CONTAINS -> filtered.filter { it.number.contains(query) }
-            Constants.STARTS_WITH -> filtered.filter { it.number.startsWith(query) }
-            Constants.EXACT_MATCH -> filtered.filter { it.number.trim() == query }
+            Constants.CONTAINS -> filtered.filter { it.number.normalizedSongNumber().contains(number) }
+            Constants.STARTS_WITH -> filtered.filter { it.number.normalizedSongNumber().startsWith(number) }
+            Constants.EXACT_MATCH -> filtered.filter { it.number.normalizedSongNumber() == number }
             else -> filtered
         }
     } else if (query.isNotEmpty()) {
         filtered = when (filterTypeState.value) {
             Constants.CONTAINS -> filtered.filter { song ->
-                song.searchTitles().any { "${song.number}. $it".contains(query, ignoreCase = true) } ||
-                    searchLyricsOf(song).contains(query, ignoreCase = true)
+                song.searchTitles().any {
+                    songSearchText("${song.number}. $it").contains(query, ignoreCase = true) ||
+                        (containsHan(it) && HymnInitials.matches(it, query))
+                } || searchLyricsOf(song).contains(query, ignoreCase = true)
             }
             Constants.STARTS_WITH -> filtered.filter { song ->
                 song.number.startsWith(query, ignoreCase = true) ||
-                    song.searchTitles().any { it.startsWith(query, ignoreCase = true) }
+                    song.searchTitles().any { songSearchText(it).startsWith(query, ignoreCase = true) }
             }
             Constants.EXACT_MATCH -> filtered.filter { song ->
                 song.number.trim().equals(query, ignoreCase = true) ||
-                    song.searchTitles().any { it.trim().equals(query, ignoreCase = true) }
+                    song.searchTitles().any { songSearchText(it.trim()).equals(query, ignoreCase = true) }
             }
             else -> filtered
         }
@@ -96,6 +102,11 @@ internal fun SongsViewModel.applyFilters() {
  */
 private fun SongItem.searchTitles(): List<String> =
     (listOf(title) + extraTranslations().map { it.title }).filter { it.isNotBlank() }
+
+private fun String.normalizedSongNumber(): String {
+    val number = trim()
+    return if (number.isNotEmpty() && number.all(Char::isDigit)) number.trimStart('0').ifEmpty { "0" } else number
+}
 
 internal fun SongsViewModel.searchLyricsOf(song: SongItem): String {
     if (lyricSearchTextFor !== allSongItemsState.value) {
