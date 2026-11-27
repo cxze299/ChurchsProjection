@@ -4434,4 +4434,5 @@
     <string name="bible_projection_style_sample">Your word is a lamp to my feet\nand a light to my path.</string>
     <string name="bible_projection_style_sample_book">Psalm</string>
     <string name="bible_projection_style_sample_next">I have sworn an oath to keep your righteous judgments.</string>
+    <string name="bible_history_copy_reference">Copy reference</string>
 </resources>

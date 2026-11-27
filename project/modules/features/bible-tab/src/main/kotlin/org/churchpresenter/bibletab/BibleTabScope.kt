@@ -131,9 +131,6 @@ internal class BibleTabScope(
     var historyExpanded
         get() = ui.historyExpanded
         set(value) { ui.historyExpanded = value }
-    var selectedHistoryIdx
-        get() = ui.selectedHistoryIdx
-        set(value) { ui.selectedHistoryIdx = value }
     var selectedDetectionIdx
         get() = ui.selectedDetectionIdx
         set(value) { ui.selectedDetectionIdx = value }
@@ -349,7 +346,7 @@ internal class BibleTabUiState {
     var quickInputRequest by mutableStateOf(0)
     var quickInputSuppressedQuery: String? = null
     var historyExpanded by mutableStateOf(true)
-    var selectedHistoryIdx by mutableStateOf(-1)
+    var selectedHistoryEntry by mutableStateOf<BibleViewModel.HistoryEntry?>(null)
     var selectedDetectionIdx by mutableStateOf(0)
 
     // True while the caret is in the search box: the arrow keys browse from there, and nothing
