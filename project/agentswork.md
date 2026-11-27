@@ -111,6 +111,7 @@ mtfy 5 12 5 qsl 6 7 8
 - Windows 上可用 Word、WPS 或 LibreOffice 转换 Word 文稿。macOS 上支持从系统或用户“应用程序”目录启动 LibreOffice。
 
 - PowerPoint 渲染保留文稿字符间距，可读取 PPS 和 PPSX 内嵌字体，并为缺失的字形选用系统字体。macOS 渲染前完成字体索引，覆盖本机与用户应用目录下的 Office、WPS 字体及系统下载字体。
+- PowerPoint 简谱的公式拍号可使用文稿内嵌的兼容图片，SimpMusic Accent 的连线和延长记号按独立符号框的底部定位。
 
 ### 3.6 投影窗口、屏幕选择与预览
 
