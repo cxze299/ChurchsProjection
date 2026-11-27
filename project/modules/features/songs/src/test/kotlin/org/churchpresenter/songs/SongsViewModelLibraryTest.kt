@@ -5,6 +5,7 @@ import org.churchpresenter.core.models.songs.SongFileParser
 import org.churchpresenter.core.models.songs.SongItem
 import org.churchpresenter.settings.AppSettings
 import org.churchpresenter.settings.SongSettings
+import org.churchpresenter.settings.ResourceDirectory
 import java.io.File
 import java.nio.file.Files
 import kotlin.test.AfterTest
@@ -28,6 +29,31 @@ class SongsViewModelLibraryTest {
 
     private lateinit var dir: File
     private val created = mutableListOf<SongsViewModel>()
+
+    @Test
+    fun `changing the additional song roots refreshes the library and scopes the cache`() {
+        val additional = dir.resolveSibling("${dir.name}-extra").apply { mkdir() }
+        val path = additional.resolve("0042 - 奇異恩典.song")
+        try {
+            SongFileParser().writeSongFile(
+                SongItem(number = "0042", title = "奇異恩典", lyrics = listOf("Lyrics")),
+                path.absolutePath,
+            )
+            additional.resolve("._0042 - 奇異恩典.song").writeText(path.readText())
+            val settings = AppSettings(songSettings = SongSettings(storageDirectory = dir.absolutePath))
+            val vm = SongsViewModel(
+                settings, dispatcher = Dispatchers.Unconfined, ioDispatcher = Dispatchers.Unconfined,
+                enableFolderWatcher = false,
+            ).also(created::add)
+            vm.updateSettings(settings.copy(additionalResourceDirectories = mapOf(ResourceDirectory.SONGS to listOf(additional.path))))
+            assertEquals(1, vm.filteredSongItems.value.count { it.title == "奇異恩典" })
+            assertNull(SongFileParser.loadSongCache(dir.absolutePath))
+            vm.updateSettings(settings)
+            assertFalse(vm.filteredSongItems.value.any { it.title == "奇異恩典" })
+        } finally {
+            additional.deleteRecursively()
+        }
+    }
 
     @BeforeTest
     fun createLibrary() {

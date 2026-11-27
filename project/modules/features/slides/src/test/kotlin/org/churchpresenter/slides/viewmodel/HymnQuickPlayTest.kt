@@ -5,6 +5,17 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class HymnQuickPlayTest {
+    @Test
+    fun `quick search accepts format prefixes and compound Chinese queries`() {
+        val song = root.resolve("BookA/第002首 奇異恩典.PPS")
+        val alternative = root.resolve("BookA/A赞美诗002.pps")
+        val catalog = listOf(song, alternative)
+        for (query in listOf("pps 奇异恩典", "奇 异 恩 典", "002 奇异", "pps 002 qyed")) {
+            assertEquals(listOf(song), HymnQuickPlay.find(catalog, root, query, "BookA", "pdf"), query)
+        }
+        assertEquals(listOf(song, alternative), HymnQuickPlay.find(catalog, root, "2", "BookA", "pps"))
+    }
+
     private val root = File("hymns").absoluteFile
     private val files = listOf(
         "BookA/001 Amazing Grace.pptx", "BookA/001 Amazing Grace.pdf",

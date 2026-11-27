@@ -54,11 +54,11 @@ class ShortcutActionDefaultsTest {
     }
 
     @Test
-    fun `the Help menu's three windows open on Ctrl+Shift shortcuts of their own`() {
-        assertEquals(listOf(KeyChord.of(Key.L, ctrl = true, shift = true)), ShortcutAction.OPEN_SONG_LIBRARY.defaults)
-        assertEquals(listOf(KeyChord.of(Key.K, ctrl = true, shift = true)), ShortcutAction.OPEN_CONVERTER.defaults)
+    fun `the Help menu's three windows use the platform primary modifier`() {
+        assertEquals(listOf(primaryShortcut(Key.L, shift = true)), ShortcutAction.OPEN_SONG_LIBRARY.defaults)
+        assertEquals(listOf(primaryShortcut(Key.K, shift = true)), ShortcutAction.OPEN_CONVERTER.defaults)
         assertEquals(
-            listOf(KeyChord.of(Key.D, ctrl = true, shift = true)),
+            listOf(primaryShortcut(Key.D, shift = true)),
             ShortcutAction.OPEN_CALENDAR_MANAGER.defaults,
         )
         val windows = listOf(
@@ -70,6 +70,12 @@ class ShortcutActionDefaultsTest {
             windows.all { it.scope == ShortcutScope.MENU },
             "menu accelerators, dispatched by the menu bar",
         )
+    }
+
+    @Test
+    fun `primary shortcut uses Command on macOS and Control elsewhere`() {
+        assertEquals(KeyChord.of(Key.Z, meta = true, shift = true), primaryShortcut(Key.Z, shift = true, mac = true))
+        assertEquals(KeyChord.of(Key.Z, ctrl = true), primaryShortcut(Key.Z, mac = false))
     }
 
     @Test

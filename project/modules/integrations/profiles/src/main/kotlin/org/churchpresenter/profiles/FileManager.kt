@@ -1,12 +1,14 @@
 package org.churchpresenter.profiles
 
 import org.churchpresenter.bible.MAX_BIBLE_SCAN_DEPTH
+import org.churchpresenter.core.models.io.isSystemDirectory
 import org.churchpresenter.sharedui.filechooser.FileChooser
 import org.churchpresenter.sharedui.utils.isSystemArtifact
 import org.churchpresenter.settings.utils.Constants
 import org.churchpresenter.settings.BibleSettings
 import java.io.File
 import java.io.IOException
+import java.nio.file.Files
 import java.nio.file.Path
 import javax.swing.filechooser.FileNameExtensionFilter
 import kotlin.io.path.Path
@@ -32,7 +34,7 @@ class FileManager {
         if (!dir.exists() || !dir.isDirectory) return emptyList()
 
         return dir.listFiles { file ->
-            file.extension.lowercase() == Constants.EXTENSION_SPS
+            file.isFile && file.extension.lowercase() == Constants.EXTENSION_SPS && !isSystemArtifact(file.name)
         }?.map { it.name }?.sorted() ?: emptyList()
     }
 
@@ -49,7 +51,7 @@ class FileManager {
 
         // Count .song files in the root directory itself
         val rootSongCount = rootDir.listFiles { file ->
-            file.extension.lowercase() == Constants.EXTENSION_SONG
+            file.isFile && file.extension.lowercase() == Constants.EXTENSION_SONG && !isSystemArtifact(file.name)
         }?.size ?: 0
         if (rootSongCount > 0) {
             results.add(Pair("/", rootSongCount))
@@ -60,10 +62,12 @@ class FileManager {
     }
 
     private fun collectSongFolders(currentDir: File, rootDir: File, results: MutableList<Pair<String, Int>>) {
-        val subdirs = currentDir.listFiles { file -> file.isDirectory } ?: emptyArray()
+        val subdirs = currentDir.listFiles { file ->
+            file.isDirectory && !Files.isSymbolicLink(file.toPath()) && !isSystemDirectory(file.name)
+        } ?: emptyArray()
         for (subdir in subdirs) {
             val songCount = subdir.listFiles { file ->
-                file.extension.lowercase() == Constants.EXTENSION_SONG
+                file.isFile && file.extension.lowercase() == Constants.EXTENSION_SONG && !isSystemArtifact(file.name)
             }?.size ?: 0
             if (songCount > 0) {
                 val relativePath = subdir.toRelativeString(rootDir).replace('\\', '/')

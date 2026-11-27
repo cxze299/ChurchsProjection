@@ -100,9 +100,11 @@ Output: `decklink_jni.dll` in the current directory.
    ./build_macos.sh
    ```
 
-4. The output dylib will be at:
+4. The script builds a universal library for Apple Silicon and Intel, checks both
+   architectures with `lipo`, and copies the library to the app's macOS resources.
+   The local output is:
    ```
-   build/lib/libdecklink_jni.dylib
+   libdecklink_jni.dylib
    ```
 
 ### Alternative (no CMake)
@@ -112,7 +114,7 @@ cd ~/Documents/GitHub/ChurchPresenter/platform/native/decklink
 
 SDK_DIR="/path/to/Blackmagic-DeckLink-SDK-15.3/Mac/include"
 
-clang++ -std=c++17 -shared -o libdecklink_jni.dylib \
+clang++ -std=c++17 -arch arm64 -arch x86_64 -shared -o libdecklink_jni.dylib \
     -I"$JAVA_HOME/include" -I"$JAVA_HOME/include/darwin" \
     -I"$SDK_DIR" \
     -framework CoreFoundation \

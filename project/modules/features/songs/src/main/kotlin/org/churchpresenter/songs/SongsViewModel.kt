@@ -152,9 +152,11 @@ class SongsViewModel(
     }
 
     fun updateSettings(newSettings: AppSettings) {
+        val directoriesChanged =
+            appSettings.resourceDirectories(ResourceDirectory.SONGS) != newSettings.resourceDirectories(ResourceDirectory.SONGS)
         appSettings = newSettings
         favoritesState.value = newSettings.songFavorites.toSet()
-        loadSongs()
+        if (directoriesChanged) loadSongs()
     }
 
     // ── Instance Link — remote song catalog ──────────────────────────────────
@@ -209,13 +211,12 @@ class SongsViewModel(
         loadSongsJob?.cancel()
         loadSongsJob = viewModelScope.launch {
             isLoadingState.value = true
-            val storageDir = appSettings.songSettings.storageDirectory
             val storageDirs = appSettings.resourceDirectories(ResourceDirectory.SONGS)
             try {
                 // Phase 1: Try loading from cache for instant display
-                if (storageDir.isNotEmpty()) {
+                if (storageDirs.isNotEmpty()) {
                     val cached = withContext(ioDispatcher) {
-                        SongFileParser.loadSongCache(storageDir)
+                        SongFileParser.loadSongCache(storageDirs)
                     }
                     if (cached != null && cached.isNotEmpty()) {
                         applySongList(cached)
@@ -226,7 +227,7 @@ class SongsViewModel(
                 // Phase 2: Load from disk incrementally (only re-parse changed files)
                 val result = withContext(ioDispatcher) {
                     val s = Songs()
-                    val cache = SongFileParser.loadCachedSongMap(storageDir)
+                    val cache = SongFileParser.loadCachedSongMap(storageDirs)
                     val cachedSongsList = storageDirs.flatMap { directory ->
                         val dir = File(directory)
                         if (!dir.isDirectory) emptyList() else {
@@ -234,7 +235,7 @@ class SongsViewModel(
                         }
                     }.distinctBy { it.song.sourceFile }
                     s.addSongs(cachedSongsList.map { it.song })
-                    if (storageDir.isNotBlank()) SongFileParser.saveSongCache(storageDir, cachedSongsList)
+                    SongFileParser.saveSongCache(storageDirs, cachedSongsList)
                     if (s.getSongCount() == 0) {
                         try {
                             s.loadFromSps(Constants.FALLBACK_SONG_RESOURCE)

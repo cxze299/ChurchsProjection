@@ -33,8 +33,6 @@ object SlideFontRegistry {
     /** Font folders nest a couple of levels (family/style); deeper is someone else's data. */
     private const val FONT_SCAN_DEPTH = 3
 
-    private val initialized = AtomicBoolean(false)
-
     /** Lower-cased family name → exact-cased family name, for every family the JVM can resolve. */
     private val availableFamilies = ConcurrentHashMap<String, String>()
     private val initialFamilyIndex = lazy { refreshAvailableFamilies() }
@@ -53,6 +51,14 @@ object SlideFontRegistry {
     private val kaiti = listOf("KaiTi", "STKaiti", "Kaiti SC", "Songti SC")
     private val fangsong = listOf("FangSong", "STFangsong", "Songti SC", "Noto Serif CJK SC")
     private val yahei = listOf("Microsoft YaHei", "PingFang SC", "Heiti SC", "Noto Sans CJK SC")
+    private val jhenghei = listOf("Microsoft JhengHei", "PingFang TC", "Heiti TC", "Noto Sans CJK TC")
+    private val mingliu = listOf("PMingLiU", "MingLiU", "Songti TC", "Noto Serif CJK TC")
+    private val xingkai = listOf("STXingkai", "Xingkai SC", "STKaiti", "Kaiti SC")
+    private val lishu = listOf("LiSu", "Baoli SC", "Songti SC")
+    private val youyuan = listOf("YouYuan", "Yuanti SC", "PingFang SC")
+    private val fontLocales = listOf(
+        Locale.getDefault(), Locale.ROOT, Locale.ENGLISH, Locale.SIMPLIFIED_CHINESE, Locale.TRADITIONAL_CHINESE,
+    ).distinct()
 
     private val substitutionTable: Map<String, List<String>> = mapOf(
         "calibri" to listOf("Carlito", "Segoe UI", "Open Sans", "Arial"),
@@ -89,6 +95,30 @@ object SlideFontRegistry {
         "仿宋_gb2312" to fangsong,
         "microsoft yahei" to yahei,
         "微软雅黑" to yahei,
+        "微軟雅黑" to yahei,
+        "dengxian" to yahei,
+        "等线" to yahei,
+        "等線" to yahei,
+        "stkaiti" to kaiti,
+        "华文楷体" to kaiti,
+        "華文楷體" to kaiti,
+        "dfkai-sb" to listOf("DFKai-SB", "Kaiti TC", "STKaiti", "Songti TC"),
+        "標楷體" to listOf("DFKai-SB", "Kaiti TC", "STKaiti", "Songti TC"),
+        "stxingkai" to xingkai,
+        "华文行楷" to xingkai,
+        "華文行楷" to xingkai,
+        "lisu" to lishu,
+        "隶书" to lishu,
+        "隸書" to lishu,
+        "youyuan" to youyuan,
+        "幼圆" to youyuan,
+        "幼圓" to youyuan,
+        "microsoft jhenghei" to jhenghei,
+        "微軟正黑體" to jhenghei,
+        "pmingliu" to mingliu,
+        "mingliu" to mingliu,
+        "新細明體" to mingliu,
+        "細明體" to mingliu,
     )
 
     /**
@@ -118,9 +148,13 @@ object SlideFontRegistry {
                 "/System/Library/Fonts/Supplemental",
                 "/Library/Fonts",
                 "$home/Library/Fonts",
-                "/Applications/Microsoft PowerPoint.app/Contents/Resources/DFonts",
-                "$home/Applications/Microsoft PowerPoint.app/Contents/Resources/DFonts",
-            )
+                "$home/Library/Group Containers/UBF8T346G9.Office/FontCache",
+            ) + listOf("/Applications", "$home/Applications").flatMap { applications ->
+                listOf("PowerPoint", "Word", "Excel").map { "$applications/Microsoft $it.app/Contents/Resources/DFonts" } +
+                    listOf("$applications/wpsoffice.app/Contents/Resources/fonts")
+            } + File("/System/Library/AssetsV2").listFiles().orEmpty()
+                .filter { it.isDirectory && it.name.startsWith("com_apple_MobileAsset_Font") }
+                .flatMap { asset -> asset.listFiles().orEmpty().map { File(it, "AssetData").path } }
             os.contains("win") -> listOf(
                 (System.getenv("WINDIR") ?: "C:\\Windows") + "\\Fonts",
                 "$home\\AppData\\Local\\Microsoft\\Windows\\Fonts"
@@ -147,8 +181,7 @@ object SlideFontRegistry {
             val graphics = GraphicsEnvironment.getLocalGraphicsEnvironment()
             fonts.forEach { font ->
                 graphics.registerFont(font)
-                availableFamilies[font.family.lowercase()] = font.family
-                availableFamilies[font.getFamily(Locale.ROOT).lowercase()] = font.family
+                indexFamily(font)
             }
             fonts.firstOrNull()?.family
         } catch (_: Exception) {
@@ -163,23 +196,26 @@ object SlideFontRegistry {
      * systems.
      */
     fun initialize(scanSystemDirs: Boolean = true) {
-        if (!initialized.compareAndSet(false, true)) return
         initialFamilyIndex.value
-        if (!scanSystemDirs) return
+        if (scanSystemDirs) systemFontRegistration.value
+    }
+
+    private val systemFontRegistration = lazy {
         // One walk completes the file index and registers the families; only when a lookup has
         // already completed the index does this walk the folders again, to register.
-        if (systemFontFileIndex.scanAll(::registerFileIfUnknown)) return
-        for (dir in systemFontDirs) {
-            if (!dir.isDirectory) continue
-            dir.walkTopDown().maxDepth(FONT_SCAN_DEPTH)
-                .filter { it.isFile && it.extension.lowercase() in FontFileIndex.FONT_FILE_EXTENSIONS }
-                .forEach(::registerFileIfUnknown)
+        if (!systemFontFileIndex.scanAll(::registerFileIfUnknown)) {
+            for (dir in systemFontDirs) {
+                if (!dir.isDirectory) continue
+                dir.walkTopDown().maxDepth(FONT_SCAN_DEPTH)
+                    .filter { it.isFile && it.extension.lowercase() in FontFileIndex.FONT_FILE_EXTENSIONS }
+                    .forEach(::registerFileIfUnknown)
+            }
         }
     }
 
     fun isFamilyAvailable(family: String): Boolean {
         initialFamilyIndex.value
-        return availableFamilies.containsKey(family.trim().lowercase())
+        return availableFamilies.containsKey(cleanTypeface(family).lowercase())
     }
 
     /**
@@ -203,9 +239,10 @@ object SlideFontRegistry {
      * candidate is tried against the installed families *and* [substitutionTable], so
      * `HelveticaNeue-Bold` still reaches the "helvetica neue" row on a machine without it.
      */
-    fun resolveFace(requested: String): ResolvedFace {
+    fun resolveFace(typeface: String): ResolvedFace {
         // Embedded fonts can be registered before the installed families have been loaded.
         initialFamilyIndex.value
+        val requested = cleanTypeface(typeface)
         val (bold, italic) = PostScriptName.styleOf(requested)
         // An installed face first when the name carries a width or weight a family cannot (the
         // face already has the weight and slant its name says; reporting them as well costs
@@ -254,7 +291,7 @@ object SlideFontRegistry {
         registerBundledFonts()
         try {
             val graphics = GraphicsEnvironment.getLocalGraphicsEnvironment()
-            listOf(Locale.getDefault(), Locale.ROOT).distinct().forEach { locale ->
+            fontLocales.forEach { locale ->
                 graphics.getAvailableFontFamilyNames(locale).forEach {
                     availableFamilies.putIfAbsent(it.lowercase(), it)
                 }
@@ -271,18 +308,29 @@ object SlideFontRegistry {
 
     private fun registerFileIfUnknown(fontFile: File) {
         try {
+            if (fontFile.extension.equals("dfont", ignoreCase = true)) {
+                forEachMacFontResource(fontFile) { registerFontStream(it) }
+                return
+            }
             val fonts = Font.createFonts(fontFile)
             for (font in fonts) {
                 if (!availableFamilies.containsKey(font.family.lowercase())) {
                     GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(font)
-                    availableFamilies[font.family.lowercase()] = font.family
-                    availableFamilies[font.getFamily(Locale.ROOT).lowercase()] = font.family
                 }
+                indexFamily(font)
             }
         } catch (_: Exception) {
             // Broken/unsupported font file — skip it.
         }
     }
+
+    private fun indexFamily(font: Font) {
+        for (locale in fontLocales) {
+            availableFamilies.putIfAbsent(font.getFamily(locale).lowercase(), font.family)
+        }
+    }
+
+    private fun cleanTypeface(name: String): String = name.substringBefore('\u0000').trim().removePrefix("@")
 
     private fun normalizeName(name: String): String =
         name.lowercase().filter { it.isLetterOrDigit() }
@@ -292,6 +340,8 @@ object SlideFontRegistry {
      * POI builds its AWT font. Everything else defers to POI's default behavior.
      */
     private class SubstitutingFontManager : DrawFontManagerDefault() {
+        override fun getFallbackFont(graphics: Graphics2D, fontInfo: FontInfo?): FontInfo =
+            FontInfo { Font.SANS_SERIF }
         /**
          * [fontInfo] is nullable on purpose: POI's own callers hand this handler a null for a run
          * that names no font of its own, and the Kotlin non-null check on the parameter then threw
@@ -302,8 +352,8 @@ object SlideFontRegistry {
         override fun getMappedFont(graphics: Graphics2D, fontInfo: FontInfo?): FontInfo {
             val mapped = super.getMappedFont(graphics, fontInfo ?: FontInfo { DEFAULT_FAMILY })
             val typeface = mapped.typeface ?: return mapped
-            if (isFamilyAvailable(typeface)) return mapped
-            val substitute = resolveFamily(typeface)
+            val substitute = availableFamilies[cleanTypeface(typeface).lowercase()] ?: resolveFamily(typeface)
+            if (substitute == typeface) return mapped
             return object : FontInfo by mapped {
                 override fun getTypeface(): String = substitute
             }

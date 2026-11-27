@@ -8,6 +8,16 @@ import kotlin.test.assertNull
 
 class OutputShortcutsTest {
     @Test
+    fun `command chords do not trigger unmodified shortcuts and Mac fullscreen has its own chord`() {
+        for (key in listOf(Key.B, Key.T, Key.Spacebar, Key.DirectionRight)) {
+            assertNull(outputShortcut(key, meta = true, mac = true))
+        }
+        assertEquals(OutputShortcut.FULLSCREEN, outputShortcut(Key.F, ctrl = true, meta = true, mac = true))
+        assertNull(outputShortcut(Key.F, ctrl = true, meta = true))
+        assertEquals(OutputShortcut.HIDE, outputShortcut(Key.Escape, mac = true))
+    }
+
+    @Test
     fun `output windows recognize navigation and display keys`() {
         assertEquals(OutputShortcut.NEXT, outputShortcut(Key.DirectionRight))
         assertEquals(OutputShortcut.NEXT, outputShortcut(Key.Spacebar))

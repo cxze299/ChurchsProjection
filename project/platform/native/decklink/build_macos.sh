@@ -50,7 +50,7 @@ echo "Building libdecklink_jni.dylib..."
 echo "DeckLink SDK: $SDK_DIR"
 echo "JAVA_HOME: $JAVA_HOME"
 
-clang++ -std=c++17 -shared -o libdecklink_jni.dylib \
+clang++ -std=c++17 -arch arm64 -arch x86_64 -shared -o libdecklink_jni.dylib \
     -I"$JAVA_HOME/include" -I"$JAVA_HOME/include/darwin" \
     -I"$SDK_DIR" \
     -framework CoreFoundation \
@@ -62,16 +62,11 @@ if [ -f libdecklink_jni.dylib ]; then
     echo "=== BUILD SUCCESS ==="
     ls -la libdecklink_jni.dylib
 
-    # Detect architecture for resource folder
-    ARCH=$(uname -m)
-    if [ "$ARCH" = "arm64" ]; then
-        RES_DIR="macos-arm64"
-    else
-        RES_DIR="macos-x64"
-    fi
-
-    # Copy to resource locations
-    cp -v libdecklink_jni.dylib "$REPO_DIR/composeApp/src/jvmMain/resources/$RES_DIR/libdecklink_jni.dylib"
+    # Both Mac installers use the shared application resource.
+    lipo -verify_arch arm64 x86_64 libdecklink_jni.dylib
+    mkdir -p "$REPO_DIR/composeApp/src/jvmMain/resources/macos-arm64"
+    cp -v libdecklink_jni.dylib "$REPO_DIR/composeApp/src/jvmMain/resources/macos-arm64/libdecklink_jni.dylib"
+    cp -v libdecklink_jni.dylib "$REPO_DIR/composeApp/src/jvmMain/resources/macos-x64/libdecklink_jni.dylib"
     cp -v libdecklink_jni.dylib "$REPO_DIR/composeApp/src/jvmMain/appResources/macos/libdecklink_jni.dylib"
     echo "=== Copied to resources and appResources ==="
 else

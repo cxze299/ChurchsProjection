@@ -283,13 +283,24 @@ internal fun selectDownloadUrl(urls: List<String>): String? {
     return when {
         os.contains("win") ->
             urls.firstOrNull { it.endsWith(".msi", ignoreCase = true) }
-        os.contains("mac") && arch == "aarch64" ->
-            urls.firstOrNull { (it.contains("MSilicon", ignoreCase = true) || it.contains("arm64", ignoreCase = true)) && it.endsWith(".dmg", ignoreCase = true) }
-        os.contains("mac") ->
-            urls.firstOrNull { !it.contains("MSilicon", ignoreCase = true) && !it.contains("arm64", ignoreCase = true) && it.endsWith(".dmg", ignoreCase = true) }
+        os.contains("mac") -> selectMacDownload(urls, arch in appleSiliconArchitectures)
         else ->
             urls.firstOrNull { it.endsWith(".deb", ignoreCase = true) }
     }
+}
+
+private val appleSiliconArchitectures = setOf("aarch64", "arm64")
+private val appleSiliconDmgName = Regex("(?:^|[-_.])(?:m-silicon|msilicon|arm64|aarch64)(?=[-_.]|$)")
+private val intelDmgName = Regex("(?:^|[-_.])(?:intel|x64|x86_64)(?=[-_.]|$)")
+
+private fun selectMacDownload(urls: List<String>, appleSilicon: Boolean): String? {
+    val dmgs = urls.mapNotNull { url ->
+        val file = url.substringBefore('?').substringBefore('#').substringAfterLast('/').lowercase()
+        (url to file).takeIf { file.endsWith(".dmg") }
+    }
+    if (appleSilicon) return dmgs.firstOrNull { appleSiliconDmgName.containsMatchIn(it.second) }?.first
+    val intel = dmgs.filterNot { appleSiliconDmgName.containsMatchIn(it.second) }
+    return (intel.firstOrNull { intelDmgName.containsMatchIn(it.second) } ?: intel.firstOrNull())?.first
 }
 
 // The website's platform naming for the four installer builds — same
@@ -300,7 +311,7 @@ internal fun currentPlatformId(): String {
     val arch = System.getProperty("os.arch", "").lowercase()
     return when {
         os.contains("win") -> "windows"
-        os.contains("mac") && arch == "aarch64" -> "macos_arm64"
+        os.contains("mac") && arch in appleSiliconArchitectures -> "macos_arm64"
         os.contains("mac") -> "macos_x64"
         else -> "linux"
     }

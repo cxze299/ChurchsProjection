@@ -1,6 +1,7 @@
 package org.churchpresenter.slides.viewmodel
 
 import java.io.File
+import org.churchpresenter.core.models.songs.HymnInitials
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

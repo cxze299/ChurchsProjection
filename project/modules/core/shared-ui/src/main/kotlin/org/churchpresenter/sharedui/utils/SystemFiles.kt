@@ -8,8 +8,4 @@ package org.churchpresenter.sharedui.utils
  * Both carry the extension of the file they shadow, so a folder scan by extension picks them up as
  * a picture or a Bible -- and then fails to read them (CHURCH-PRESENTER-DESKTOP-9V/9W, 9S/9T).
  */
-fun isSystemArtifact(fileName: String): Boolean =
-    fileName.startsWith(APPLE_DOUBLE_PREFIX) || fileName.startsWith(OFFICE_LOCK_PREFIX)
-
-private const val APPLE_DOUBLE_PREFIX = "._"
-private const val OFFICE_LOCK_PREFIX = "~$"
+fun isSystemArtifact(fileName: String): Boolean = org.churchpresenter.core.models.io.isSystemArtifact(fileName)

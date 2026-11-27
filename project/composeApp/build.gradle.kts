@@ -460,6 +460,18 @@ compose.desktop {
                     extraKeysRawXml = """
                         <key>NSCameraUsageDescription</key>
                         <string>ChurchPresenter needs camera access to show cameras and capture cards on the canvas and the presenter output.</string>
+                        <key>NSMicrophoneUsageDescription</key>
+                        <string>ChurchPresenter 需要使用麦克风识别语音字幕和经文。</string>
+                        <key>NSRemovableVolumesUsageDescription</key>
+                        <string>ChurchPresenter 需要读取你配置在外置磁盘上的诗歌、演示文稿和其他投影素材。</string>
+                        <key>NSNetworkVolumesUsageDescription</key>
+                        <string>ChurchPresenter 需要读取你配置在网络共享目录中的诗歌、演示文稿和其他投影素材。</string>
+                        <key>NSDocumentsFolderUsageDescription</key>
+                        <string>ChurchPresenter 需要读取你选在“文稿”中的投影素材。</string>
+                        <key>NSDesktopFolderUsageDescription</key>
+                        <string>ChurchPresenter 需要读取你选在“桌面”上的投影素材。</string>
+                        <key>NSDownloadsFolderUsageDescription</key>
+                        <string>ChurchPresenter 需要读取你选在“下载”中的投影素材。</string>
                     """.trimIndent()
                 }
 

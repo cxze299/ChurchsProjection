@@ -4,6 +4,8 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.churchpresenter.core.models.io.writeTextAtomically
+import org.churchpresenter.core.models.io.isSystemArtifact
+import org.churchpresenter.core.models.io.isSystemDirectory
 import java.io.File
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
@@ -36,7 +38,8 @@ data class SongCache(
      * every time the folder watcher saw a change.
      */
     val songs: List<SongItem> = emptyList(),
-    val cachedSongs: List<CachedSong> = emptyList()
+    val cachedSongs: List<CachedSong> = emptyList(),
+    val storageDirectories: List<String> = listOf(storageDirectory),
 )
 
 private const val TITLE_KEY_LENGTH = 6
@@ -345,7 +348,7 @@ class SongFileParser {
 
         // Load .song files in this directory
         val songFiles = currentDir.listFiles { file ->
-            file.extension.equals(SONG_EXTENSION, ignoreCase = true)
+            file.isFile && file.extension.equals(SONG_EXTENSION, ignoreCase = true) && !isSystemArtifact(file.name)
         } ?: emptyArray()
         for (songFile in songFiles.sortedBy { it.name }) {
             val path = songFile.absolutePath
@@ -366,7 +369,9 @@ class SongFileParser {
         }
 
         // Recurse into subdirectories
-        val subdirs = currentDir.listFiles { file -> file.isDirectory } ?: emptyArray()
+        val subdirs = currentDir.listFiles { file ->
+            file.isDirectory && !Files.isSymbolicLink(file.toPath()) && !isSystemDirectory(file.name)
+        } ?: emptyArray()
         for (subdir in subdirs.sortedBy { it.name }) {
             loadSongsRecursive(subdir, rootDir, cache, results)
         }
@@ -379,26 +384,35 @@ class SongFileParser {
         }
         private val cacheFile = File(System.getProperty("user.home"), ".churchpresenter/song_cache.json")
 
-        private fun readCacheFor(storageDirectory: String): SongCache? = try {
+        private fun readCacheFor(directories: List<String>): SongCache? = try {
             cacheJson.decodeFromString<SongCache>(cacheFile.readText(StandardCharsets.UTF_8))
-                .takeIf { it.storageDirectory == storageDirectory }
+                .takeIf { it.storageDirectories == directories }
         } catch (_: Exception) {
             null
         }
 
-        fun loadSongCache(storageDirectory: String): List<SongItem>? {
-            val cache = readCacheFor(storageDirectory) ?: return null
+        fun loadSongCache(storageDirectory: String): List<SongItem>? = loadSongCache(listOf(storageDirectory))
+
+        fun loadSongCache(directories: List<String>): List<SongItem>? {
+            val cache = readCacheFor(directories) ?: return null
             // Prefer cachedSongs (with timestamps); fall back to legacy songs list
-            return if (cache.cachedSongs.isNotEmpty()) cache.cachedSongs.map { it.song }
-            else cache.songs.ifEmpty { null }
+            val songs = if (cache.cachedSongs.isNotEmpty()) cache.cachedSongs.map { it.song } else cache.songs
+            return songs.filterNot { isSystemArtifact(File(it.sourceFile).name) }.ifEmpty { null }
         }
 
         fun loadCachedSongMap(storageDirectory: String): Map<String, CachedSong> =
-            readCacheFor(storageDirectory)?.cachedSongs?.associateBy { it.song.sourceFile } ?: emptyMap()
+            loadCachedSongMap(listOf(storageDirectory))
 
-        fun saveSongCache(storageDirectory: String, cachedSongs: List<CachedSong>) {
+        fun loadCachedSongMap(directories: List<String>): Map<String, CachedSong> =
+            readCacheFor(directories)?.cachedSongs?.associateBy { it.song.sourceFile } ?: emptyMap()
+
+        fun saveSongCache(storageDirectory: String, cachedSongs: List<CachedSong>) =
+            saveSongCache(listOf(storageDirectory), cachedSongs)
+
+        fun saveSongCache(directories: List<String>, cachedSongs: List<CachedSong>) {
+            val first = directories.firstOrNull() ?: return
             try {
-                val cache = SongCache(storageDirectory = storageDirectory, cachedSongs = cachedSongs)
+                val cache = SongCache(first, cachedSongs = cachedSongs, storageDirectories = directories)
                 cacheFile.writeTextAtomically(cacheJson.encodeToString(cache), StandardCharsets.UTF_8)
             } catch (_: Exception) {
             }

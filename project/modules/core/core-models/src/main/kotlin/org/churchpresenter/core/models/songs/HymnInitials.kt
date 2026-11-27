@@ -1,10 +1,10 @@
-package org.churchpresenter.slides.viewmodel
+package org.churchpresenter.core.models.songs
 
 import net.sourceforge.pinyin4j.PinyinHelper
 import java.util.concurrent.ConcurrentHashMap
 
 /** Matches every supported pronunciation without constructing all polyphonic title combinations. */
-internal object HymnInitials {
+object HymnInitials {
     private val characterInitials = ConcurrentHashMap<Char, Set<Char>>()
 
     fun matches(title: String, query: String): Boolean {

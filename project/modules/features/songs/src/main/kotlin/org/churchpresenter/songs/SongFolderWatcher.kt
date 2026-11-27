@@ -1,5 +1,9 @@
 package org.churchpresenter.songs
 
+import org.churchpresenter.core.models.io.isSystemArtifact
+import org.churchpresenter.core.models.io.isSystemDirectory
+import java.nio.file.Files
+
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -74,7 +78,9 @@ class SongFolderWatcher(
                     )
                 } catch (_: Exception) {
                 }
-                val subdirs = dir.listFiles { file -> file.isDirectory } ?: emptyArray()
+                val subdirs = dir.listFiles { file ->
+                    file.isDirectory && !Files.isSymbolicLink(file.toPath()) && !isSystemDirectory(file.name)
+                } ?: emptyArray()
                 for (subdir in subdirs) {
                     registerDir(subdir)
                 }
@@ -123,8 +129,10 @@ class SongFolderWatcher(
         // here enforces that and a null dereference would take the watcher's whole coroutine down.
         if (event.kind() == StandardWatchEventKinds.OVERFLOW) return false
         val fileName = event.context()?.toString() ?: return false
+        if (isSystemArtifact(fileName) || isSystemDirectory(fileName)) return false
         val isSongFile = fileName.substringAfterLast('.', "").lowercase() == Constants.EXTENSION_SONG
         val file = (key.watchable() as? Path)?.resolve(fileName)?.toFile()
+        if (file != null && Files.isSymbolicLink(file.toPath())) return false
         if (file?.isDirectory != true) return isSongFile
         if (event.kind() == StandardWatchEventKinds.ENTRY_CREATE) {
             runCatching {
