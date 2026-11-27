@@ -93,6 +93,7 @@ class BibleSearchAndHistoryPanesTest {
     @Test
     fun `history collapses, clears and reports its entries`() = runComposeUiTest {
         var expanded by mutableStateOf(true)
+        var selectedIndex by mutableStateOf(0)
         var entries by mutableStateOf(
             listOf(
                 BibleViewModel.HistoryEntry("John", 3, 16, "For God so loved", verseRange = "16-17"),
@@ -104,15 +105,20 @@ class BibleSearchAndHistoryPanesTest {
             MaterialTheme {
                 Box(Modifier.size(500.dp, 400.dp)) {
                     BibleHistoryPanel(
-                        entries = entries, expanded = expanded, selectedIndex = 1,
+                        entries = entries, expanded = expanded, selectedIndex = selectedIndex,
                         onToggleExpanded = { events += "toggle" }, onClear = { events += "clear" },
                         onEntryClick = { events += "click $it" }, onEntryDoubleClick = { events += "double $it" },
+                        onCopyReference = { events += it },
                     )
                 }
             }
         }
         waitForIdle()
         assertTrue(has("John 3:16-17") && has("Genesis 1:1"))
+        onNode(hasContentDescription("Copy reference")).performClick()
+        runOnIdle { selectedIndex = 1 }
+        onNode(hasContentDescription("Copy reference")).performClick()
+        assertEquals(listOf("John 3:16-17", "Genesis 1:1"), events)
 
         onAllNodes(hasText("History"), useUnmergedTree = true)[0].performClick()
         onAllNodes(hasContentDescription("Clear"), useUnmergedTree = true)[0].performClick()

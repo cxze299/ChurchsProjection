@@ -45,6 +45,8 @@ import org.churchpresenter.icons.generated.resources.Res as IconRes
 import org.churchpresenter.strings.generated.resources.Res
 import org.churchpresenter.strings.generated.resources.bible_history
 import org.churchpresenter.strings.generated.resources.bible_history_clear
+import org.churchpresenter.strings.generated.resources.bible_history_copy_reference
+import org.churchpresenter.icons.generated.resources.ic_copy
 import org.churchpresenter.icons.generated.resources.ic_arrow_down
 import org.churchpresenter.icons.generated.resources.ic_arrow_up
 import org.churchpresenter.icons.generated.resources.ic_delete
@@ -53,6 +55,8 @@ import org.churchpresenter.theme.semantic
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.churchpresenter.sharedui.composables.bibleListCard
+import org.churchpresenter.sharedui.composables.TooltipIconButton
+import org.churchpresenter.sharedui.utils.SystemClipboard
 
 private const val SELECTION_BAR_WIDTH = 4f
 
@@ -66,6 +70,7 @@ internal fun BibleHistoryPanel(
     onClear: () -> Unit,
     onEntryClick: (Int) -> Unit,
     onEntryDoubleClick: (Int) -> Unit,
+    onCopyReference: (String) -> Unit = { SystemClipboard.copy(it) },
 ) {
         if (entries.isEmpty()) return
     // Its own card under the verse card; the gap lives here so an empty history leaves none.
@@ -89,6 +94,16 @@ internal fun BibleHistoryPanel(
                     modifier = Modifier.padding(start = 4.dp)
                 )
                 Spacer(modifier = Modifier.weight(1f))
+                if (expanded) {
+                    val reference = entries.getOrNull(selectedIndex)?.displayText
+                    TooltipIconButton(
+                        painter = painterResource(IconRes.drawable.ic_copy),
+                        text = stringResource(Res.string.bible_history_copy_reference),
+                        enabled = reference != null,
+                        onClick = { reference?.let(onCopyReference) },
+                        iconSize = 16.dp,
+                    )
+                }
                 TooltipArea(
                     tooltip = {
                         Surface(

@@ -457,19 +457,22 @@ private fun BibleTabScope.BibleTabHistory(viewModel: BibleViewModel) {
         BibleHistoryPanel(
             entries = viewModel.history,
             expanded = historyExpanded,
-            selectedIndex = selectedHistoryIdx,
+            selectedIndex = viewModel.history.indexOfFirst { it == ui.selectedHistoryEntry },
             onToggleExpanded = { historyExpanded = !historyExpanded },
-            onClear = { viewModel.clearHistory() },
+            onClear = {
+                ui.selectedHistoryEntry = null
+                viewModel.clearHistory()
+            },
             onEntryClick = { idx ->
-                selectedHistoryIdx = idx
                 viewModel.history.getOrNull(idx)?.let {
+                    ui.selectedHistoryEntry = it
                     viewModel.selectVerseByDetails(it.bookName, it.chapter, it.verseNumber, it.verseRange)
                 }
                 focusRequester.requestFocus()
             },
             onEntryDoubleClick = { idx ->
-                selectedHistoryIdx = idx
                 viewModel.history.getOrNull(idx)?.let {
+                    ui.selectedHistoryEntry = it
                     viewModel.selectVerseByDetails(
                         it.bookName, it.chapter, it.verseNumber, it.verseRange,
                         goLiveSource = "history",
