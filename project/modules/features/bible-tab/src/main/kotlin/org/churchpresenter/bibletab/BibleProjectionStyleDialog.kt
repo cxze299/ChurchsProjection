@@ -35,7 +35,10 @@ import kotlin.math.roundToInt
 import org.churchpresenter.core.models.bible.SelectedVerse
 import org.churchpresenter.presenter.BiblePresenter
 import org.churchpresenter.settings.AppSettings
+import org.churchpresenter.settings.BibleSettings
 import org.churchpresenter.settings.BibleTranslationSettings
+import org.churchpresenter.settings.bibleSettingsFor
+import org.churchpresenter.settings.profileFor
 import org.churchpresenter.sharedui.composables.ColorPickerField
 import org.churchpresenter.sharedui.composables.DropdownSettingsField
 import org.churchpresenter.sharedui.composables.FontSettingsDropdown
@@ -62,15 +65,27 @@ import org.churchpresenter.strings.generated.resources.text_color
 import org.jetbrains.compose.resources.stringResource
 
 internal fun updateBibleProjectionTranslation(
-    settings: AppSettings,
+    settings: BibleSettings,
     fileName: String,
     styleKey: String,
     transform: (BibleTranslationSettings) -> BibleTranslationSettings,
-): AppSettings {
-    val index = settings.bibleSettings.translationList().indexOfFirst { it.fileName == fileName }
-    return settings.copy(bibleSettings = settings.bibleSettings.updateTranslation(index) {
+): BibleSettings {
+    val index = settings.translationList().indexOfFirst { it.fileName == fileName }
+    return settings.updateTranslation(index) {
         transform(it).copy(ownStyleKeys = it.ownStyleKeys + styleKey)
-    })
+    }
+}
+
+internal fun AppSettings.applyBibleProjectionStyle(edit: (BibleSettings) -> BibleSettings): AppSettings {
+    val projection = projectionSettings
+    val profileIds = if (projection.quickPlayDisplay != null) {
+        setOfNotNull(projection.getAssignment(0).activeProfileId)
+    } else {
+        projection.screenAssignments.mapNotNull { it.activeProfileId }.toSet() + projection.fallbackProfileId
+    }
+    return copy(projectionSettings = projection.copy(outputProfiles = projection.outputProfiles.map { profile ->
+        if (profile.id in profileIds) profile.copy(bibleSettings = edit(bibleSettingsFor(profile))) else profile
+    }))
 }
 
 @Composable
@@ -79,9 +94,11 @@ internal fun BibleProjectionStyleDialog(
     onSettingsChange: ((AppSettings) -> AppSettings) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val changes = remember { mutableStateMapOf<Pair<String, String>, (AppSettings) -> AppSettings>() }
-    val draft = changes.values.fold(settings) { current, change -> change(current) }
-    val bible = draft.bibleSettings
+    val changes = remember { mutableStateMapOf<Pair<String, String>, (BibleSettings) -> BibleSettings>() }
+    val projection = settings.projectionSettings
+    val profile = projection.profileFor(projection.getAssignment(0))
+    val original = profile?.let(settings::bibleSettingsFor) ?: settings.bibleSettings
+    val bible = changes.values.fold(original) { current, change -> change(current) }
     val stack = bible.translationList()
     var selectedFile by remember { mutableStateOf(stack.firstOrNull()?.fileName.orEmpty()) }
     val index = stack.indexOfFirst { it.fileName == selectedFile }.coerceAtLeast(0)
@@ -98,7 +115,9 @@ internal fun BibleProjectionStyleDialog(
         confirmButton = {
             TextButton(enabled = changes.isNotEmpty(), onClick = {
                 val edits = changes.values.toList()
-                onSettingsChange { current -> edits.fold(current) { value, edit -> edit(value) } }
+                onSettingsChange { current ->
+                    current.applyBibleProjectionStyle { bible -> edits.fold(bible) { value, edit -> edit(value) } }
+                }
                 onDismiss()
             }) { Text(stringResource(Res.string.apply)) }
         },
@@ -119,7 +138,7 @@ internal fun BibleProjectionStyleDialog(
                     BiblePresenter(
                         modifier = Modifier.fillMaxWidth().aspectRatio(2.4f).testTag("bible_projection_preview"),
                         selectedVerses = listOf(first.copy(continuousPassages = listOf(listOf(first), listOf(second)))),
-                        appSettings = draft.copy(bibleSettings = bible.withTranslations(listOf(translation))),
+                        appSettings = settings.copy(bibleSettings = bible.withTranslations(listOf(translation))),
                     )
                     val scroll = rememberScrollState()
                     Box(Modifier.weight(1f, fill = false)) {
@@ -147,13 +166,13 @@ internal fun BibleProjectionStyleDialog(
                             StyleSlider(label = stringResource(Res.string.bible_projection_style_line_spacing),
                                 tag = "bible_projection_line_spacing",
                                 initialText = bible.continuousLineSpacingPercent ?: 0, range = 0..300,
-                                onValueChange = { value -> if (value == 0 || value >= 50) changes["" to "lineSpacing"] = { current -> current.copy(
-                                    bibleSettings = current.bibleSettings.copy(continuousLineSpacingPercent = value.takeIf { it > 0 })) } })
+                                onValueChange = { value -> if (value == 0 || value >= 50) changes["" to "lineSpacing"] = { current ->
+                                    current.copy(continuousLineSpacingPercent = value.takeIf { it > 0 }) } })
                             StyleSlider(label = stringResource(Res.string.bible_projection_style_passage_spacing),
                                 tag = "bible_projection_passage_spacing",
                                 initialText = bible.continuousPassageSpacing ?: bible.multiTranslationSpacing, range = 0..200,
-                                onValueChange = { value -> changes["" to "passageSpacing"] = { current -> current.copy(
-                                    bibleSettings = current.bibleSettings.copy(continuousPassageSpacing = value)) } })
+                                onValueChange = { value -> changes["" to "passageSpacing"] = { current ->
+                                    current.copy(continuousPassageSpacing = value) } })
                             ColorPickerField(color = translation.textColor, label = stringResource(Res.string.text_color),
                                 onColorChange = { value -> edit("textColor") { it.copy(textColor = value) } })
                             TextStyleButtons(bold = translation.textBold, italic = translation.textItalic,
