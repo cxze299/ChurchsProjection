@@ -33,6 +33,8 @@ import org.churchpresenter.strings.generated.resources.bible_found_results_bible
 import org.churchpresenter.strings.generated.resources.bible_found_results_book
 import org.churchpresenter.sharedui.composables.initialPassClickable
 import org.churchpresenter.sharedui.utils.highlightedText
+import androidx.compose.runtime.remember
+import androidx.compose.ui.text.AnnotatedString
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.foundation.layout.ColumnScope
 import org.churchpresenter.bible.BibleSearch
@@ -55,7 +57,11 @@ internal fun ColumnScope.BibleSearchResults(
     onResultChosen: (BibleSearch) -> Unit,
     /** The result the arrow keys reached from the search box; -1 for none. */
     highlightedIndex: Int = -1,
+    exactMatch: Boolean = false,
 ) {
+        val pattern = remember(query, exactMatch) {
+            if (query.isBlank()) null else bibleSearchPattern(query, exactMatch)
+        }
         Column(
             modifier = Modifier.fillMaxWidth().weight(1f)
                 .padding(start = 4.dp, end = 4.dp, bottom = 4.dp)
@@ -92,7 +98,8 @@ internal fun ColumnScope.BibleSearchResults(
                     itemsIndexed(results) { index, result ->
 
                         val resultText = result.verseText
-                        val highlightedText = highlightedText(resultText, query)
+                        val highlightedText = pattern?.let { highlightedText(resultText, it) }
+                            ?: AnnotatedString(resultText)
                         val (hover, hovered) = rememberRowHover()
                         Text(
                             text = highlightedText,

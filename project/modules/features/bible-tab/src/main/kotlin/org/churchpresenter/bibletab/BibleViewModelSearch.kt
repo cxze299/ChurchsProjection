@@ -59,8 +59,7 @@ internal fun BibleViewModel.launchSearch(debounceMs: Long) {
         if (debounceMs > 0) delay(debounceMs)
         val results = withContext(ioDispatcher) {
             try {
-                val pattern = if (isExactMatch) "\\b${Regex.escape(query)}\\b" else Regex.escape(query)
-                val searchRegex = Regex(pattern, RegexOption.IGNORE_CASE)
+                val searchRegex = bibleSearchPattern(query, isExactMatch)
                 if (scopeIndex == SCOPE_CURRENT_BOOK) {
                     bible.searchBible(allWords = false, searchExp = searchRegex, book = bible.getBookId(bookIndex))
                 } else {

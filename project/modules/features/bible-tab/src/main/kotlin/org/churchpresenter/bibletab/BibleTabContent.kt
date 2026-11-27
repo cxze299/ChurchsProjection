@@ -146,6 +146,7 @@ internal fun ColumnScope.BibleTabContent(
                 query = searchQuery,
                 scopeBook = scopeBook,
                 highlightedIndex = ui.highlightedResult,
+                exactMatch = selectedModeIndex == 1,
                 onResultChosen = { result ->
                     viewModel.selectSearchResult(result)
                     viewModel.clearSearch()
