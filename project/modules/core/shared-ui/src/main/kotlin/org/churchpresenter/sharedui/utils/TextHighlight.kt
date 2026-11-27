@@ -38,7 +38,15 @@ internal fun highlightRanges(text: String, query: String): List<Pair<Int, Int>> 
  * container colour. Shared by the Bible and Song search results so a match looks the same in both.
  */
 @Composable
-fun highlightedText(text: String, query: String): AnnotatedString {
+fun highlightedText(text: String, query: String): AnnotatedString =
+    highlightedText(text, highlightRanges(text, query).asSequence())
+
+@Composable
+fun highlightedText(text: String, pattern: Regex): AnnotatedString =
+    highlightedText(text, pattern.findAll(text).map { it.range.first to it.range.last + 1 })
+
+@Composable
+private fun highlightedText(text: String, ranges: Sequence<Pair<Int, Int>>): AnnotatedString {
     val style = SpanStyle(
         background = MaterialTheme.colorScheme.primaryContainer,
         color = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -46,7 +54,7 @@ fun highlightedText(text: String, query: String): AnnotatedString {
     )
     return buildAnnotatedString {
         var lastIndex = 0
-        for ((start, end) in highlightRanges(text, query)) {
+        for ((start, end) in ranges) {
             append(text.substring(lastIndex.coerceAtMost(start), start))
             withStyle(style) { append(text.substring(start, end)) }
             lastIndex = end

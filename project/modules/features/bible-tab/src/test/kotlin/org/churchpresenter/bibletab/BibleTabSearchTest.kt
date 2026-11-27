@@ -25,6 +25,27 @@ import org.churchpresenter.sharedui.testing.showsExactly
  */
 class BibleTabSearchTest {
     @Test
+    fun `Chinese search ignores inter-character spaces and returns the original verse`() = bibleTab(
+        content = bibleFixture.replace("And God said, Let there be light.", "你 们 要 预　备 主 的 道。"),
+    ) { vm, _ ->
+        vm.onSmartQueryChanged("预备")
+        vm.performSearch()
+        waitUntil(timeoutMillis = 5_000) { vm.searchResults.value.isNotEmpty() }
+        assertEquals("Genesis 1:3 你 们 要 预　备 主 的 道。", vm.searchResults.value.single().verseText)
+        assertEquals("预　备", bibleSearchPattern("预备", exact = false)
+            .find(vm.searchResults.value.single().verseText)?.value)
+    }
+
+    @Test
+    fun `phrase matching keeps Latin word spaces and does not skip Chinese punctuation`() {
+        assertTrue(bibleSearchPattern("预 备", exact = false).containsMatchIn("预备"))
+        assertFalse(bibleSearchPattern("预备", exact = false).containsMatchIn("预，备"))
+        assertFalse(bibleSearchPattern("预备", exact = false).containsMatchIn("预\n备"))
+        assertFalse(bibleSearchPattern("God said", exact = false).containsMatchIn("Godsaid"))
+        assertFalse(bibleSearchPattern("God", exact = true).containsMatchIn("godly"))
+    }
+
+    @Test
     fun `a single available fuzzy candidate is selected and accepts a passage`() = bibleTab { vm, reports ->
         vm.selectBook(2)
         vm.onSmartQueryChanged("cs")
