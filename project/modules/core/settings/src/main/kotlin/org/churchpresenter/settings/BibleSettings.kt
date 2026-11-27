@@ -364,6 +364,7 @@ data class BibleSettings(
 
     /** Whether picking a verse near the bottom of the verse list scrolls the next verses into view. */
     val verseAutoScroll: Boolean = true,
+    val historyCitationStyle: BibleCitationStyle = BibleCitationStyle.PLAIN,
 
     /**
      * Whether this profile's translation looks stay with their place in the stack rather than with

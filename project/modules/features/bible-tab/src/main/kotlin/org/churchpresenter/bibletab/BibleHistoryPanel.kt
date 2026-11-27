@@ -22,6 +22,10 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.material3.Icon
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.TextButton
 import org.churchpresenter.theme.components.KeyIconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -29,6 +33,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,6 +52,8 @@ import org.churchpresenter.strings.generated.resources.Res
 import org.churchpresenter.strings.generated.resources.bible_history
 import org.churchpresenter.strings.generated.resources.bible_history_clear
 import org.churchpresenter.strings.generated.resources.bible_history_copy_reference
+import org.churchpresenter.strings.generated.resources.bible_history_citation_style
+import org.churchpresenter.settings.BibleCitationStyle
 import org.churchpresenter.icons.generated.resources.ic_copy
 import org.churchpresenter.icons.generated.resources.ic_arrow_down
 import org.churchpresenter.icons.generated.resources.ic_arrow_up
@@ -71,6 +79,8 @@ internal fun BibleHistoryPanel(
     onEntryClick: (Int) -> Unit,
     onEntryDoubleClick: (Int) -> Unit,
     onCopyReference: (String) -> Unit = { SystemClipboard.copy(it) },
+    citationStyle: BibleCitationStyle = BibleCitationStyle.PLAIN,
+    onCitationStyleChange: (BibleCitationStyle) -> Unit = {},
 ) {
         if (entries.isEmpty()) return
     // Its own card under the verse card; the gap lives here so an empty history leaves none.
@@ -96,11 +106,12 @@ internal fun BibleHistoryPanel(
                 Spacer(modifier = Modifier.weight(1f))
                 if (expanded) {
                     val reference = entries.getOrNull(selectedIndex)?.displayText
+                    HistoryCitationStyleButton(citationStyle, reference ?: entries.first().displayText, onCitationStyleChange)
                     TooltipIconButton(
                         painter = painterResource(IconRes.drawable.ic_copy),
                         text = stringResource(Res.string.bible_history_copy_reference),
                         enabled = reference != null,
-                        onClick = { reference?.let(onCopyReference) },
+                        onClick = { reference?.let { onCopyReference(citationStyle.format(it)) } },
                         iconSize = 16.dp,
                     )
                 }
@@ -180,4 +191,30 @@ internal fun BibleHistoryPanel(
                 }
             }
         }
+}
+
+@Composable
+private fun HistoryCitationStyleButton(
+    selected: BibleCitationStyle,
+    example: String,
+    onSelect: (BibleCitationStyle) -> Unit,
+) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        TextButton(onClick = { open = true }) {
+            Text(stringResource(Res.string.bible_history_citation_style))
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            BibleCitationStyle.entries.forEach { style ->
+                DropdownMenuItem(
+                    text = { Text(style.format(example)) },
+                    leadingIcon = { RadioButton(selected = selected == style, onClick = null) },
+                    onClick = {
+                        open = false
+                        onSelect(style)
+                    },
+                )
+            }
+        }
+    }
 }
