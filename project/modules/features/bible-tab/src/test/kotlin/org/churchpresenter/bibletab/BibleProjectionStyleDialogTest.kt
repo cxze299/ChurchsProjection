@@ -21,6 +21,10 @@ import kotlinx.serialization.json.Json
 import org.churchpresenter.settings.AppSettings
 import org.churchpresenter.settings.BibleSettings
 import org.churchpresenter.settings.BibleTranslationSettings
+import org.churchpresenter.settings.OutputProfile
+import org.churchpresenter.settings.ScreenAssignment
+import org.churchpresenter.settings.profileFor
+import org.churchpresenter.settings.resolvedFor
 import java.util.Locale
 import java.io.File
 import javax.imageio.ImageIO
@@ -71,7 +75,10 @@ class BibleProjectionStyleDialogTest {
         onNodeWithTag("bible_projection_preview").assertExists()
         assertEquals(settings, current.value)
         onNodeWithText("应用").performClick()
-        val changed = current.value.bibleSettings
+        val projection = current.value.projectionSettings
+        val profile = checkNotNull(projection.profileFor(projection.getAssignment(0)))
+        val changed = current.value.resolvedFor(profile).bibleSettings
+        assertEquals(settings.bibleSettings, current.value.bibleSettings)
         assertEquals(88, changed.translationList().first().textFontSize)
         assertEquals(42, changed.translationList().first().referenceFontSize)
         assertEquals(settings.bibleSettings.translationList()[1], changed.translationList()[1])
@@ -96,9 +103,30 @@ class BibleProjectionStyleDialogTest {
 
     @Test
     fun `font changes affect only the chosen translation and preserve other styling`() {
-        val changed = updateBibleProjectionTranslation(settings, "other.spb", "textFontType") { it.copy(textFontType = "Microsoft YaHei") }
-        assertEquals(settings.bibleSettings.translationList().first(), changed.bibleSettings.translationList().first())
-        assertEquals("Microsoft YaHei", changed.bibleSettings.translationList()[1].textFontType)
-        assertTrue("textFontType" in changed.bibleSettings.translationList()[1].ownStyleKeys)
+        val changed = updateBibleProjectionTranslation(settings.bibleSettings, "other.spb", "textFontType") { it.copy(textFontType = "Microsoft YaHei") }
+        assertEquals(settings.bibleSettings.translationList().first(), changed.translationList().first())
+        assertEquals("Microsoft YaHei", changed.translationList()[1].textFontType)
+        assertTrue("textFontType" in changed.translationList()[1].ownStyleKeys)
+    }
+
+    @Test
+    fun `selected display uses slot zero and keeps unrelated output profiles unchanged`() {
+        val screen = OutputProfile(id = "screen", bibleSettings = settings.bibleSettings.updateTranslation(0) {
+            it.copy(textFontSize = 120, textColor = "#ABCDEF")
+        })
+        val other = OutputProfile(id = "other", bibleSettings = settings.bibleSettings)
+        val before = settings.copy(projectionSettings = settings.projectionSettings.copy(
+            outputProfiles = listOf(other, screen),
+            screenAssignments = listOf(ScreenAssignment(activeProfileId = screen.id), ScreenAssignment(activeProfileId = other.id)),
+            quickPlayDisplay = 1,
+        ))
+        val after = before.applyBibleProjectionStyle { bible ->
+            updateBibleProjectionTranslation(bible, "test.spb", "textFontSize") { it.copy(textFontSize = 88) }
+        }
+        val profile = checkNotNull(after.projectionSettings.profileFor(after.projectionSettings.getAssignment(0)))
+        val rendered = after.resolvedFor(profile).bibleSettings.translationList().first()
+        assertEquals(88, rendered.textFontSize)
+        assertEquals("#ABCDEF", rendered.textColor)
+        assertEquals(other, after.projectionSettings.outputProfiles.first())
     }
 }
