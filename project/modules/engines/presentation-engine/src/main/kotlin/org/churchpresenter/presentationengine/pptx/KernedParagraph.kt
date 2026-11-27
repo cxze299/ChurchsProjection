@@ -18,6 +18,7 @@ import org.apache.poi.sl.usermodel.HighlightColorSupport
 import org.apache.poi.sl.usermodel.TextParagraph
 import org.apache.poi.sl.usermodel.TextParagraph.TextAlign
 import org.apache.poi.sl.usermodel.TextRun
+import org.apache.poi.xslf.usermodel.XSLFTextRun
 import java.awt.Font
 import java.awt.Graphics2D
 import java.awt.font.LineBreakMeasurer
@@ -187,7 +188,13 @@ internal class KernedParagraph(paragraph: TextParagraph<*, *, *>) : DrawTextPara
                 ?.let { style -> paint.getPaint(graphics, style) }
                 ?.let { att[TextAttribute.BACKGROUND] = it }
         }
-        att[TextAttribute.SIZE] = (run.fontSize ?: paragraph.defaultFontSize).toFloat()
+        val fontSize = (run.fontSize ?: paragraph.defaultFontSize).toFloat()
+        att[TextAttribute.SIZE] = fontSize
+        // OOXML stores character spacing in points; AWT tracking uses a fraction of the font size.
+        val spacing = (run as? XSLFTextRun)?.characterSpacing ?: 0.0
+        if (spacing.isFinite() && spacing != 0.0 && fontSize > 0f) {
+            att[TextAttribute.TRACKING] = (spacing / fontSize).toFloat()
+        }
         if (run.isBold) att[TextAttribute.WEIGHT] = TextAttribute.WEIGHT_BOLD
         if (run.isItalic) att[TextAttribute.POSTURE] = TextAttribute.POSTURE_OBLIQUE
         if (run.isUnderlined) {
