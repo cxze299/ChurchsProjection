@@ -1,24 +1,218 @@
-use crate::{app::App, appearance};
+use crate::{app::App, appearance, widgets::*};
 use cp_bible::{initials::candidates, CHINESE_BOOK_NAMES};
 use cp_core::BibleTranslationSettings;
-use egui::{
-    vec2, Button, Color32, ComboBox, Context, DragValue, Key, Layout, ScrollArea, TextEdit, Ui,
-};
+use egui::{vec2, Color32, ComboBox, Context, DragValue, Key, Layout, ScrollArea, Ui};
 use std::time::{Duration, Instant};
 
+#[derive(Clone, Copy, PartialEq, Default)]
+pub enum SearchMode {
+    #[default]
+    Auto,
+    Reference,
+    Text,
+}
+impl SearchMode {
+    fn label(self) -> &'static str {
+        match self {
+            Self::Auto => "自动",
+            Self::Reference => "引用",
+            Self::Text => "全文",
+        }
+    }
+}
+#[derive(Clone, Copy)]
+enum VerseAction {
+    Select,
+    Live,
+    Schedule,
+    Copy,
+}
 impl App {
-    pub fn bible_tab(&mut self, ui: &mut Ui) {
+    pub fn submit_bible(&mut self, explicit: bool) {
+        self.deadline = None;
+        if self.quick.trim().is_empty() {
+            self.hits = None;
+            return;
+        }
+        let Some(bible) = self.bible.primary() else {
+            return;
+        };
+        if self.search_mode == SearchMode::Text
+            || (self.search_mode == SearchMode::Auto
+                && bible.quick_passage_references(&self.quick).is_none()
+                && self.candidate_books().is_empty())
+        {
+            self.hits = Some(bible.search_keywords(
+                &self.quick,
+                false,
+                if self.scoped {
+                    cp_bible::SearchScope::Book(self.bible.book)
+                } else {
+                    cp_bible::SearchScope::All
+                },
+            ));
+        } else {
+            self.hits = None;
+            self.apply_quick(explicit);
+        }
+    }
+    fn bible_search(&mut self, ui: &mut Ui) {
+        let p = self.palette;
+        card_frame(p).show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            let input = ui
+                .horizontal_wrapped(|ui| {
+                    let w = (ui.available_width() - 194.).max(85.);
+                    let input = well_edit(
+                        ui,
+                        p,
+                        "quick_bible",
+                        &mut self.quick,
+                        "⌕  搜索经文或输入引用，如 csj 1 1 3",
+                        w,
+                    );
+                    if filter_chip(ui, p, true, self.search_mode.label())
+                        .on_hover_text("切换检索模式")
+                        .clicked()
+                    {
+                        self.search_mode = match self.search_mode {
+                            SearchMode::Auto => SearchMode::Reference,
+                            SearchMode::Reference => SearchMode::Text,
+                            SearchMode::Text => SearchMode::Auto,
+                        };
+                        self.submit_bible(false);
+                    }
+                    let old = self.scoped;
+                    ComboBox::from_id_salt("bible_scope")
+                        .width(76.)
+                        .selected_text(if self.scoped {
+                            "当前书卷"
+                        } else {
+                            "全本圣经"
+                        })
+                        .show_ui(ui, |ui| {
+                            ui.selectable_value(&mut self.scoped, false, "全本圣经");
+                            ui.selectable_value(&mut self.scoped, true, "当前书卷");
+                        });
+                    if old != self.scoped {
+                        self.submit_bible(false);
+                    }
+                    let submit = raised_action_button(
+                        ui,
+                        p,
+                        "⌕",
+                        p.primary,
+                        p.on_primary,
+                        vec2(42., 36.),
+                        "搜索",
+                    )
+                    .clicked();
+                    (input, submit)
+                })
+                .inner;
+            let (input, submit) = input;
+            if self.focus_search {
+                input.request_focus();
+                self.focus_search = false;
+            }
+            let delay = Duration::from_millis(300);
+            if input.changed() {
+                self.deadline = Some(Instant::now() + delay);
+                self.hits = None;
+                if self.quick.is_empty() {
+                    self.bible.forget_command();
+                }
+                if self.search_mode != SearchMode::Text
+                    && self.quick.trim().chars().all(|c| c.is_ascii_alphabetic())
+                {
+                    let matches = self.candidate_books();
+                    if matches.len() == 1 {
+                        self.bible.set_location(matches[0], 1);
+                    }
+                }
+            }
+            if submit || (input.lost_focus() && ui.input(|i| i.key_pressed(Key::Enter))) {
+                self.submit_bible(true);
+                input.request_focus();
+            } else if let Some(t) = self.deadline {
+                if Instant::now() >= t {
+                    self.submit_bible(false);
+                } else {
+                    ui.ctx()
+                        .request_repaint_after(t.saturating_duration_since(Instant::now()));
+                }
+            }
+            if self.search_mode != SearchMode::Text && !self.quick.trim().is_empty() {
+                if let Some(label) = cp_bible::quick_passage_label(&self.quick) {
+                    ui.colored_label(p.primary, label);
+                } else if self.quick.trim().chars().all(|c| c.is_ascii_alphabetic()) {
+                    ui.horizontal_wrapped(|ui| {
+                        for id in self.candidate_books() {
+                            if filter_chip(ui, p, false, CHINESE_BOOK_NAMES[id as usize - 1])
+                                .clicked()
+                            {
+                                self.bible.set_location(id, 1);
+                                self.quick = format!(
+                                    "{} ",
+                                    cp_bible::initials::CHINESE_BOOK_INITIALS[id as usize - 1]
+                                );
+                                input.request_focus();
+                            }
+                        }
+                    });
+                }
+            }
+            let mut pick = None;
+            if let Some(hits) = &self.hits {
+                ui.horizontal(|ui| {
+                    ui.small(format!("{} 条结果", hits.len()));
+                });
+                ScrollArea::vertical()
+                    .id_salt("scripture_hits")
+                    .max_height(112.)
+                    .show_rows(ui, 26., hits.len(), |ui, rows| {
+                        for i in rows {
+                            if ui
+                                .add(
+                                    egui::Label::new(&hits[i].verse_text)
+                                        .truncate()
+                                        .sense(egui::Sense::click()),
+                                )
+                                .on_hover_text(&hits[i].verse_text)
+                                .clicked()
+                            {
+                                pick = Some(hits[i].clone());
+                            }
+                        }
+                    });
+            }
+            if let Some(hit) = pick {
+                if let Some(id) = self
+                    .bible
+                    .primary()
+                    .and_then(|b| b.books().iter().find(|b| b.name == hit.book))
+                    .map(|b| b.book_id)
+                {
+                    self.bible
+                        .select_numbers(id, hit.chapter, hit.verse, hit.verse);
+                    if self.settings.selection_goes_live {
+                        self.go_bible();
+                    }
+                }
+                self.hits = None;
+            }
+        });
+    }
+    fn translations(&mut self, ui: &mut Ui) {
         let mut stack = self.bible.stack.clone();
-        ui.horizontal_wrapped(|ui| {
-            ui.heading("圣经速投");
-            ui.separator();
-            ui.label("主译本");
+        {
             let label = self
                 .bible
                 .primary()
                 .map(|b| b.abbreviation())
                 .unwrap_or("请选择");
             ComboBox::from_id_salt("primary_bible")
+                .width(52.)
                 .selected_text(label)
                 .show_ui(ui, |ui| {
                     for (i, b) in self.bible.modules.iter().enumerate() {
@@ -36,237 +230,380 @@ impl App {
                         }
                     }
                 });
-            ui.menu_button("对照译本 ▾", |ui| {
-                for (i, b) in self.bible.modules.iter().enumerate() {
-                    if stack.first() == Some(&i) {
-                        continue;
-                    }
-                    let mut on = stack.contains(&i);
-                    if ui.checkbox(&mut on, b.title()).changed() {
-                        if on {
-                            stack.push(i);
-                        } else {
-                            stack.retain(|&v| v != i);
+            ui.menu_button(
+                format!("对照 {} ▾", stack.len().saturating_sub(1)),
+                |ui| {
+                    for (i, b) in self.bible.modules.iter().enumerate() {
+                        if stack.first() == Some(&i) {
+                            continue;
+                        }
+                        let mut on = stack.contains(&i);
+                        if ui.checkbox(&mut on, b.title()).changed() {
+                            if on {
+                                stack.push(i);
+                            } else {
+                                stack.retain(|&v| v != i);
+                            }
                         }
                     }
-                }
-            });
+                },
+            );
             for &i in stack.iter().skip(1) {
                 ui.small(self.bible.modules[i].abbreviation());
             }
-        });
+        }
         if stack != self.bible.stack {
             self.bible.stack = stack;
             self.sync_stack();
+            self.hits = None;
             self.bible.set_location(self.bible.book, self.bible.chapter);
             self.bible.forget_command();
         }
-        ui.add_space(4.);
-        let input = ui.add(
-            TextEdit::singleline(&mut self.quick)
-                .id_salt("quick_bible")
-                .desired_width(f32::INFINITY)
-                .hint_text("输入书卷拼音首字母、章、起止节，例如 csj 1 12 16"),
-        );
-        if self.focus_search {
-            input.request_focus();
-            self.focus_search = false;
-        }
-        let enter = input.lost_focus() && ui.input(|i| i.key_pressed(Key::Enter));
-        let delay = Duration::from_millis(300);
-        if input.changed() {
-            self.deadline = Some(Instant::now() + delay);
-            if self.quick.is_empty() {
-                self.bible.forget_command();
-            }
-            let matches = self.candidate_books();
-            if matches.len() == 1 && self.quick.trim().chars().all(|c| c.is_ascii_alphabetic()) {
-                self.bible.set_location(matches[0], 1);
-            }
-        }
-        if enter {
-            self.apply_quick(true);
-            input.request_focus();
-        } else if let Some(t) = self.deadline {
-            if Instant::now() >= t {
-                self.apply_quick(false);
-            } else {
-                ui.ctx()
-                    .request_repaint_after(t.saturating_duration_since(Instant::now()));
-            }
-        }
-        if let Some(label) = cp_bible::quick_passage_label(&self.quick) {
-            ui.label(egui::RichText::new(label).color(ui.visuals().hyperlink_color));
-        } else {
-            let matches = self.candidate_books();
-            if !matches.is_empty() {
-                ui.horizontal_wrapped(|ui| {
-                    for id in matches {
-                        if ui
-                            .small_button(CHINESE_BOOK_NAMES[id as usize - 1])
-                            .clicked()
-                        {
-                            self.bible.set_location(id, 1);
-                            let trimmed = self.quick.trim_start();
-                            let end = trimmed.find(char::is_whitespace).unwrap_or(trimmed.len());
-                            self.quick = format!(
-                                "{} {}",
-                                cp_bible::initials::CHINESE_BOOK_INITIALS[id as usize - 1],
-                                trimmed[end..].trim_start()
-                            );
-                            input.request_focus();
-                            self.deadline = Some(Instant::now() + delay);
-                        }
-                    }
-                });
-            }
-        }
-        ui.horizontal_wrapped(|ui| {
-            if ui.toggle_value(&mut self.continuous, "连续上屏").changed() {
-                self.bible.forget_command();
-                if self.continuous && !self.quick.trim().is_empty() {
-                    self.deadline = Some(Instant::now() + delay);
-                    ui.ctx().request_repaint_after(delay);
+    }
+    pub fn bible_tab(&mut self, ui: &mut Ui) {
+        self.bible_search(ui);
+        let p = self.palette;
+        let w = ui.available_width();
+        let h = ui.available_height().max(120.);
+        let book_w = (self.bible_widths[0] * w).clamp(70., (w * 0.42).max(70.));
+        let ch_w = (self.bible_widths[1] * w).clamp(46., (w * 0.25).max(46.));
+        let verse_w = (w - book_w - ch_w - 16.).max(75.);
+        ui.horizontal_top(|ui| {
+            ui.spacing_mut().item_spacing.x = 0.;
+            for (col, width) in [book_w, ch_w].into_iter().enumerate() {
+                ui.allocate_ui_with_layout(
+                    vec2(width, h),
+                    Layout::top_down(egui::Align::Min),
+                    |ui| {
+                        ui.set_width(width);
+                        card_frame(p)
+                            .inner_margin(egui::Margin::symmetric(5, 10))
+                            .show(ui, |ui| {
+                                ui.set_width(ui.available_width());
+                                ui.set_min_height((h - 22.).max(20.));
+                                section_header_label(ui, p, if col == 0 { "书卷" } else { "章" });
+                                let mut picked = None;
+                                ScrollArea::vertical()
+                                    .id_salt((
+                                        "bible_list",
+                                        col,
+                                        if col == 1 { self.bible.book } else { 0 },
+                                    ))
+                                    .auto_shrink([false, false])
+                                    .show(ui, |ui| {
+                                        ui.spacing_mut().item_spacing.y = 1.;
+                                        let Some(bible) = self.bible.primary() else {
+                                            return;
+                                        };
+                                        if col == 0 {
+                                            for b in bible.books() {
+                                                if list_row(
+                                                    ui,
+                                                    p,
+                                                    b.book_id == self.bible.book,
+                                                    &b.name,
+                                                    false,
+                                                )
+                                                .clicked()
+                                                {
+                                                    picked = Some(b.book_id);
+                                                }
+                                            }
+                                        } else if let Some(book) = bible.book(self.bible.book) {
+                                            for n in 1..=book.chapter_count {
+                                                if list_row(
+                                                    ui,
+                                                    p,
+                                                    n == self.bible.chapter,
+                                                    &n.to_string(),
+                                                    true,
+                                                )
+                                                .clicked()
+                                                {
+                                                    picked = Some(n);
+                                                }
+                                            }
+                                        }
+                                    });
+                                if let Some(n) = picked {
+                                    self.deadline = None;
+                                    self.bible.forget_command();
+                                    self.hits = None;
+                                    if col == 0 {
+                                        self.bible.set_location(n, 1);
+                                    } else {
+                                        self.bible.set_location(self.bible.book, n);
+                                    }
+                                }
+                            });
+                    },
+                );
+                let (rect, r) = ui.allocate_exact_size(vec2(8., h), egui::Sense::drag());
+                r.clone()
+                    .on_hover_cursor(egui::CursorIcon::ResizeHorizontal);
+                ui.painter().rect_filled(
+                    egui::Rect::from_center_size(rect.center(), vec2(2., 32.)),
+                    1,
+                    p.muted.gamma_multiply(0.22),
+                );
+                if r.dragged() {
+                    let max = if col == 0 {
+                        (w * 0.42).max(70.)
+                    } else {
+                        (w * 0.25).max(46.)
+                    };
+                    self.bible_widths[col] =
+                        (width + r.drag_delta().x).clamp(if col == 0 { 70. } else { 46. }, max) / w.max(1.);
                 }
             }
-            if ui.button("清除经文").clicked() {
-                self.clear_passages();
+            ui.allocate_ui_with_layout(
+                vec2(verse_w, h),
+                Layout::top_down(egui::Align::Min),
+                |ui| {
+                    ui.set_width(verse_w);
+                    ui.spacing_mut().item_spacing.x = 5.;
+                    let history_h = if self.history_open {
+                        (h * 0.18).clamp(58., 120.)
+                    } else {
+                        35.
+                    };
+                    let list_h = (h - history_h - 6.).max(70.);
+                    card_frame(p).inner_margin(8).show(ui, |ui| {
+                        ui.set_width(ui.available_width());
+                        let top = ui.cursor().top();
+                        self.verse_header(ui);
+                        let rows_h = (list_h - (ui.cursor().top() - top) - 18.).max(26.);
+                        if self.bible.modules.is_empty() {
+                            ui.weak(if self.bible_load.is_some() {
+                                "正在加载圣经译本…"
+                            } else {
+                                "请在设置中添加包含 .spb 圣经文件的目录。"
+                            });
+                        }
+                        self.verse_rows(ui, rows_h);
+                    });
+                    self.bible_history(ui, history_h);
+                },
+            );
+        });
+    }
+    fn verse_header(&mut self, ui: &mut Ui) {
+        let p = self.palette;
+        let compact = ui.available_width() < 650.;
+        ui.horizontal_wrapped(|ui| {
+            section_header_label(ui, p, "经节");
+            self.translations(ui);
+            if filter_chip(ui, p, self.continuous, "连续上屏").clicked() {
+                self.continuous = !self.continuous;
+                self.bible.forget_command();
+                if self.continuous && !self.quick.is_empty() {
+                    self.deadline = Some(Instant::now());
+                }
             }
-            if ui.button("样式设置").clicked() {
+            if filter_chip(ui, p, false, if compact { "样式" } else { "样式设置" })
+                .on_hover_text("样式设置")
+                .clicked()
+            {
                 self.style_open = true;
             }
-            ui.separator();
-            if ui
-                .add_enabled(!self.bible.rows.is_empty(), Button::new("立即上屏"))
+            if filter_chip(ui, p, false, if compact { "清除" } else { "清除经文" })
+                .on_hover_text("清除经文")
                 .clicked()
             {
-                if self.deadline.is_some() && !self.quick.trim().is_empty() {
-                    self.apply_quick(true);
+                self.clear_passages();
+                self.hits = None;
+            }
+            ui.add_enabled_ui(!self.bible.rows.is_empty(), |ui| {
+                if raised_action_button(
+                    ui,
+                    p,
+                    if compact { "＋" } else { "加入程序单" },
+                    p.secondary,
+                    p.on_secondary,
+                    vec2(34., 34.),
+                    "加入程序单",
+                )
+                .clicked()
+                {
+                    self.add_schedule();
+                }
+                if raised_action_button(
+                    ui,
+                    p,
+                    if compact { "▶" } else { "立即上屏" },
+                    p.primary,
+                    p.on_primary,
+                    vec2(34., 34.),
+                    "立即上屏",
+                )
+                .clicked()
+                {
+                    if self.deadline.is_some() {
+                        self.submit_bible(true);
+                    } else {
+                        self.go_bible();
+                    }
+                }
+            });
+        });
+    }
+    fn verse_rows(&mut self, ui: &mut Ui, height: f32) {
+        let p = self.palette;
+        let selected = self.bible.selection.selected_rows();
+        let mut action = None;
+        ScrollArea::vertical()
+            .max_height(height)
+            .auto_shrink([false, false])
+            .id_salt(("verses", self.bible.book, self.bible.chapter))
+            .show(ui, |ui| {
+                ui.spacing_mut().item_spacing.y = 1.;
+                for (i, v) in self.bible.rows.iter().enumerate() {
+                    let on = selected.contains(&i);
+                    let r = row(ui, p, on, false, |ui| {
+                        ui.horizontal_top(|ui| {
+                            ui.label(
+                                bold(v.verse_number.to_string())
+                                    .strong()
+                                    .color(p.primary),
+                            );
+                            ui.add(
+                                egui::Label::new(egui::RichText::new(&v.verse_text).color(if on {
+                                    p.selected_ink()
+                                } else {
+                                    p.ink
+                                }))
+                                .selectable(false)
+                                .wrap(),
+                            );
+                        });
+                    });
+                    if r.clicked() || r.double_clicked() {
+                        action = Some((
+                            i,
+                            if r.double_clicked() {
+                                VerseAction::Live
+                            } else {
+                                VerseAction::Select
+                            },
+                            false,
+                        ));
+                    }
+                    r.context_menu(|ui| {
+                        for (label, a) in [
+                            ("立即上屏", VerseAction::Live),
+                            ("加入程序单", VerseAction::Schedule),
+                            ("复制经文", VerseAction::Copy),
+                        ] {
+                            if ui.button(label).clicked() {
+                                action = Some((i, a, true));
+                                ui.close_menu();
+                            }
+                        }
+                    });
+                }
+            });
+        if let Some((i, action, menu)) = action {
+            self.deadline = None;
+            if menu {
+                if !selected.contains(&i) {
+                    let n = self.bible.rows[i].verse_number;
+                    self.bible
+                        .select_numbers(self.bible.book, self.bible.chapter, n, n);
+                }
+            } else if !matches!(action, VerseAction::Live) {
+                let mods = ui.input(|i| i.modifiers);
+                if mods.shift {
+                    self.bible.selection.shift_click_verse(i);
+                } else if mods.ctrl || mods.mac_cmd {
+                    self.bible.selection.ctrl_click_verse(i);
                 } else {
-                    self.go_bible();
+                    self.bible.selection.click_verse(i);
                 }
             }
-            if ui
-                .add_enabled(!self.bible.rows.is_empty(), Button::new("加入程序单"))
-                .clicked()
-            {
-                self.add_schedule();
-            }
-        });
-        ui.separator();
-        if self.bible.modules.is_empty() {
-            ui.label(if self.bible_load.is_some() {
-                "正在加载圣经译本…"
-            } else {
-                "请在设置中添加包含 .spb 圣经文件的目录。"
-            });
-            return;
-        }
-        let width = ui.available_width();
-        let book_w = (width * 0.21).clamp(65., 185.);
-        let ch_w = (width * 0.13).clamp(46., 104.);
-        let h = ui.available_height().max(60.);
-        let mut book = None;
-        let mut chapter = None;
-        let mut verse = None;
-        ui.horizontal_top(|ui| {
-            ui.allocate_ui_with_layout(vec2(book_w, h), Layout::top_down(egui::Align::Min), |ui| {
-                ui.set_width(book_w);
-                ui.strong("书卷");
-                ui.separator();
-                ScrollArea::vertical()
-                    .id_salt("books")
-                    .auto_shrink([false, false])
-                    .show(ui, |ui| {
-                        for b in self.bible.primary().unwrap().books() {
-                            if ui
-                                .selectable_label(self.bible.book == b.book_id, &b.name)
-                                .clicked()
-                            {
-                                book = Some(b.book_id);
-                            }
-                        }
-                    });
-            });
-            ui.separator();
-            ui.allocate_ui_with_layout(vec2(ch_w, h), Layout::top_down(egui::Align::Min), |ui| {
-                ui.set_width(ch_w);
-                ui.strong("章");
-                ui.separator();
-                ScrollArea::vertical()
-                    .id_salt(("chapters", self.bible.book))
-                    .auto_shrink([false, false])
-                    .show(ui, |ui| {
-                        let count = self
-                            .bible
-                            .primary()
-                            .and_then(|b| b.book(self.bible.book))
-                            .map_or(0, |b| b.chapter_count);
-                        for n in 1..=count {
-                            if ui
-                                .selectable_label(n == self.bible.chapter, format!("第 {n} 章"))
-                                .clicked()
-                            {
-                                chapter = Some(n);
-                            }
-                        }
-                    });
-            });
-            ui.separator();
-            ui.vertical(|ui| {
-                ui.strong("经节");
-                ui.separator();
-                let selected = self.bible.selection.selected_rows();
-                ScrollArea::vertical()
-                    .id_salt(("verses", self.bible.book, self.bible.chapter))
-                    .auto_shrink([false, false])
-                    .show(ui, |ui| {
-                        for (i, row) in self.bible.rows.iter().enumerate() {
-                            let r = ui.add(
-                                egui::Label::new(format!(
-                                    "{}   {}",
-                                    row.verse_number, row.verse_text
-                                ))
-                                .wrap()
-                                .sense(egui::Sense::click())
-                                .selectable(false),
-                            );
-                            if selected.contains(&i) {
-                                ui.painter().rect_filled(
-                                    r.rect,
-                                    3,
-                                    ui.visuals().selection.bg_fill.gamma_multiply(0.36),
-                                );
-                            }
-                            if r.clicked() {
-                                verse = Some(i);
-                            }
-                        }
-                    });
-            });
-        });
-        if let Some(b) = book {
-            self.bible.set_location(b, 1);
-        }
-        if let Some(ch) = chapter {
-            self.bible.set_location(self.bible.book, ch);
-        }
-        if let Some(row) = verse {
-            let mods = ui.input(|i| i.modifiers);
-            if mods.shift {
-                self.bible.selection.shift_click_verse(row);
-            } else if mods.ctrl || mods.mac_cmd {
-                self.bible.selection.ctrl_click_verse(row);
-            } else {
-                self.bible.selection.click_verse(row);
-            }
-            self.deadline = None;
-            if self.settings.selection_goes_live {
-                self.go_bible();
+            match action {
+                VerseAction::Select if self.settings.selection_goes_live => self.go_bible(),
+                VerseAction::Live => self.go_bible(),
+                VerseAction::Schedule => self.add_schedule(),
+                VerseAction::Copy => ui.ctx().copy_text(
+                    self.bible
+                        .selected()
+                        .iter()
+                        .map(|v| format!("{} {}", v.display_reference(), v.verse_text))
+                        .collect::<Vec<_>>()
+                        .join("\n"),
+                ),
+                _ => {}
             }
         }
     }
-
+    fn bible_history(&mut self, ui: &mut Ui, height: f32) {
+        let p = self.palette;
+        card_frame(p).inner_margin(7).show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            ui.horizontal(|ui| {
+                if ui
+                    .add(
+                        egui::Button::new(if self.history_open {
+                            "▾ 历史记录"
+                        } else {
+                            "▸ 历史记录"
+                        })
+                        .frame(false),
+                    )
+                    .clicked()
+                {
+                    self.history_open = !self.history_open;
+                }
+                ui.with_layout(Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui.small_button("×").on_hover_text("清空历史记录").clicked() {
+                        self.history.clear();
+                    }
+                });
+            });
+            if self.history_open {
+                let mut live = None;
+                let mut select = None;
+                ScrollArea::vertical()
+                    .id_salt("bible_history_rows")
+                    .auto_shrink([false, false])
+                    .max_height((height - 43.).max(10.))
+                    .show(ui, |ui| {
+                        for (i, group) in self.history.iter().enumerate() {
+                            if let Some(v) = group.first() {
+                                let r = ui.add(
+                                    egui::Label::new(format!(
+                                        "{}   {}",
+                                        v.display_reference(),
+                                        v.verse_text
+                                    ))
+                                    .truncate()
+                                    .selectable(false)
+                                    .sense(egui::Sense::click()),
+                                );
+                                if r.clicked() {
+                                    select = Some(i);
+                                }
+                                if r.double_clicked() {
+                                    live = Some(i);
+                                }
+                            }
+                        }
+                    });
+                if let Some(i) = select.or(live) {
+                    self.bible.restore(&self.history[i]);
+                    self.deadline = None;
+                }
+                if let Some(i) = live {
+                    self.cancel_pending_live();
+                    let verses = self.history[i].clone();
+                    self.output.publish(crate::output::Content::Scripture {
+                        continuous: !verses[0].continuous_passages.is_empty(),
+                        verses,
+                    });
+                }
+            }
+        });
+    }
     fn candidate_books(&self) -> Vec<i32> {
         let token = self.quick.split_whitespace().next().unwrap_or_default();
         candidates(token)

@@ -183,12 +183,14 @@ impl App {
                 ShortcutAction::GoLive => match self.tab {
                     Tab::Bible => {
                         if editing && !self.quick.is_empty() {
-                            self.apply_quick(true);
+                            self.submit_bible(true);
                         } else {
                             self.go_bible();
                         }
                     }
-                    Tab::Library => self.go_media(),
+                    Tab::Library | Tab::Songs => self.go_media(),
+                    Tab::Pictures => self.go_picture(),
+                    Tab::Announcements => self.go_announcement(),
                     Tab::Settings => {
                         self.output.visible = true;
                         self.output.blank = false;
@@ -206,7 +208,7 @@ impl App {
                 ShortcutAction::ToggleAlwaysOnTop => self.output.top = !self.output.top,
                 ShortcutAction::ClearPassages => self.clear_passages(),
                 ShortcutAction::FocusSearch => {
-                    if self.tab == Tab::Settings {
+                    if matches!(self.tab, Tab::Settings | Tab::Pictures | Tab::Announcements) {
                         self.change_tab(Tab::Bible);
                     }
                     self.focus_search = true;

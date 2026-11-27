@@ -19,7 +19,7 @@ pub struct Library {
     pub roots: Vec<PathBuf>,
     pub files: Vec<PathBuf>,
     pub books: Vec<String>,
-    songs: HashMap<PathBuf, SongItem>,
+    pub songs: HashMap<PathBuf, SongItem>,
 }
 
 impl Library {
