@@ -458,6 +458,10 @@ private fun BibleTabScope.BibleTabHistory(viewModel: BibleViewModel) {
             entries = viewModel.history,
             expanded = historyExpanded,
             selectedIndex = viewModel.history.indexOfFirst { it == ui.selectedHistoryEntry },
+            citationStyle = appSettings.bibleSettings.historyCitationStyle,
+            onCitationStyleChange = { style ->
+                onSettingsChange { it.copy(bibleSettings = it.bibleSettings.copy(historyCitationStyle = style)) }
+            },
             onToggleExpanded = { historyExpanded = !historyExpanded },
             onClear = {
                 ui.selectedHistoryEntry = null

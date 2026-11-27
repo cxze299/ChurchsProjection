@@ -4435,4 +4435,5 @@
     <string name="bible_projection_style_sample_book">Psalm</string>
     <string name="bible_projection_style_sample_next">I have sworn an oath to keep your righteous judgments.</string>
     <string name="bible_history_copy_reference">Copy reference</string>
+    <string name="bible_history_citation_style">Citation style</string>
 </resources>

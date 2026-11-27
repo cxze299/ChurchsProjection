@@ -19,6 +19,7 @@ import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.dp
 import org.churchpresenter.bible.BibleSearch
 import org.churchpresenter.settings.BibleTranslationSettings
+import org.churchpresenter.settings.BibleCitationStyle
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -94,6 +95,7 @@ class BibleSearchAndHistoryPanesTest {
     fun `history collapses, clears and reports its entries`() = runComposeUiTest {
         var expanded by mutableStateOf(true)
         var selectedIndex by mutableStateOf(0)
+        var citationStyle by mutableStateOf(BibleCitationStyle.PLAIN)
         var entries by mutableStateOf(
             listOf(
                 BibleViewModel.HistoryEntry("John", 3, 16, "For God so loved", verseRange = "16-17"),
@@ -109,6 +111,8 @@ class BibleSearchAndHistoryPanesTest {
                         onToggleExpanded = { events += "toggle" }, onClear = { events += "clear" },
                         onEntryClick = { events += "click $it" }, onEntryDoubleClick = { events += "double $it" },
                         onCopyReference = { events += it },
+                        citationStyle = citationStyle,
+                        onCitationStyleChange = { citationStyle = it },
                     )
                 }
             }
@@ -119,6 +123,10 @@ class BibleSearchAndHistoryPanesTest {
         runOnIdle { selectedIndex = 1 }
         onNode(hasContentDescription("Copy reference")).performClick()
         assertEquals(listOf("John 3:16-17", "Genesis 1:1"), events)
+        onNode(hasText("Citation style")).performClick()
+        onNode(hasText("〖Genesis 1:1〗")).performClick()
+        onNode(hasContentDescription("Copy reference")).performClick()
+        assertEquals("〖Genesis 1:1〗", events.last())
 
         onAllNodes(hasText("History"), useUnmergedTree = true)[0].performClick()
         onAllNodes(hasContentDescription("Clear"), useUnmergedTree = true)[0].performClick()

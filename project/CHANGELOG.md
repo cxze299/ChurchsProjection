@@ -4,7 +4,7 @@
 
 ### 2026-11-27
 
-- 经文历史记录新增“复制引用”，选中条目后可复制书名、章节和节号范围。
+- 经文历史记录新增“复制引用”，选中条目后可复制书名、章节和节号范围。标题栏增加引用样式按钮，可选择无括号、〖〗、「」或 []，并记住选择。
 - 修复经文样式设置应用后投影画面仍使用旧样式的问题。预览读取投影配置，应用后更新投影屏幕使用的经文样式。
 - 全面重构 ust-project/ 原生 Rust 桌面界面，1:1 对齐原版 ChurchPresenter Material 3 视觉体系与多标签功能布局：新增 8 套原版配色主题（Dark / Light / Studio / Midnight / Forest / Ocean / Warm / Slate）、圆角卡片与凹陷搜索栏组件库；完整还原 6 个核心标签页（圣经三栏卡片+历史记录卡片、诗歌表格+金色徽标歌词段落卡片、文稿 16:9 幻灯片缩略图网格、图片 16:9 缩略图网格、布告+倒计时器+九宫格位置选择器、卡片式设置与多目录管理）以及带彩色徽标卡片的程序单和带红框实时预览的右侧工具栏。通过 cargo test --workspace 共 62 项测试（含全标签无头渲染测试）与 cargo clippy 零警告检查，单文件 Release 产物 ChurchPresenter.exe 大小仅 10.01 MB。
 - 在仓库独立目录 `rust-project/` 下使用纯原生 Rust（`eframe` / `egui` Workspace，包含 `cp-core`、`cp-bible`、`cp-library`、`cp-app` 四个 crate）完整重写 ChurchPresenter 核心主力桌面软件，与原 Kotlin 工程 `project/` 并存：涵盖 `.spb` 圣经解析、66 卷拼音首字母与多书卷连续速投、段选紧凑引用与连续上屏自动去重、多音字诗歌检索与优先格式排序、`.pptx`/`.pdf`/`.docx`/`.song` 解析渲染、9 类多目录配置与快捷键录制、左右边栏统一尺寸（`36.dp` 分隔条、`32.dp × 40.dp` 按钮、`24.dp` 箭头）及带右键菜单与 `F11`/`B`/`T`/`Esc` 快捷键的双窗口投影系统。通过 `cargo test --workspace` 共 58 项测试与 `cargo clippy` 零警告检查，生成单文件原生可执行程序 `D:\churchpre\rust-project\target\release\ChurchPresenter.exe`（体积仅 `9.67 MB`，较原 Kotlin+JRE 解压目录 `638.58 MB` 缩减 98.5%）。
