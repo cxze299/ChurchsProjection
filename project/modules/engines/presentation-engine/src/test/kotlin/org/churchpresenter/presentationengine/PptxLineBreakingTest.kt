@@ -179,6 +179,13 @@ class PptxLineBreakingTest {
         } ?: -1
 
     @Test
+    fun `explicit character spacing positions lyrics across the line`() {
+        val plain = rightmostInk(render(400.0, "离弃宝座") {})
+        val expanded = rightmostInk(render(400.0, "离弃宝座") { it.characterSpacing = 24.0 })
+        assertTrue(expanded >= plain + 65, "expected the last lyric to move with the explicit spacing")
+    }
+
+    @Test
     fun `a justified line reaches the right edge of its box`() {
         val text = "mmm mmm mmm mmm mmm mmm"
         val width = 200.0
