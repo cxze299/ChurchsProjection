@@ -20,11 +20,11 @@ class HymnInitialsTest {
     }
 
     @Test
-    fun `initials search retains hymn book and preferred format filters`() {
+    fun `initials search prioritizes preferred book and format while including other books`() {
         val root = File("hymns").absoluteFile
         val ppt = root.resolve("BookA/001 奇异恩典.pptx")
         val pdf = root.resolve("BookA/001 奇异恩典.pdf")
         val other = root.resolve("BookB/002 奇异恩典.pptx")
-        assertEquals(listOf(pdf), HymnQuickPlay.find(listOf(ppt, pdf, other), root, "qyed", "BookA", "pdf"))
+        assertEquals(listOf(pdf, other), HymnQuickPlay.find(listOf(ppt, pdf, other), root, "qyed", "BookA", "pdf"))
     }
 }

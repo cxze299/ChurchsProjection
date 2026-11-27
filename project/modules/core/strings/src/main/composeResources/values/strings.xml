@@ -34,11 +34,11 @@
     <string name="tune">Tune</string>
     <string name="search">Search</string>
     <string name="bible_smart_search_hint">Reference or text — e.g. John 3:16. Pinyin quick live: csj 1 12 16 or yhfy 3 16, then Enter</string>
-    <string name="hymn_quick_query">Song title, pinyin initials or number</string>
+    <string name="hymn_quick_query">Song title, pinyin initials, number or format</string>
     <string name="hymn_quick_play">Go live</string>
     <string name="hymn_quick_screen">Output screen</string>
     <string name="hymn_quick_window">Projection window</string>
-    <string name="hymn_quick_missing">No matching hymn found in the selected book.</string>
+    <string name="hymn_quick_missing">No matching hymn found.</string>
     <string name="hymn_quick_format">Preferred format</string>
     <string name="hymn_quick_book">Default hymn book</string>
     <string name="hymn_quick_all">All hymn books</string>
@@ -46,7 +46,9 @@
     <string name="presentation_documents_refresh">Refresh</string>
     <string name="presentation_documents_scanning">Finding documents…</string>
     <string name="presentation_documents_empty">No supported documents found in the search folders.</string>
+    <string name="presentation_documents_unreadable">Cannot read %1$s. Check that the drive is mounted and the app has permission to read it.</string>
     <string name="presentation_documents_word_renderer">Word projection requires an installed copy of Word, WPS or LibreOffice.</string>
+    <string name="presentation_documents_word_renderer_mac">Word projection on macOS requires LibreOffice.</string>
     <string name="menu_projection">Projection</string>
     <string name="menu_projection_windowed">Windowed projection</string>
     <string name="menu_projection_show">Show projection</string>

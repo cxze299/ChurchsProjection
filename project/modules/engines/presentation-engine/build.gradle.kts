@@ -22,6 +22,7 @@ dependencies {
     implementation(libs.apache.poi.ooxmlFull)
     implementation(libs.apache.poi.scratchpad)
     implementation(libs.aircompressor)
+    implementation(libs.rhino)
 
     // TextEffectsDeck writes a .pptx with POI; the same single schema jar as main.
     testFixturesImplementation(libs.apache.poi.ooxml) {
