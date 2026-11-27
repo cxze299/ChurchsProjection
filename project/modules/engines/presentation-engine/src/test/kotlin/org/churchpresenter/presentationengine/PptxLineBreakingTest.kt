@@ -241,16 +241,15 @@ class PptxLineBreakingTest {
 
     @Test
     fun `a Calibri run is set to Calibri's widths, not the JVM's default face`() {
-        // Calibri ships only with Office; the engine carries Carlito, drawn to its metrics. Either
-        // way the line below measures as Carlito does — before the substitute reached the drawn
-        // font, a missing Calibri was set in Dialog, wider, and the line wrapped.
+        // Use the installed Calibri when available and the bundled Carlito elsewhere.
         val text = "Grace and peace to you from God our Father"
         val graphics = graphics()
         val width = try {
-            SlideFontRegistry.resolveFamily("Calibri") // registers the bundled fonts
+            val family = SlideFontRegistry.resolveFamily("Calibri")
+            assertTrue(family in setOf("Calibri", "Carlito"))
             val font = Font(
                 mapOf(
-                    TextAttribute.FAMILY to "Carlito",
+                    TextAttribute.FAMILY to family,
                     TextAttribute.SIZE to size.toFloat(),
                     TextAttribute.KERNING to TextAttribute.KERNING_ON,
                 ),

@@ -30,7 +30,7 @@ internal fun PresentationTabScope.PresentationLibraryFilters(documents: List<Fil
     val roots = appSettings.resourceDirectories(ResourceDirectory.PRESENTATIONS).map(::File)
         PresentationScreenChoice()
         QuickPlayChoice(stringResource(Res.string.hymn_quick_format), settings.quickPlayFormat,
-            listOf("pptx", "pdf", "docx")) { format ->
+            listOf("pptx", "ppt", "ppsx", "pps", "pdf", "docx", "doc", "key")) { format ->
             onSettingsChange { it.copy(presentationSettings = it.presentationSettings.copy(quickPlayFormat = format)) }
         }
         val all = stringResource(Res.string.hymn_quick_all)

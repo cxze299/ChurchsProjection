@@ -77,7 +77,7 @@ class PresentationTabTest {
         presentationTab { vm, reports ->
             onNodeWithText("AUTO-SCROLL INTERVAL", substring = true).performClick()
             waitForIdle()
-            onNode(hasSetTextAction() and !hasText("Song title, pinyin initials or number"))
+            onNode(hasSetTextAction() and !hasText("Song title, pinyin initials, number or format"))
                 .performTextReplacement("12")
             onNodeWithText("OK").performClick()
             waitForIdle()
@@ -95,7 +95,7 @@ class PresentationTabTest {
         presentationTab { vm, reports ->
             onNodeWithText("TRANSITION DURATION", substring = true).performClick()
             waitForIdle()
-            onNode(hasSetTextAction() and !hasText("Song title, pinyin initials or number"))
+            onNode(hasSetTextAction() and !hasText("Song title, pinyin initials, number or format"))
                 .performTextReplacement("250")
             onNodeWithText("OK").performClick()
             waitForIdle()

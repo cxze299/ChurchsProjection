@@ -1,6 +1,7 @@
 package org.churchpresenter.presentationengine.pptx
 
 import org.apache.poi.EncryptedDocumentException
+import org.apache.poi.hslf.usermodel.HSLFSlideShow
 import org.apache.poi.openxml4j.opc.PackagePart
 import org.apache.poi.sl.usermodel.Placeholder
 import org.apache.poi.sl.usermodel.Slide
@@ -11,7 +12,6 @@ import org.apache.poi.xslf.usermodel.XMLSlideShow
 import org.apache.poi.xslf.usermodel.XSLFGroupShape
 import org.apache.poi.xslf.usermodel.XSLFShape
 import org.apache.poi.xslf.usermodel.XSLFSlide
-import org.churchpresenter.presentationengine.fonts.SlideFontRegistry
 import org.churchpresenter.presentationengine.model.DeckLoadError
 import org.churchpresenter.presentationengine.model.LayerSpec
 import org.churchpresenter.presentationengine.model.SlideTransitionSpec
@@ -52,10 +52,10 @@ internal object PowerPointDeckSupport {
      * apply [PoiLimits] — the alternative, initialising from the app's startup thread, races the
      * first deck load.
      */
-    fun open(file: File): SlideShow<*, *> {
+    fun open(file: File, registerFonts: Boolean = true): SlideShow<*, *> {
         PoiLimits.apply()
         return SlideShowFactory.create(file, null, true)
-            .also { registerEmbeddedFonts(it) }
+            .also { if (registerFonts) registerEmbeddedFonts(it) }
             .also { show ->
                 (show as? XMLSlideShow)?.let {
                     stripUnsupportedHighlights(it)
@@ -65,12 +65,15 @@ internal object PowerPointDeckSupport {
     }
 
     /**
-     * Registers fonts embedded in the document (the fntdata parts under ppt/fonts — plain TTF
-     * payloads) into the JVM so slides render with the deck's own typefaces even when they
-     * aren't installed. Obfuscated or embed-restricted payloads simply fail registration and
-     * fall back to the substitution table.
+     * Registers embedded fonts before the deck is drawn, including binary PPT/PPS font records.
      */
     private fun registerEmbeddedFonts(show: SlideShow<*, *>) {
+        if (show is HSLFSlideShow) {
+            for (font in show.fonts) {
+                font.facets.forEach { runCatching { EmbeddedPowerPointFonts.register(it) } }
+            }
+            return
+        }
         val pkg = (show as? XMLSlideShow)?.`package` ?: return
         try {
             pkg.parts.asSequence()
@@ -83,14 +86,14 @@ internal object PowerPointDeckSupport {
     /** One embedded font; a payload that cannot be read is skipped rather than failing the deck. */
     private fun registerFontPart(part: PackagePart) {
         try {
-            SlideFontRegistry.registerFontStream(part.inputStream)
+            EmbeddedPowerPointFonts.register(part.inputStream)
         } catch (_: Exception) {
         }
     }
 
     fun readMetadata(file: File): PowerPointMetadataResult {
         return try {
-            open(file).use { show ->
+            open(file, registerFonts = false).use { show ->
                 val slides = show.slides
                 if (slides.isEmpty()) {
                     return PowerPointMetadataResult.Failure(DeckLoadError.EMPTY_DOCUMENT, null)

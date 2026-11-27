@@ -24,7 +24,9 @@ import org.churchpresenter.presentationengine.PresentationLoader
 import org.churchpresenter.strings.generated.resources.Res
 import org.churchpresenter.strings.generated.resources.presentation_documents_scanning
 import org.churchpresenter.strings.generated.resources.presentation_documents_empty
+import org.churchpresenter.strings.generated.resources.presentation_documents_unreadable
 import org.churchpresenter.strings.generated.resources.presentation_documents_word_renderer
+import org.churchpresenter.strings.generated.resources.presentation_documents_word_renderer_mac
 import org.jetbrains.compose.resources.stringResource
 import org.churchpresenter.settings.ResourceDirectory
 import org.churchpresenter.settings.resourceDirectories
@@ -39,13 +41,16 @@ internal fun PresentationTabScope.PresentationDocuments(viewModel: PresentationV
     }
     val documents = viewModel.discoveredDocuments
     var scanning by remember { mutableStateOf(false) }
+    var unreadable by remember(directories) { mutableStateOf(emptyList<File>()) }
     LaunchedEffect(directories, viewModel.documentRefreshToken) {
         do {
             scanning = true
             try {
-                viewModel.discoveredDocuments = withContext(Dispatchers.IO) {
+                val scan = withContext(Dispatchers.IO) {
                     PresentationDocumentDiscovery.discover(directories.map(::File))
                 }
+                viewModel.discoveredDocuments = scan.files
+                unreadable = scan.unreadableDirectories
             } finally {
                 scanning = false
             }
@@ -61,12 +66,24 @@ internal fun PresentationTabScope.PresentationDocuments(viewModel: PresentationV
                 overflow = TextOverflow.Ellipsis,
             )
             if (viewModel.selectedPresentation?.extension?.lowercase() in PresentationLoader.WORD_EXTENSIONS) {
+                val rendererHint = if (System.getProperty("os.name").startsWith("Mac")) {
+                    Res.string.presentation_documents_word_renderer_mac
+                } else {
+                    Res.string.presentation_documents_word_renderer
+                }
                 Text(
-                    stringResource(Res.string.presentation_documents_word_renderer),
+                    stringResource(rendererHint),
                     style = MaterialTheme.typography.labelSmall,
                 )
             }
-            if (scanning || documents.isEmpty()) {
+            if (unreadable.isNotEmpty()) {
+                Text(
+                    stringResource(Res.string.presentation_documents_unreadable, unreadable.first().path),
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(vertical = 4.dp),
+                )
+            }
+            if (scanning || (documents.isEmpty() && unreadable.isEmpty())) {
                 val status = if (scanning) {
                     Res.string.presentation_documents_scanning
                 } else {

@@ -62,6 +62,7 @@ internal object WordDocumentPdf {
             "C:/Program Files (x86)/LibreOffice/program/soffice.com",
             "C:/Program Files (x86)/LibreOffice/program/soffice.exe",
             "/Applications/LibreOffice.app/Contents/MacOS/soffice",
+            "${System.getProperty("user.home")}/Applications/LibreOffice.app/Contents/MacOS/soffice",
         ) + System.getenv("PATH").orEmpty().split(File.pathSeparator).flatMap {
             listOf(File(it, "soffice").path, File(it, "soffice.com").path, File(it, "soffice.exe").path)
         }

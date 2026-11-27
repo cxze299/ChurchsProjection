@@ -8,6 +8,7 @@ import java.awt.Graphics2D
 import java.awt.GraphicsEnvironment
 import java.io.File
 import java.io.InputStream
+import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -36,6 +37,7 @@ object SlideFontRegistry {
 
     /** Lower-cased family name → exact-cased family name, for every family the JVM can resolve. */
     private val availableFamilies = ConcurrentHashMap<String, String>()
+    private val initialFamilyIndex = lazy { refreshAvailableFamilies() }
 
     /** Normalized file name (sans extension) → font file, from the system-directory scan. */
     private val systemFontFileIndex =
@@ -46,6 +48,12 @@ object SlideFontRegistry {
      * family bundled with the app (registered via [registerFontStream]) so slides never fall back
      * to the JVM's default Dialog face.
      */
+    private val songti = listOf("SimSun", "Songti SC", "STSong", "Noto Serif CJK SC")
+    private val heiti = listOf("SimHei", "Heiti SC", "PingFang SC", "Noto Sans CJK SC")
+    private val kaiti = listOf("KaiTi", "STKaiti", "Kaiti SC", "Songti SC")
+    private val fangsong = listOf("FangSong", "STFangsong", "Songti SC", "Noto Serif CJK SC")
+    private val yahei = listOf("Microsoft YaHei", "PingFang SC", "Heiti SC", "Noto Sans CJK SC")
+
     private val substitutionTable: Map<String, List<String>> = mapOf(
         "calibri" to listOf("Carlito", "Segoe UI", "Open Sans", "Arial"),
         "calibri light" to listOf("Carlito", "Segoe UI Light", "Open Sans", "Arial"),
@@ -64,7 +72,23 @@ object SlideFontRegistry {
         "trebuchet ms" to listOf("Verdana", "Open Sans"),
         "century gothic" to listOf("Avant Garde", "Poppins", "Open Sans"),
         "gill sans" to listOf("Gill Sans MT", "Open Sans"),
-        "impact" to listOf("Haettenschweiler", "Anton", "Open Sans")
+        "impact" to listOf("Haettenschweiler", "Anton", "Open Sans"),
+        "simsun" to songti,
+        "nsimsun" to songti,
+        "宋体" to songti,
+        "新宋体" to songti,
+        "simhei" to heiti,
+        "黑体" to heiti,
+        "kaiti" to kaiti,
+        "kaiti_gb2312" to kaiti,
+        "楷体" to kaiti,
+        "楷体_gb2312" to kaiti,
+        "fangsong" to fangsong,
+        "fangsong_gb2312" to fangsong,
+        "仿宋" to fangsong,
+        "仿宋_gb2312" to fangsong,
+        "microsoft yahei" to yahei,
+        "微软雅黑" to yahei,
     )
 
     /**
@@ -93,7 +117,9 @@ object SlideFontRegistry {
                 "/System/Library/Fonts",
                 "/System/Library/Fonts/Supplemental",
                 "/Library/Fonts",
-                "$home/Library/Fonts"
+                "$home/Library/Fonts",
+                "/Applications/Microsoft PowerPoint.app/Contents/Resources/DFonts",
+                "$home/Applications/Microsoft PowerPoint.app/Contents/Resources/DFonts",
             )
             os.contains("win") -> listOf(
                 (System.getenv("WINDIR") ?: "C:\\Windows") + "\\Fonts",
@@ -112,15 +138,19 @@ object SlideFontRegistry {
     val drawFontManager: DrawFontManager = SubstitutingFontManager()
 
     /**
-     * Registers one font (TTF/OTF stream) into the JVM. Returns the family name on success.
+     * Registers a TTF/OTF font or collection into the JVM. Returns the first family on success.
      * Safe to call repeatedly; registration of an already-known family is a no-op in AWT.
      */
     fun registerFontStream(stream: InputStream): String? {
         return try {
-            val font = stream.use { Font.createFont(Font.TRUETYPE_FONT, it) }
-            GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(font)
-            availableFamilies[font.family.lowercase()] = font.family
-            font.family
+            val fonts = stream.use { Font.createFonts(it) }
+            val graphics = GraphicsEnvironment.getLocalGraphicsEnvironment()
+            fonts.forEach { font ->
+                graphics.registerFont(font)
+                availableFamilies[font.family.lowercase()] = font.family
+                availableFamilies[font.getFamily(Locale.ROOT).lowercase()] = font.family
+            }
+            fonts.firstOrNull()?.family
         } catch (_: Exception) {
             null
         }
@@ -134,7 +164,7 @@ object SlideFontRegistry {
      */
     fun initialize(scanSystemDirs: Boolean = true) {
         if (!initialized.compareAndSet(false, true)) return
-        refreshAvailableFamilies()
+        initialFamilyIndex.value
         if (!scanSystemDirs) return
         // One walk completes the file index and registers the families; only when a lookup has
         // already completed the index does this walk the folders again, to register.
@@ -148,7 +178,7 @@ object SlideFontRegistry {
     }
 
     fun isFamilyAvailable(family: String): Boolean {
-        if (availableFamilies.isEmpty()) refreshAvailableFamilies()
+        initialFamilyIndex.value
         return availableFamilies.containsKey(family.trim().lowercase())
     }
 
@@ -174,10 +204,8 @@ object SlideFontRegistry {
      * `HelveticaNeue-Bold` still reaches the "helvetica neue" row on a machine without it.
      */
     fun resolveFace(requested: String): ResolvedFace {
-        // Same lazy contract as isFamilyAvailable: the engine is used outside the app (the
-        // converter, the companion server's background renders, tests), where nothing has called
-        // initialize, and an empty index would silently resolve every request to SansSerif.
-        if (availableFamilies.isEmpty()) refreshAvailableFamilies()
+        // Embedded fonts can be registered before the installed families have been loaded.
+        initialFamilyIndex.value
         val (bold, italic) = PostScriptName.styleOf(requested)
         // An installed face first when the name carries a width or weight a family cannot (the
         // face already has the weight and slant its name says; reporting them as well costs
@@ -225,8 +253,11 @@ object SlideFontRegistry {
     private fun refreshAvailableFamilies() {
         registerBundledFonts()
         try {
-            GraphicsEnvironment.getLocalGraphicsEnvironment().availableFontFamilyNames.forEach {
-                availableFamilies.putIfAbsent(it.lowercase(), it)
+            val graphics = GraphicsEnvironment.getLocalGraphicsEnvironment()
+            listOf(Locale.getDefault(), Locale.ROOT).distinct().forEach { locale ->
+                graphics.getAvailableFontFamilyNames(locale).forEach {
+                    availableFamilies.putIfAbsent(it.lowercase(), it)
+                }
             }
         } catch (_: Throwable) {
             // Headless environments without fontconfig can throw; the registry then only knows
@@ -245,6 +276,7 @@ object SlideFontRegistry {
                 if (!availableFamilies.containsKey(font.family.lowercase())) {
                     GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(font)
                     availableFamilies[font.family.lowercase()] = font.family
+                    availableFamilies[font.getFamily(Locale.ROOT).lowercase()] = font.family
                 }
             }
         } catch (_: Exception) {

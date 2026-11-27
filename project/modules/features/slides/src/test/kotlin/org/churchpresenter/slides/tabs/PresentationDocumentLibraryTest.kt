@@ -132,7 +132,7 @@ class PresentationDocumentLibraryTest {
             root.resolve("002 赞美救主.pdf").writeText("discovery fixture")
             presentationTab(settings = { it.copy(presentationStorageDirectory = root.absolutePath) }) { _, _ ->
                 waitUntilAtLeastOneExists(hasText("001 奇异恩典.pdf"), timeoutMillis = 10_000)
-                onNodeWithText("Song title, pinyin initials or number").performTextInput("QYED")
+                onNodeWithText("Song title, pinyin initials, number or format").performTextInput("QYED pdf")
                 onNodeWithText("001 奇异恩典.pdf").assertExists()
                 assertEquals(0, onAllNodesWithText("002 赞美救主.pdf").fetchSemanticsNodes().size)
             }
@@ -163,9 +163,9 @@ class PresentationDocumentLibraryTest {
             }, presenterManager = output) { vm, reports ->
                 waitUntilAtLeastOneExists(hasText(pdf.name), timeoutMillis = 10_000)
                 assertEquals(0, onAllNodesWithText("999 Other Song.pdf").fetchSemanticsNodes().size)
-                onNodeWithText("Song title, pinyin initials or number").performTextInput("1")
+                onNodeWithText("Song title, pinyin initials, number or format").performTextInput("1")
                 assertEquals(1, onAllNodesWithText(pdf.name, substring = true).fetchSemanticsNodes().size)
-                onNodeWithText("Song title, pinyin initials or number").performImeAction()
+                onNodeWithText("Song title, pinyin initials, number or format").performImeAction()
                 waitUntil(timeoutMillis = 10_000) { output.showPresenterWindow.value }
                 assertEquals(pdf.absolutePath, vm.selectedPresentation?.absolutePath)
                 assertTrue(output.isLive(Presenting.PRESENTATION))

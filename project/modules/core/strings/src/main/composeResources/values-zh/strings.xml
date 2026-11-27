@@ -19,11 +19,11 @@
     <string name="output_menu_on_top">窗口置顶</string>
     <string name="output_menu_normal">取消置顶</string>
     <string name="output_menu_hide">隐藏此投影窗口</string>
-    <string name="hymn_quick_query">输入歌名、拼音首字母或编号</string>
+    <string name="hymn_quick_query">输入歌名、拼音首字母、编号或格式</string>
     <string name="hymn_quick_play">投屏</string>
     <string name="hymn_quick_screen">投屏屏幕</string>
     <string name="hymn_quick_window">独立投影窗口</string>
-    <string name="hymn_quick_missing">当前歌本中没有匹配的诗歌。</string>
+    <string name="hymn_quick_missing">没有找到匹配的诗歌。</string>
     <string name="hymn_quick_format">默认放映格式</string>
     <string name="hymn_quick_book">默认诗歌本</string>
     <string name="hymn_quick_all">全部诗歌本</string>
@@ -31,7 +31,9 @@
     <string name="presentation_documents_refresh">刷新</string>
     <string name="presentation_documents_scanning">正在查找文档…</string>
     <string name="presentation_documents_empty">目录中没有支持的文档。</string>
+    <string name="presentation_documents_unreadable">无法读取 %1$s。请确认磁盘已挂载，且应用有权限读取该位置。</string>
     <string name="presentation_documents_word_renderer">Word 投影需要安装 Word、WPS 或 LibreOffice。</string>
+    <string name="presentation_documents_word_renderer_mac">macOS 上投影 Word 文档需要安装 LibreOffice。</string>
     <string name="app_name">Church Presenter</string>
     <string name="mode">模式</string>
     <string name="scope">范围</string>
