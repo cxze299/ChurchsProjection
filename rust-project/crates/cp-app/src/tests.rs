@@ -283,3 +283,109 @@ fn presentation_document_loads_sorted_image_slides_and_clamps_navigation() {
     page.step(isize::MIN);
     assert_eq!(page.index, 0);
 }
+
+#[test]
+fn appearance_palettes_resolve_names_and_selection_colors() {
+    let light = crate::appearance::palette("Light");
+    let dark = crate::appearance::palette("dark");
+    let ocean = crate::appearance::palette("oCeAn");
+    let fallback = crate::appearance::palette("unknown palette");
+
+    assert_eq!(light.name, "Light");
+    assert!(!light.dark);
+    assert_eq!(dark.name, "Dark");
+    assert!(dark.dark);
+    assert_eq!(ocean.name, "Ocean");
+    assert!(!ocean.dark);
+    assert_eq!(fallback.name, "Dark");
+
+    assert_eq!(light.selection(), light.primary.gamma_multiply(0.10));
+    assert_eq!(dark.selection(), dark.primary.gamma_multiply(0.18));
+}
+
+#[test]
+fn picture_scan_recurses_sorts_and_deduplicates_roots() {
+    use crate::pictures_ui::scan_pictures;
+
+    let temp = TempDirectory::new();
+    let root = temp.path().join("Pictures");
+    let nested = root.join("Nested");
+    fs::create_dir_all(&nested).unwrap();
+    for name in ["a.jpg", "b.PNG", "ignored.gif"] {
+        fs::write(root.join(name), b"picture fixture").unwrap();
+    }
+    fs::write(nested.join("c.JpEg"), b"picture fixture").unwrap();
+
+    let mut expected = vec![
+        root.join("a.jpg"),
+        root.join("b.PNG"),
+        nested.join("c.JpEg"),
+    ];
+    expected.sort();
+    let found = scan_pictures(&[root.clone(), nested, root]);
+
+    assert_eq!(found, expected);
+}
+
+#[test]
+fn countdown_pauses_resumes_resets_and_expires() {
+    use crate::announcements_ui::Countdown;
+    use std::time::{Duration, Instant};
+
+    let start = Instant::now();
+    let mut countdown = Countdown::default();
+    countdown.set_seconds(12);
+    assert_eq!(countdown.remaining(start), 12);
+
+    countdown.toggle(start);
+    assert_eq!(countdown.remaining(start + Duration::from_secs(3)), 9);
+
+    countdown.toggle(start + Duration::from_secs(3));
+    assert_eq!(countdown.remaining(start + Duration::from_secs(8)), 9);
+
+    countdown.toggle(start + Duration::from_secs(8));
+    assert_eq!(countdown.remaining(start + Duration::from_secs(11)), 6);
+
+    countdown.reset();
+    assert_eq!(countdown.remaining(start + Duration::from_secs(30)), 12);
+
+    countdown.set_seconds(2);
+    countdown.toggle(start + Duration::from_secs(30));
+    assert_eq!(countdown.remaining(start + Duration::from_secs(32)), 0);
+    assert_eq!(countdown.remaining(start + Duration::from_secs(40)), 0);
+}
+
+#[test]
+fn workspace_renders_each_tab_headlessly() {
+    use crate::app::{App, Tab};
+    use cp_core::SettingsManager;
+    use egui::{pos2, vec2, Context, RawInput, Rect};
+
+    let temp = TempDirectory::new();
+    let context = Context::default();
+    let mut app = App::new_with_manager(
+        &context,
+        Vec::new(),
+        SettingsManager::with_dir(temp.path().to_owned()),
+    );
+    let input = RawInput {
+        screen_rect: Some(Rect::from_min_size(pos2(0., 0.), vec2(1280., 800.))),
+        ..Default::default()
+    };
+
+    for tab in [
+        Tab::Bible,
+        Tab::Songs,
+        Tab::Library,
+        Tab::Pictures,
+        Tab::Announcements,
+        Tab::Settings,
+    ] {
+        app.change_tab(tab);
+        let output = context.run(input.clone(), |ctx| app.workspace(ctx));
+        assert!(
+            !output.shapes.is_empty(),
+            "workspace should create UI shapes for every tab"
+        );
+    }
+}

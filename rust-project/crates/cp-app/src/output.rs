@@ -38,6 +38,8 @@ pub enum Content {
         continuous: bool,
     },
     Media(Page),
+    Picture(std::path::PathBuf),
+    Announcement(crate::announcements_ui::Announcement),
 }
 pub struct Output {
     pub content: Content,
@@ -78,71 +80,84 @@ enum Images {
     Ready(Vec<(TextureHandle, bool)>),
     Failed(String),
 }
+#[derive(Clone)]
+enum ImageSource {
+    Picture(std::path::PathBuf),
+    Slide(Page),
+}
+impl ImageSource {
+    fn same(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Picture(a), Self::Picture(b)) => a == b,
+            (Self::Slide(a), Self::Slide(b)) => {
+                a.index == b.index && Arc::ptr_eq(&a.document, &b.document)
+            }
+            _ => false,
+        }
+    }
+    fn decode(&self, edge: u32) -> Result<Vec<(egui::ColorImage, bool)>, String> {
+        match self {
+            Self::Picture(path) => Ok(vec![(
+                pixels(image::open(path).map_err(|e| e.to_string())?, edge),
+                false,
+            )]),
+            Self::Slide(page) => {
+                let Document::Deck(d) = &*page.document else {
+                    return Ok(vec![]);
+                };
+                if d.pdf_path.is_some() {
+                    let bytes = d.render_page(page.index, edge).map_err(|e| e.to_string())?;
+                    return Ok(vec![(
+                        pixels(
+                            image::load_from_memory(&bytes).map_err(|e| e.to_string())?,
+                            edge,
+                        ),
+                        false,
+                    )]);
+                }
+                d.slides[page.index]
+                    .images
+                    .iter()
+                    .map(|im| {
+                        let decoded =
+                            image::load_from_memory(&im.bytes).map_err(|e| e.to_string())?;
+                        Ok((pixels(decoded, edge), im.is_background))
+                    })
+                    .collect()
+            }
+        }
+    }
+}
 struct CachedPage {
-    document: Arc<Document>,
-    page: usize,
+    source: ImageSource,
+    small: bool,
     images: Images,
 }
 #[derive(Default)]
 pub struct Renderer {
     pages: VecDeque<CachedPage>,
 }
-
-fn pixels(bytes: &[u8]) -> Result<egui::ColorImage, String> {
-    let image = image::load_from_memory(bytes).map_err(|e| e.to_string())?;
-    let image = if image.width().max(image.height()) > 2560 {
-        image.thumbnail(2560, 2560)
+fn pixels(image: image::DynamicImage, edge: u32) -> egui::ColorImage {
+    let rgba = if image.width().max(image.height()) > edge {
+        image.thumbnail(edge, edge)
     } else {
         image
-    };
-    let rgba = image.into_rgba8();
-    Ok(egui::ColorImage::from_rgba_unmultiplied(
-        [rgba.width() as usize, rgba.height() as usize],
-        &rgba,
-    ))
+    }
+    .into_rgba8();
+    egui::ColorImage::from_rgba_unmultiplied([rgba.width() as usize, rgba.height() as usize], &rgba)
 }
 fn fit(bounds: Rect, size: egui::Vec2) -> Rect {
     let ratio = (bounds.width() / size.x).min(bounds.height() / size.y);
     Rect::from_center_size(bounds.center(), size * ratio)
 }
-
 impl Renderer {
-    fn images(&mut self, ctx: &Context, page: &Page) -> &Images {
-        let i = self
-            .pages
-            .iter()
-            .position(|p| Arc::ptr_eq(&p.document, &page.document) && p.page == page.index);
-        let mut entry = if let Some(i) = i {
-            self.pages.remove(i).unwrap()
-        } else {
-            let document = page.document.clone();
-            let index = page.index;
-            let rx = worker(ctx, move || {
-                let Document::Deck(d) = &*document else {
-                    return Ok(Vec::new());
-                };
-                if d.pdf_path.is_some() {
-                    return Ok(vec![(
-                        pixels(&d.render_page(index, 1920).map_err(|e| e.to_string())?)?,
-                        false,
-                    )]);
-                }
-                d.slides[index]
-                    .images
-                    .iter()
-                    .map(|image| Ok((pixels(&image.bytes)?, image.is_background)))
-                    .collect()
-            });
-            CachedPage {
-                document: page.document.clone(),
-                page: page.index,
-                images: Images::Loading(rx),
-            }
-        };
-        if let Images::Loading(rx) = &entry.images {
-            match rx.try_recv() {
-                Ok(Ok(images)) => {
-                    entry.images = Images::Ready(
+    fn images(&mut self, ctx: &Context, source: ImageSource, small: bool) -> Option<&Images> {
+        // Complete off-screen requests too, so scrolling cannot strand the decode queue.
+        let mut loading = 0;
+        for entry in &mut self.pages {
+            if let Images::Loading(rx) = &entry.images {
+                entry.images = match rx.try_recv() {
+                    Ok(Ok(images)) => Images::Ready(
                         images
                             .into_iter()
                             .map(|(im, bg)| {
@@ -152,20 +167,48 @@ impl Renderer {
                                 )
                             })
                             .collect(),
-                    )
-                }
-                Ok(Err(e)) => entry.images = Images::Failed(e),
-                Err(mpsc::TryRecvError::Disconnected) => {
-                    entry.images = Images::Failed("页面读取中断".into())
-                }
-                Err(mpsc::TryRecvError::Empty) => {}
+                    ),
+                    Ok(Err(e)) => Images::Failed(e),
+                    Err(mpsc::TryRecvError::Disconnected) => Images::Failed("页面读取中断".into()),
+                    Err(mpsc::TryRecvError::Empty) => {
+                        loading += 1;
+                        continue;
+                    }
+                };
             }
         }
+        let index = self
+            .pages
+            .iter()
+            .position(|p| p.small == small && p.source.same(&source));
+        let entry = if let Some(i) = index {
+            self.pages.remove(i)?
+        } else {
+            if loading >= 4 {
+                return None;
+            }
+            let job = source.clone();
+            let edge = if small { 600 } else { 2560 };
+            let images = Images::Loading(worker(ctx, move || job.decode(edge)));
+            CachedPage {
+                source,
+                small,
+                images,
+            }
+        };
         self.pages.push_front(entry);
-        self.pages.truncate(6);
-        &self.pages[0].images
+        let (mut previews, mut full) = (0, 0);
+        self.pages.retain(|p| {
+            if p.small {
+                previews += 1;
+                previews <= 48
+            } else {
+                full += 1;
+                full <= 4
+            }
+        });
+        Some(&self.pages.front()?.images)
     }
-
     pub fn canvas(
         &mut self,
         ui: &mut Ui,
@@ -182,14 +225,32 @@ impl Renderer {
         let rect = fit(outer, vec2(16., 9.));
         let painter = ui.painter().with_clip_rect(ui.clip_rect().intersect(rect));
         ui.painter().rect_filled(outer, 0, Color32::BLACK);
-        let base = Color32::from_rgb(14, 23, 29);
-        painter.rect_filled(rect, 0, base);
+        let small = rect.width() * ui.ctx().pixels_per_point() <= 600.;
         let mut blocks = Vec::new();
         let mut continuous = false;
         let mut center = false;
         let fallback = BibleTranslationSettings::default();
         match content {
             Content::Empty => {}
+            Content::Picture(path) => {
+                match self.images(ui.ctx(), ImageSource::Picture(path.clone()), small) {
+                    Some(Images::Ready(textures)) => {
+                        if let Some((texture, _)) = textures.first() {
+                            painter.image(
+                                texture.id(),
+                                fit(rect, texture.size_vec2()),
+                                Rect::from_min_max(pos2(0., 0.), pos2(1., 1.)),
+                                Color32::WHITE,
+                            );
+                        }
+                    }
+                    Some(Images::Failed(e)) => {
+                        blocks.push(Block::plain(format!("无法读取图片 · {e}"), 28., GOLD))
+                    }
+                    _ => {}
+                }
+            }
+            Content::Announcement(a) => a.paint(ui, rect, blank),
             Content::Scripture {
                 verses,
                 continuous: on,
@@ -270,8 +331,8 @@ impl Renderer {
                 Document::Deck(d) => {
                     let slide = &d.slides[page.index];
                     if !slide.images.is_empty() || d.pdf_path.is_some() {
-                        match self.images(ui.ctx(), page) {
-                            Images::Ready(images) => {
+                        match self.images(ui.ctx(), ImageSource::Slide(page.clone()), small) {
+                            Some(Images::Ready(images)) => {
                                 let count = images.iter().filter(|(_, bg)| !bg).count().max(1);
                                 let mut index = 0;
                                 for (texture, bg) in images
@@ -301,10 +362,10 @@ impl Renderer {
                                     );
                                 }
                             }
-                            Images::Failed(e) if !blank => {
+                            Some(Images::Failed(e)) if !blank => {
                                 blocks.push(Block::plain(format!("无法显示页面 · {e}"), 28., GOLD))
                             }
-                            Images::Loading(_) if !blank => {
+                            Some(Images::Loading(_)) | None if !blank => {
                                 blocks.push(Block::plain("正在加载页面…".into(), 26., GOLD))
                             }
                             _ => {}

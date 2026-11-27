@@ -19,10 +19,13 @@ use std::{
 pub enum Tab {
     Bible,
     Library,
+    Songs,
+    Pictures,
+    Announcements,
     Settings,
 }
 pub struct Scheduled {
-    pub entry: ScheduleEntry,
+    pub entry: Option<ScheduleEntry>,
     pub content: Content,
 }
 type BibleLoad = (Vec<cp_bible::Bible>, Vec<String>);
@@ -31,7 +34,23 @@ pub struct App {
     pub manager: SettingsManager,
     pub settings: AppSettings,
     pub fonts: Fonts,
-    pub dark: bool,
+    pub palette: appearance::Palette,
+    pub pictures: crate::pictures_ui::Pictures,
+    pub announcement: crate::announcements_ui::Announcement,
+    pub song_results: Vec<PathBuf>,
+    pub song_query: String,
+    pub song_book: String,
+    pub song_page: Option<Page>,
+    pub deck_page: Option<Page>,
+    pub browse_results: bool,
+    pub history: Vec<Arc<Vec<SelectedVerse>>>,
+    pub history_open: bool,
+    pub search_mode: crate::bible_ui::SearchMode,
+    pub scoped: bool,
+    pub hits: Option<Vec<cp_bible::BibleSearch>>,
+    pub bible_widths: [f32; 2],
+    pub toast: Option<(String, Instant)>,
+    pub schedule_loads: std::collections::VecDeque<Receiver<Vec<Result<Content, String>>>>,
     pub tab: Tab,
     pub bible: Browser,
     pub library: Library,
@@ -104,18 +123,36 @@ impl App {
             && prefs
                 .quick_play_display
                 .is_some_and(|i| usize::try_from(i).is_ok_and(|n| n < screens.len()));
-        let dark = match settings.extra.get("theme").and_then(|s| s.as_str()) {
-            Some("LIGHT") => false,
-            Some("DARK") => true,
-            _ => ctx.style().visuals.dark_mode,
-        };
+        let palette = appearance::palette(
+            settings
+                .extra
+                .get("theme")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Dark"),
+        );
         let fonts = Fonts::install(ctx);
-        appearance::theme(ctx, dark);
+        appearance::theme(ctx, palette);
         let mut app = Self {
             manager,
             settings,
             fonts,
-            dark,
+            palette,
+            pictures: Default::default(),
+            announcement: Default::default(),
+            song_results: Vec::new(),
+            song_query: String::new(),
+            song_book: String::new(),
+            song_page: None,
+            deck_page: None,
+            browse_results: false,
+            history: Vec::new(),
+            history_open: true,
+            search_mode: Default::default(),
+            scoped: false,
+            hits: None,
+            bible_widths: [0.19, 0.105],
+            toast: None,
+            schedule_loads: Default::default(),
             tab: Tab::Bible,
             bible: Default::default(),
             library: Default::default(),
@@ -133,8 +170,8 @@ impl App {
             target,
             fullscreen,
             placed: None,
-            left: false,
-            right: false,
+            left: true,
+            right: true,
             schedule: Vec::new(),
             serial: 0,
             staged: None,
@@ -149,6 +186,7 @@ impl App {
         };
         app.refresh(ctx, ResourceDirectory::Bible);
         app.refresh(ctx, ResourceDirectory::Presentations);
+        app.refresh(ctx, ResourceDirectory::Pictures);
         app
     }
     pub fn save(&mut self) {
@@ -166,6 +204,7 @@ impl App {
                 let added = self.added.clone();
                 self.library_load = Some(worker(ctx, move || Library::load(&settings, &added)));
             }
+            ResourceDirectory::Pictures => self.pictures.refresh(ctx, &settings),
             _ => {}
         }
     }
@@ -191,8 +230,23 @@ impl App {
         self.reset_results = true;
     }
     pub fn poll(&mut self) {
+        self.pictures.poll();
+        while let Some(items) = self
+            .schedule_loads
+            .front()
+            .and_then(|rx| rx.try_recv().ok())
+        {
+            self.schedule_loads.pop_front();
+            for result in items {
+                match result {
+                    Ok(content) => self.enqueue(content),
+                    Err(e) => self.message = e,
+                }
+            }
+        }
         if let Some((modules, errors)) = self.bible_load.as_ref().and_then(|r| r.try_recv().ok()) {
             self.bible_load = None;
+            self.hits = None;
             let (book, chapter) = (self.bible.book, self.bible.chapter);
             self.bible = Browser::new(modules, &self.settings);
             self.bible.set_location(book, chapter);
@@ -203,6 +257,7 @@ impl App {
         if let Some(library) = self.library_load.as_ref().and_then(|r| r.try_recv().ok()) {
             self.library_load = None;
             self.library = library;
+            self.filter_songs();
             if !self.settings.preferred_hymn_book.is_empty()
                 && !self
                     .library
@@ -255,11 +310,18 @@ impl App {
     fn publish_bible(&mut self, verses: Vec<SelectedVerse>) {
         if !verses.is_empty() {
             self.cancel_pending_live();
+            let verses = Arc::new(verses);
+            self.remember_passage(verses.clone());
             self.output.publish(Content::Scripture {
-                verses: Arc::new(verses),
+                verses,
                 continuous: self.continuous,
             });
         }
+    }
+    fn remember_passage(&mut self, verses: Arc<Vec<SelectedVerse>>) {
+        self.history.retain(|old| old != &verses);
+        self.history.insert(0, verses);
+        self.history.truncate(64);
     }
     pub fn cancel_pending_live(&mut self) {
         if let Some((_, live)) = &mut self.opening {
@@ -289,50 +351,60 @@ impl App {
     pub fn clear_passages(&mut self) {
         self.bible.clear();
         self.quick.clear();
+        self.hits = None;
         self.deadline = None;
         if matches!(self.output.content, Content::Scripture { .. }) {
             self.output.content = Content::Empty;
         }
     }
     pub fn add_schedule(&mut self) {
-        self.serial += 1;
-        let id = self.serial.to_string();
-        let item = match self.tab {
+        let content = match self.tab {
             Tab::Bible => {
                 let verses = self.bible.selected();
-                let Some(v) = verses.first() else { return };
-                let entry = ScheduleEntry::Bible {
-                    id,
-                    book_id: v.book_id,
-                    book_name: v.book_name.clone(),
-                    chapter: v.chapter,
-                    verse_number: v.verse_number,
-                    verse_range: v.verse_range.clone(),
-                    verse_text: v.verse_text.clone(),
-                };
-                Scheduled {
-                    entry,
-                    content: Content::Scripture {
-                        verses: Arc::new(verses),
-                        continuous: false,
-                    },
+                if verses.is_empty() {
+                    return;
+                }
+                Content::Scripture {
+                    verses: Arc::new(verses),
+                    continuous: false,
                 }
             }
-            Tab::Library => {
-                let Some(page) = self.staged.as_ref() else {
+            Tab::Library | Tab::Songs => {
+                let Some(page) = self.staged.clone() else {
                     return;
                 };
-                Scheduled {
-                    entry: page.document.entry(
-                        id,
-                        cp_library::quick_play::book(page.document.path(), &self.library.roots),
-                    ),
-                    content: Content::Media(page.clone()),
-                }
+                Content::Media(page)
             }
-            Tab::Settings => return,
+            Tab::Pictures => {
+                let Some(path) = self.pictures.selected.clone() else {
+                    return;
+                };
+                Content::Picture(path)
+            }
+            _ => return,
         };
-        self.schedule.push(item);
+        self.enqueue(content);
+    }
+    pub fn enqueue(&mut self, content: Content) {
+        self.serial += 1;
+        let id = self.serial.to_string();
+        let entry = match &content {
+            Content::Scripture { verses, .. } => verses.first().map(|v| ScheduleEntry::Bible {
+                id,
+                book_id: v.book_id,
+                book_name: v.book_name.clone(),
+                chapter: v.chapter,
+                verse_number: v.verse_number,
+                verse_range: v.verse_range.clone(),
+                verse_text: v.verse_text.clone(),
+            }),
+            Content::Media(page) => Some(page.document.entry(
+                id,
+                cp_library::quick_play::book(page.document.path(), &self.library.roots),
+            )),
+            _ => None,
+        };
+        self.schedule.push(Scheduled { entry, content });
         self.message = format!("已加入程序单 · 共 {} 项", self.schedule.len());
     }
     pub fn play_schedule(&mut self, index: usize) {
@@ -341,14 +413,23 @@ impl App {
         self.opening = None;
         match &content {
             Content::Media(p) => {
-                self.tab = Tab::Library;
+                self.change_tab(if matches!(&*p.document, Document::Song { .. }) {
+                    Tab::Songs
+                } else {
+                    Tab::Library
+                });
                 self.staged = Some(p.clone());
             }
             Content::Scripture { verses, .. } => {
-                self.tab = Tab::Bible;
+                self.change_tab(Tab::Bible);
+                self.remember_passage(verses.clone());
                 self.bible.restore(verses);
             }
-            Content::Empty => {}
+            Content::Picture(path) => {
+                self.change_tab(Tab::Pictures);
+                self.pictures.selected = Some(path.clone());
+            }
+            Content::Announcement(_) | Content::Empty => {}
         }
         self.output.publish(content);
     }
@@ -364,17 +445,24 @@ impl App {
         }
     }
     pub fn navigate(&mut self, delta: isize, projector: bool) {
-        if !projector && self.tab == Tab::Library {
+        if (!projector && self.tab == Tab::Pictures)
+            || (projector && matches!(self.output.content, Content::Picture(_)))
+        {
+            self.step_picture(delta, projector);
+            return;
+        }
+        if !projector && matches!(self.tab, Tab::Settings | Tab::Announcements) {
+            return;
+        }
+        if !projector && matches!(self.tab, Tab::Library | Tab::Songs) {
             self.step_page(delta);
             return;
         }
         if projector {
             if let Content::Media(p) = &mut self.output.content {
                 p.step(delta);
-                if let Some(staged) = &mut self.staged {
-                    if Arc::ptr_eq(&p.document, &staged.document) {
-                        staged.index = p.index;
-                    }
+                for staged in [&mut self.staged, &mut self.song_page, &mut self.deck_page].into_iter().flatten(){
+                    if Arc::ptr_eq(&p.document,&staged.document){staged.index=p.index;}
                 }
                 return;
             }
@@ -396,6 +484,17 @@ impl App {
     }
     pub fn change_tab(&mut self, tab: Tab) {
         if self.tab != tab {
+            match self.tab {
+                Tab::Library => self.deck_page = self.staged.take(),
+                Tab::Songs => self.song_page = self.staged.take(),
+                _ => {}
+            }
+            self.opening = None;
+            self.staged = match tab {
+                Tab::Library => self.deck_page.take(),
+                Tab::Songs => self.song_page.take(),
+                _ => None,
+            };
             self.tab = tab;
             self.focus_search = self
                 .settings

@@ -1,5 +1,6 @@
 #![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
 
+mod announcements_ui;
 mod app;
 mod appearance;
 mod bible;
@@ -8,16 +9,19 @@ mod keyboard;
 mod library_ui;
 mod media;
 mod output;
+mod pictures_ui;
 mod screens;
 mod settings_ui;
 mod shell;
+mod songs_ui;
 #[cfg(test)]
 mod tests;
+mod widgets;
 
 fn main() -> eframe::Result<()> {
     let screens = screens::screens();
     let mut viewport = screens::main_window(&screens[0]);
-    if let Ok(image) = image::open(r"D:\churchpre\project\assets\branding\app-icon.png") {
+    if let Ok(image) = image::load_from_memory(include_bytes!("../assets/app-icon.png")) {
         let icon = image.thumbnail(256, 256).into_rgba8();
         viewport = viewport.with_icon(egui::IconData {
             width: icon.width(),

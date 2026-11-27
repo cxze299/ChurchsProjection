@@ -366,3 +366,5 @@ P12 导出文件和 P8 密钥按照工作流要求编码后配置。证书签名
    - **构建产物与验证结果**：
      - 全工作区 58 项测试（`cargo test --workspace`）与 `cargo clippy --workspace --all-targets -- -D warnings` 全部 0 警告通过。
      - 单文件 Release 可执行程序：`D:\churchpre\rust-project\target\release\ChurchPresenter.exe`，体积仅 **`9.67 MB`**（无需捆绑 112 MB JVM 运行时，较原 Kotlin 解压目录 `638.58 MB` 缩减 **98.5%**），本机实测启动正常。
+
+4. **Rust 原生版 Material 3 UI 深度重构**：新增 widgets.rs、songs_ui.rs、pictures_ui.rs、nnouncements_ui.rs，补齐 8 套原版配色方案与 6 个完整标签页（圣经+历史记录卡片、诗歌表格+段落卡片、文稿 16:9 缩略图网格、图片 16:9 缩略图网格、布告倒计时+九宫格位置选择器、卡片式设置）。全工作区 62 项测试与 clippy 零警告通过，单文件 D:\churchpre\rust-project\target\release\ChurchPresenter.exe 体积 10.01 MB，本机实测启动正常。
