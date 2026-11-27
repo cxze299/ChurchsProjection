@@ -4,6 +4,7 @@
 
 ### 2026-11-27
 
+- 在仓库独立目录 `rust-project/` 下使用纯原生 Rust（`eframe` / `egui` Workspace，包含 `cp-core`、`cp-bible`、`cp-library`、`cp-app` 四个 crate）完整重写 ChurchPresenter 核心主力桌面软件，与原 Kotlin 工程 `project/` 并存：涵盖 `.spb` 圣经解析、66 卷拼音首字母与多书卷连续速投、段选紧凑引用与连续上屏自动去重、多音字诗歌检索与优先格式排序、`.pptx`/`.pdf`/`.docx`/`.song` 解析渲染、9 类多目录配置与快捷键录制、左右边栏统一尺寸（`36.dp` 分隔条、`32.dp × 40.dp` 按钮、`24.dp` 箭头）及带右键菜单与 `F11`/`B`/`T`/`Esc` 快捷键的双窗口投影系统。通过 `cargo test --workspace` 共 58 项测试与 `cargo clippy` 零警告检查，生成单文件原生可执行程序 `D:\churchpre\rust-project\target\release\ChurchPresenter.exe`（体积仅 `9.67 MB`，较原 Kotlin+JRE 解压目录 `638.58 MB` 缩减 98.5%）。
 - 经文投影样式设置增加字号和间距滑块。设置区内容超出窗口时显示滚动条。修改可在窗口内实时预览，点击“应用”后保存并更新投影，点击“取消”则放弃修改。
 
 ### 2026-11-26
@@ -171,3 +172,7 @@
 - 补齐 Git 提交历史，使本地构建版本号与源码提交计数一致。
 
 本日志记录本地定制功能，发布状态与验证结果以实际构建为准。
+
+## 2026-11-27 Rust 歌词解析
+
+Codex 在 `project/modules/core/song-chords/rust` 添加了多语言段落标题识别与 SPS 文本歌词解析。Windows 上的两项 Rust 单元测试通过。桌面应用仍使用 Kotlin 实现。
