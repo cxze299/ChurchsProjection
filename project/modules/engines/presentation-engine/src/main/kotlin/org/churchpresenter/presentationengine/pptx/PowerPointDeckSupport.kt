@@ -60,6 +60,7 @@ internal object PowerPointDeckSupport {
             .also { if (registerFonts) registerEmbeddedFonts(it) }
             .also { show ->
                 (show as? XMLSlideShow)?.let {
+                    preferEquationFallbacks(it)
                     stripUnsupportedHighlights(it)
                     addMissingFillRects(it)
                 }

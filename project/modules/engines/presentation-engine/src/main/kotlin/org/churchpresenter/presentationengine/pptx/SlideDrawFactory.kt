@@ -16,6 +16,7 @@ import org.apache.poi.sl.usermodel.ShapeType
 import org.apache.poi.sl.usermodel.TextBox
 import org.apache.poi.sl.usermodel.TextShape
 import org.apache.poi.xslf.usermodel.XSLFShape
+import org.apache.poi.xslf.usermodel.XSLFTextParagraph
 import org.openxmlformats.schemas.presentationml.x2006.main.CTShape
 import java.awt.Graphics2D
 import java.awt.Paint
@@ -250,7 +251,7 @@ private fun stackParagraphs(shape: TextShape<*, *>, graphics: Graphics2D, x: Dou
             y -= previousDescent
         }
 
-        drawable.setPosition(x, y)
+        drawable.setPosition(x, y + notationBaselineOffset(shape, paragraph as? XSLFTextParagraph, drawable))
         drawable.markFirst(previousDescent == null)
         drawable.draw(graphics)
         y += drawable.y
@@ -262,6 +263,21 @@ private fun stackParagraphs(shape: TextShape<*, *>, graphics: Graphics2D, x: Dou
         autoNumberIndex++
     }
     return y - y0
+}
+
+/** SimpMusic draws accent glyphs above the baseline at the foot of their small overlay boxes. */
+private fun notationBaselineOffset(
+    shape: TextShape<*, *>,
+    paragraph: XSLFTextParagraph?,
+    drawable: KernedParagraph,
+): Double {
+    if (paragraph == null || !drawable.isSingleLine || shape.textParagraphs.size != 1 ||
+        paragraph.textRuns.isEmpty() || paragraph.textRuns.any { !it.fontFamily.equals("SimpMusic Accent", true) }
+    ) return 0.0
+    val height = shape.anchor.height - shape.insets.top - shape.insets.bottom
+    if (height <= 0.0) return 0.0
+    val baseline = drawable.firstLineHeight - drawable.lastLineDescent
+    return (height - baseline).coerceAtMost(0.0)
 }
 
 /** OOXML paragraph spacing: positive is a percentage of [lineHeight], negative is absolute points. */

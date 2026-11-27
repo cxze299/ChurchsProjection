@@ -48,6 +48,8 @@ private class RangeAttribute(val attribute: Attribute, val value: Any, val begin
  * PowerPoint does; see [nextHangingLayout].
  */
 internal class KernedParagraph(paragraph: TextParagraph<*, *, *>) : DrawTextParagraph(paragraph) {
+    val isSingleLine: Boolean get() = lines.size == 1
+
     val lastLineDescent: Double
         get() = lines.lastOrNull()?.layout?.descent?.toDouble() ?: 0.0
 
