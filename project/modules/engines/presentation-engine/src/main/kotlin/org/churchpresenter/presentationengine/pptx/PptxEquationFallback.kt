@@ -14,6 +14,7 @@ private val alternateContentName = QName(MC, "AlternateContent")
 private val fallback = QName(MC, "Fallback")
 private val shape = QName(P, "sp")
 private val picture = QName(P, "pic")
+private val groupShape = QName(P, "grpSp")
 
 /** Promote the authored fallback for an Office Math shape that POI cannot draw. */
 internal fun preferEquationFallbacks(xml: XmlObject) {
@@ -24,7 +25,9 @@ internal fun preferEquationFallbacks(xml: XmlObject) {
             if (!destination.isStart) destination.toFirstChild()
             if (destination.name != alternateContentName) return@use
             replacement.newCursor().use sourceCursor@{ source ->
-                if (!source.toFirstChild() || (source.name != shape && source.name != picture)) return@sourceCursor
+                if (!source.toFirstChild() ||
+                    (source.name != shape && source.name != picture && source.name != groupShape)
+                ) return@sourceCursor
                 source.push()
                 val hasOtherChildren = source.toNextSibling()
                 source.pop()

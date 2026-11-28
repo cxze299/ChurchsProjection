@@ -2,6 +2,13 @@
 
 ## 未发布
 
+### 2026-11-28
+
+- 双轨修复 Windows 与 macOS 两端 `.ppsx`、`.pps`、`.ppt` 演示文稿中简谱乐谱与歌词渲染问题：
+  - 新增 `PowerPointDocumentPdf` 高保真转换缓存管线：静态演示文稿（含 `.pps`、`.ppsx`、`.ppt`）在 Windows 优先调用本机 PowerPoint/WPS COM 或 LibreOffice，在 macOS 优先调用 LibreOffice 或 Keynote 导出缓存 PDF 并通过 `PDFBox` 精确渲染，页数不匹配或无外部套件时自动无感回退至内置引擎。
+  - 深度修复内置 POI 渲染引擎：新增 `.odttf` GUID 混淆字体解码与文稿级内嵌子集字体隔离（避免多首诗歌同名子集字体互相覆盖）；补齐 `.ppt`/`.pps` 二进制字符间距与简谱符号框基线定位；支持 `normAutofit` 自动缩排字号与行距、真实水平制表位（`\t`）对齐、乐谱符号字体 PUA（`0xF000–0xF0FF`）字形探测、公式拍号组合形状回退及 WMF/EMF GB18030 中文乱码字体名恢复；缓存渲染版本号升至 `9`。
+  - 通过 `PowerPointScoreAndDualTrackTest`、`EmbeddedFontTest`、`PptxEquationFallbackTest`、`PptxLineBreakingTest`、`PresentationLoaderFormatTest` 及 `:composeApp:compileKotlinJvm` 编译验证。
+
 ### 2026-11-27
 
 - 修复 Windows PowerPoint 简谱投影。使用文稿自带的公式兼容图片恢复母版拍号，按简谱符号框定位连线和延长记号。用《离弃宝座，撇下王冕》的 PPTX 样例核对实际渲染，并运行 15 项相关测试。

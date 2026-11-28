@@ -19,6 +19,7 @@ import org.churchpresenter.presentationengine.model.KeynoteStaticStrategy
 import org.churchpresenter.presentationengine.model.LayerSpec
 import org.churchpresenter.presentationengine.model.RasterLayer
 import org.churchpresenter.presentationengine.model.RectPt
+import org.churchpresenter.presentationengine.pptx.DECK_EMBEDDED_FONTS_KEY
 import org.churchpresenter.presentationengine.pptx.PowerPointDeckSupport
 import org.churchpresenter.presentationengine.pptx.PptxSlideRasterizer
 import org.churchpresenter.presentationengine.pptx.SlideDrawFactory
@@ -99,6 +100,8 @@ class DeckRasterizer(
 
     private var pdfDocument: PDDocument? = null
     private var pdfRenderer: PDFRenderer? = null
+    private var powerPointPdfAttempted = false
+    private var powerPointPdfFile: File? = null
     private var slideShow: SlideShow<*, *>? = null
     private var keynoteTempPdf: File? = null
     private var keynoteSceneRasterizer: KeynoteSceneRasterizer? = null
@@ -224,6 +227,7 @@ class DeckRasterizer(
     // raises Errors (OutOfMemoryError on an absurd declared length) as well as exceptions.
     @Suppress("TooGenericExceptionCaught")
     private fun renderPowerPointSlide(file: File, slideIndex: Int): BufferedImage {
+        renderPowerPointViaNativePdfOrNull(file, slideIndex)?.let { return it }
         val show = slideShow ?: PowerPointDeckSupport.open(file).also { slideShow = it }
         val slide = show.slides[slideIndex]
         val pageSize = show.pageSize
@@ -234,7 +238,7 @@ class DeckRasterizer(
             scale = scale,
         )
         return try {
-            slideImage(canvas) { graphics ->
+            slideImage(canvas, show) { graphics ->
                 DrawFactory.getInstance(graphics).getDrawable(slide).draw(graphics)
             }
         } catch (t: Throwable) {
@@ -244,8 +248,39 @@ class DeckRasterizer(
             // slide missing one picture, so draw it again the forgiving way. Nothing is retained
             // from the failed attempt: it is a fresh image, because the first pass may have
             // painted part of the slide before it threw.
-            renderPowerPointSlideDegraded(slide, slideIndex, canvas, t)
+            renderPowerPointSlideDegraded(show, slide, slideIndex, canvas, t)
         }
+    }
+
+    /**
+     * Track A high-fidelity path: for static PowerPoint decks (including `.ppsx`, `.pps`, `.ppt`),
+     * prefer the cached PDF exported by the host's native Office / WPS / LibreOffice / Keynote
+     * suite whenever available and its page count matches [deck.slideCount] 1:1.
+     */
+    private fun renderPowerPointViaNativePdfOrNull(file: File, slideIndex: Int): BufferedImage? {
+        if (!powerPointPdfAttempted) {
+            powerPointPdfAttempted = true
+            val isStaticDeck = deck.slides.all { it.timeline == null }
+            if (isStaticDeck) {
+                val converted = PowerPointDocumentPdf.convertOrNull(file)
+                if (converted != null) {
+                    try {
+                        val document = PDDocument.load(converted)
+                        if (document.numberOfPages == deck.slideCount) {
+                            pdfDocument = document
+                            pdfRenderer = PDFRenderer(document)
+                            powerPointPdfFile = converted
+                        } else {
+                            document.close()
+                        }
+                    } catch (_: Exception) {
+                        powerPointPdfFile = null
+                    }
+                }
+            }
+        }
+        val pdfFile = powerPointPdfFile ?: return null
+        return runCatching { renderPdfPage(pdfFile, slideIndex) }.getOrNull()
     }
 
     /**
@@ -255,7 +290,11 @@ class DeckRasterizer(
      * pipeline's forced white fill (the slide's own background — from slide, layout or master —
      * is painted by POI's DrawSlide).
      */
-    private fun slideImage(canvas: SlideCanvas, draw: (Graphics2D) -> Unit): BufferedImage {
+    private fun slideImage(
+        canvas: SlideCanvas,
+        show: SlideShow<*, *>,
+        draw: (Graphics2D) -> Unit,
+    ): BufferedImage {
         val image = BufferedImage(canvas.width, canvas.height, BufferedImage.TYPE_INT_ARGB)
         val graphics = image.createGraphics()
         try {
@@ -266,6 +305,7 @@ class DeckRasterizer(
             graphics.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
             graphics.setRenderingHint(Drawable.FONT_HANDLER, SlideFontRegistry.drawFontManager)
             graphics.setRenderingHint(Drawable.DRAW_FACTORY, SlideDrawFactory)
+            graphics.setRenderingHint(DECK_EMBEDDED_FONTS_KEY, PowerPointDeckSupport.embeddedFontsFor(show))
             graphics.scale(canvas.scale, canvas.scale)
             draw(graphics)
         } finally {
@@ -283,6 +323,7 @@ class DeckRasterizer(
      * an ordering POI owns, which is why it runs only after that call has already failed.
      */
     private fun renderPowerPointSlideDegraded(
+        show: SlideShow<*, *>,
         slide: Slide<*, *>,
         slideIndex: Int,
         canvas: SlideCanvas,
@@ -290,7 +331,7 @@ class DeckRasterizer(
     ): BufferedImage {
         val shapes: List<Shape<*, *>> = slide.shapes.toList()
         var skipped = emptyList<SkippedDraw<Shape<*, *>>>()
-        val image = slideImage(canvas) { graphics ->
+        val image = slideImage(canvas, show) { graphics ->
             val factory = DrawFactory.getInstance(graphics)
             runCatching { slide.background?.let { factory.getDrawable(it).draw(graphics) } }
             if (slide.followMasterGraphics) {

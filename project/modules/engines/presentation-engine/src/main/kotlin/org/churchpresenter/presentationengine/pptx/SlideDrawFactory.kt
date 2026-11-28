@@ -14,9 +14,9 @@ import org.apache.poi.sl.usermodel.PlaceableShape
 import org.apache.poi.sl.usermodel.Shape
 import org.apache.poi.sl.usermodel.ShapeType
 import org.apache.poi.sl.usermodel.TextBox
+import org.apache.poi.sl.usermodel.TextParagraph
 import org.apache.poi.sl.usermodel.TextShape
 import org.apache.poi.xslf.usermodel.XSLFShape
-import org.apache.poi.xslf.usermodel.XSLFTextParagraph
 import org.openxmlformats.schemas.presentationml.x2006.main.CTShape
 import java.awt.Graphics2D
 import java.awt.Paint
@@ -251,10 +251,16 @@ private fun stackParagraphs(shape: TextShape<*, *>, graphics: Graphics2D, x: Dou
             y -= previousDescent
         }
 
-        drawable.setPosition(x, y + notationBaselineOffset(shape, paragraph as? XSLFTextParagraph, drawable))
+        drawable.setPosition(x, y + notationBaselineOffset(shape, paragraph, drawable))
         drawable.markFirst(previousDescent == null)
         drawable.draw(graphics)
-        y += drawable.y
+        val lineSpacingReduction = normAutofitLineSpacingReduction(shape)
+        val paragraphAdvance = if (lineSpacingReduction > 0.0 && drawable.y > 0.0) {
+            drawable.y * (1.0 - lineSpacingReduction)
+        } else {
+            drawable.y
+        }
+        y += paragraphAdvance
         previousDescent = drawable.lastLineDescent
 
         if (paragraphs.hasNext()) {
@@ -265,15 +271,33 @@ private fun stackParagraphs(shape: TextShape<*, *>, graphics: Graphics2D, x: Dou
     return y - y0
 }
 
-/** SimpMusic draws accent glyphs above the baseline at the foot of their small overlay boxes. */
+private val NOTATION_ACCENT_FAMILIES = setOf(
+    "simpmusic accent",
+    "simpmusic",
+    "jpfont",
+    "musicalsymbols",
+    "opus",
+    "maestro",
+)
+
+/**
+ * Musical notation accent fonts (e.g. `SimpMusic Accent` in `.ppsx`, `.pps`, and `.ppt`) draw
+ * slurs, fermatas, and tie glyphs above the baseline inside tight overlay boxes. Anchor the
+ * baseline to the bottom of the inner box whenever it would otherwise drop below the box.
+ */
 private fun notationBaselineOffset(
     shape: TextShape<*, *>,
-    paragraph: XSLFTextParagraph?,
+    paragraph: TextParagraph<*, *, *>,
     drawable: KernedParagraph,
 ): Double {
-    if (paragraph == null || !drawable.isSingleLine || shape.textParagraphs.size != 1 ||
-        paragraph.textRuns.isEmpty() || paragraph.textRuns.any { !it.fontFamily.equals("SimpMusic Accent", true) }
-    ) return 0.0
+    if (!drawable.isSingleLine || shape.textParagraphs.size != 1) return 0.0
+    val runs = paragraph.textRuns
+    if (runs.isEmpty()) return 0.0
+    val isNotationBox = runs.all { run ->
+        val family = run.fontFamily?.substringBefore('\u0000')?.trim()?.removePrefix("@")?.lowercase()
+        family != null && (family in NOTATION_ACCENT_FAMILIES || family.contains("simpmusic"))
+    }
+    if (!isNotationBox) return 0.0
     val height = shape.anchor.height - shape.insets.top - shape.insets.bottom
     if (height <= 0.0) return 0.0
     val baseline = drawable.firstLineHeight - drawable.lastLineDescent
