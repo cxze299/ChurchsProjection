@@ -1,14 +1,18 @@
 /*
  * The line breaking below is a port of Apache POI 5.5.1's DrawTextParagraph.breakText,
  * getAttributedString, processGlyphs and nextPart, licensed under the Apache License, Version 2.0
- * (http://www.apache.org/licenses/LICENSE-2.0). Changed: each run's font has kerning turned on, and a
- * line's trailing spaces may hang past the wrapping width, and each run's font is built from the
- * substituted family rather than the deck's own.
+ * (http://www.apache.org/licenses/LICENSE-2.0). Changed: each run's font has kerning turned on, a
+ * line's trailing spaces may hang past the wrapping width, per-deck embedded subset fonts are
+ * honoured directly, PUA symbol codepoints (0xF000..0xF0FF) are probed for musical notation fonts,
+ * normAutofit scaling and HSLF/XSLF character spacing are applied, and explicit tab stops (\t)
+ * advance to PowerPoint's horizontal tab positions.
  */
 package org.churchpresenter.presentationengine.pptx
 
 import org.apache.poi.common.usermodel.fonts.FontGroup
 import org.apache.poi.common.usermodel.fonts.FontInfo
+import org.apache.poi.hslf.model.textproperties.TextProp
+import org.apache.poi.hslf.usermodel.HSLFTextRun
 import org.apache.poi.sl.draw.DrawFactory
 import org.apache.poi.sl.draw.DrawFontManager
 import org.apache.poi.sl.draw.DrawPaint
@@ -18,12 +22,19 @@ import org.apache.poi.sl.usermodel.HighlightColorSupport
 import org.apache.poi.sl.usermodel.TextParagraph
 import org.apache.poi.sl.usermodel.TextParagraph.TextAlign
 import org.apache.poi.sl.usermodel.TextRun
+import org.apache.poi.sl.usermodel.TextShape
+import org.apache.poi.util.Units
+import org.apache.poi.xslf.usermodel.XSLFTextParagraph
 import org.apache.poi.xslf.usermodel.XSLFTextRun
+import org.apache.poi.xslf.usermodel.XSLFTextShape
+import org.openxmlformats.schemas.presentationml.x2006.main.CTShape
 import java.awt.Font
 import java.awt.Graphics2D
+import java.awt.font.GraphicAttribute
 import java.awt.font.LineBreakMeasurer
 import java.awt.font.TextAttribute
 import java.awt.font.TextLayout
+import java.awt.geom.Rectangle2D
 import java.text.AttributedCharacterIterator
 import java.text.AttributedCharacterIterator.Attribute
 import java.text.AttributedString
@@ -35,17 +46,19 @@ private class Line(val layout: TextLayout, val end: Int)
 private class RangeAttribute(val attribute: Attribute, val value: Any, val begin: Int, val end: Int)
 
 /**
+ * Zero-height horizontal spacer representing a single `\t` advanced to its PowerPoint tab stop.
+ */
+private class TabGraphicAttribute(private val advanceWidth: Float) : GraphicAttribute(ROMAN_BASELINE) {
+    override fun getAscent(): Float = 0f
+    override fun getDescent(): Float = 0f
+    override fun getAdvance(): Float = advanceWidth.coerceAtLeast(1f)
+    override fun getBounds(): Rectangle2D = Rectangle2D.Float(0f, 0f, advance, 0f)
+    override fun draw(graphics: Graphics2D, x: Float, y: Float) = Unit
+}
+
+/**
  * A paragraph drawable that lays its lines out with kerning, reports the descent of its last
  * line, and opens the two steps [stackParagraphs] calls from outside POI's package.
- *
- * PowerPoint kerns text at the sizes slides use (every stock template sets `kern="1200"`, kerning
- * from 12pt up); Java kerns only when the font asks for it, and POI never does. Unkerned, a line
- * runs a little wider than PowerPoint's — enough that a line PowerPoint fits in its box wraps its
- * last word here, the paragraph grows a line, and the slide no longer matches. Kerning is applied
- * at every size: below 12pt the difference it makes is a fraction of a point.
- *
- * Lines also break on their visible width, letting the spaces that end them hang past the edge as
- * PowerPoint does; see [nextHangingLayout].
  */
 internal class KernedParagraph(paragraph: TextParagraph<*, *, *>) : DrawTextParagraph(paragraph) {
     val isSingleLine: Boolean get() = lines.size == 1
@@ -111,35 +124,63 @@ internal class KernedParagraph(paragraph: TextParagraph<*, *, *>) : DrawTextPara
     private fun attributedRuns(graphics: Graphics2D, text: StringBuilder): List<RangeAttribute> {
         val paint = DrawPaint(paragraph.parentShape)
         val fonts = DrawFactory.getInstance(graphics).getFontManager(graphics)
+        val deckFonts = deckEmbeddedFonts(graphics)
+        val fontScale = normAutofitFontScale(paragraph.parentShape)
+        val tabStops = explicitTabStopsPt(paragraph)
+        val defaultTabPt = (paragraph.defaultTabSize ?: DEFAULT_TAB_SIZE_PT).coerceAtLeast(1.0)
         val ranges = mutableListOf<RangeAttribute>()
+        var lineAdvanceX = 0.0
         for (run in paragraph) {
-            var runText = getRenderableText(graphics, run)
+            val raw = run.rawText.orEmpty()
+            val hasTab = '\t' in raw
+            var runText = if (hasTab) renderableTextPreservingTabs(run) else getRenderableText(graphics, run)
             if (runText.isEmpty()) continue
             val fontInfo = run.getFontInfo(null)
             runText = fonts.mapFontCharset(graphics, fontInfo, runText)
-            val begin = text.length
-            text.append(runText)
-            val att = runAttributes(graphics, paint, run)
-            // The font Java draws is the FONT attribute, built here from the *substituted* family:
-            // POI built it from the deck's own name, which for a font this machine lacks is Java's
-            // Dialog — the substitute it then added as FAMILY is ignored beside a FONT.
+            val att = runAttributes(graphics, paint, run, fontScale)
             val runFont = fontInfo ?: PlainFontInfo(paragraph.defaultFontFamily)
-            att[TextAttribute.FAMILY] = mappedFamily(graphics, fonts, runFont)
+            val mappedName = mappedFamily(graphics, fonts, runFont)
+            att[TextAttribute.FAMILY] = mappedName
             att[TextAttribute.KERNING] = TextAttribute.KERNING_ON
-            att[TextAttribute.FONT] = Font(att)
+            att[TextAttribute.FONT] = buildAwtFont(deckFonts, mappedName, att)
+            val begin = text.length
+            val resolved = partFontsAndRemap(graphics, fonts, deckFonts, run, runText, begin, att)
+            val finalRunText = resolved.text
+            text.append(finalRunText)
             att.forEach { (key, value) -> ranges += RangeAttribute(key, value, begin, text.length) }
             textEffectsOf(run)?.let { ranges += RangeAttribute(TextEffectsKey, it, begin, text.length) }
-            ranges += partFonts(graphics, fonts, PlacedRun(run, runText, begin), att)
+            ranges += resolved.ranges
+            if (hasTab) {
+                lineAdvanceX = applyTabStops(
+                    graphics = graphics,
+                    runText = finalRunText,
+                    begin = begin,
+                    baseFont = att[TextAttribute.FONT] as Font,
+                    startX = lineAdvanceX,
+                    tabStops = tabStops,
+                    defaultTabPt = defaultTabPt,
+                    ranges = ranges,
+                )
+            } else {
+                val lastBreak = finalRunText.lastIndexOf('\n')
+                val tail = if (lastBreak >= 0) finalRunText.substring(lastBreak + 1) else finalRunText
+                if (lastBreak >= 0) lineAdvanceX = 0.0
+                if (tail.isNotEmpty()) {
+                    val font = att[TextAttribute.FONT] as Font
+                    lineAdvanceX += TextLayout(tail, font, graphics.fontRenderContext).advance.toDouble()
+                }
+            }
         }
         // A paragraph needs at least one character to be measured at all.
         if (text.isEmpty()) {
             text.append(" ")
+            val defaultName = mappedFamily(graphics, fonts, PlainFontInfo(paragraph.defaultFontFamily))
             val att = mutableMapOf<Attribute, Any>(
-                TextAttribute.SIZE to paragraph.defaultFontSize.toFloat(),
-                TextAttribute.FAMILY to mappedFamily(graphics, fonts, PlainFontInfo(paragraph.defaultFontFamily)),
+                TextAttribute.SIZE to (paragraph.defaultFontSize * fontScale).toFloat(),
+                TextAttribute.FAMILY to defaultName,
                 TextAttribute.KERNING to TextAttribute.KERNING_ON,
             )
-            att[TextAttribute.FONT] = Font(att)
+            att[TextAttribute.FONT] = buildAwtFont(deckFonts, defaultName, att)
             att.forEach { (key, value) -> ranges += RangeAttribute(key, value, 0, 1) }
         }
         return ranges
@@ -156,6 +197,7 @@ internal class KernedParagraph(paragraph: TextParagraph<*, *, *>) : DrawTextPara
         val character = (if (numbering != null) numbering.format(autoNbrIdx) else style.bulletCharacter)
             ?: return null
         val fonts = DrawFactory.getInstance(graphics).getFontManager(graphics)
+        val deckFonts = deckEmbeddedFonts(graphics)
         val named = PlainFontInfo(style.bulletFont ?: paragraph.defaultFontFamily)
         val font = PlainFontInfo(mappedFamily(graphics, fonts, named))
         val textSize = (firstLineAttr.getAttribute(TextAttribute.SIZE) as Number).toDouble()
@@ -170,7 +212,7 @@ internal class KernedParagraph(paragraph: TextParagraph<*, *, *>) : DrawTextPara
             ?.let { DrawPaint(paragraph.parentShape).getPaint(graphics, it) }
             ?: firstLineAttr.getAttribute(TextAttribute.FOREGROUND)
         color?.let { att[TextAttribute.FOREGROUND] = it }
-        att[TextAttribute.FONT] = Font(att)
+        att[TextAttribute.FONT] = buildAwtFont(deckFonts, font.typeface, att)
         firstLineAttr.getAttribute(TextEffectsKey)?.let { att[TextEffectsKey] = it }
 
         val text = AttributedString(fonts.mapFontCharset(graphics, font, character))
@@ -182,7 +224,12 @@ internal class KernedParagraph(paragraph: TextParagraph<*, *, *>) : DrawTextPara
     private fun mappedFamily(graphics: Graphics2D, fonts: DrawFontManager, font: FontInfo): String =
         fonts.getMappedFont(graphics, font)?.typeface ?: paragraph.defaultFontFamily
 
-    private fun runAttributes(graphics: Graphics2D, paint: DrawPaint, run: TextRun): MutableMap<Attribute, Any> {
+    private fun runAttributes(
+        graphics: Graphics2D,
+        paint: DrawPaint,
+        run: TextRun,
+        fontScale: Double,
+    ): MutableMap<Attribute, Any> {
         val att = mutableMapOf<Attribute, Any>()
         paint.getPaint(graphics, run.fontColor)?.let { att[TextAttribute.FOREGROUND] = it }
         if (run is HighlightColorSupport) {
@@ -190,10 +237,10 @@ internal class KernedParagraph(paragraph: TextParagraph<*, *, *>) : DrawTextPara
                 ?.let { style -> paint.getPaint(graphics, style) }
                 ?.let { att[TextAttribute.BACKGROUND] = it }
         }
-        val fontSize = (run.fontSize ?: paragraph.defaultFontSize).toFloat()
+        val fontSize = ((run.fontSize ?: paragraph.defaultFontSize) * fontScale).toFloat()
         att[TextAttribute.SIZE] = fontSize
-        // OOXML stores character spacing in points; AWT tracking uses a fraction of the font size.
-        val spacing = (run as? XSLFTextRun)?.characterSpacing ?: 0.0
+        // PowerPoint stores character spacing in points; AWT tracking uses a fraction of the font size.
+        val spacing = characterSpacingPt(run) * fontScale
         if (spacing.isFinite() && spacing != 0.0 && fontSize > 0f) {
             att[TextAttribute.TRACKING] = (spacing / fontSize).toFloat()
         }
@@ -213,25 +260,29 @@ internal class KernedParagraph(paragraph: TextParagraph<*, *, *>) : DrawTextPara
         return att
     }
 
+    private class ResolvedRunText(val text: String, val ranges: List<RangeAttribute>)
+
     /**
-     * POI's `processGlyphs`: per font group of the run (Latin, East Asian, symbol, …), the font for
-     * the characters its mapped font can show and the fallback font for those it cannot — each as
-     * the FONT of its own stretch, built on the run's [base] attributes, since a FONT is the only
-     * font attribute Java honours beside one.
+     * Resolves per-font-group faces (Latin, East Asian, Symbol, ...) while preferring per-deck
+     * embedded fonts and probing Windows Symbol PUA codepoints (`0xF000..0xF0FF`) so custom
+     * musical notation fonts never fall back to `SansSerif`.
      */
-    private fun partFonts(
+    private fun partFontsAndRemap(
         graphics: Graphics2D,
         fonts: DrawFontManager,
-        placed: PlacedRun,
+        deckFonts: Map<String, List<Font>>,
+        run: TextRun,
+        rawText: String,
+        begin: Int,
         base: Map<Attribute, Any>,
-    ): List<RangeAttribute> {
-        val run = placed.run
+    ): ResolvedRunText {
         val ranges = mutableListOf<RangeAttribute>()
         val attributes = base - TextAttribute.FONT
-        fun font(family: String?) = Font(attributes + (TextAttribute.FAMILY to (family ?: paragraph.defaultFontFamily)))
-        val logical = font(Font.SANS_SERIF)
+        fun font(family: String?) = buildAwtFont(deckFonts, family ?: paragraph.defaultFontFamily, attributes)
+        val logical = Font(attributes + (TextAttribute.FAMILY to Font.SANS_SERIF))
+        val remapped = StringBuilder(rawText.length)
         var groupBegin = 0
-        for (group in FontGroup.getFontGroupRanges(placed.text)) {
+        for (group in FontGroup.getFontGroupRanges(rawText)) {
             val runFont = run.getFontInfo(group.fontGroup) ?: run.getFontInfo(FontGroup.LATIN)
             val fallbackInfo = fonts.getFallbackFont(graphics, runFont)
             val mappedInfo = fonts.getMappedFont(graphics, runFont)
@@ -240,42 +291,169 @@ internal class KernedParagraph(paragraph: TextParagraph<*, *, *>) : DrawTextPara
             val mapped = font(mappedInfo.typeface)
             val fallback = font(fallbackInfo.typeface)
             val groupEnd = groupBegin + group.length
-            fun fontFor(codePoint: Int): Font = when {
-                mapped.canDisplay(codePoint) -> mapped
-                fallback.canDisplay(codePoint) -> fallback
-                else -> logical
+
+            fun selectFontAndCodePoint(codePoint: Int): Pair<Font, Int> {
+                if (codePoint == '\t'.code) return mapped to codePoint
+                if (mapped.canDisplay(codePoint)) return mapped to codePoint
+                if (codePoint in SYMBOL_ASCII_MIN..SYMBOL_ASCII_MAX) {
+                    val pua = codePoint or SYMBOL_PUA_BASE
+                    if (mapped.canDisplay(pua)) return mapped to pua
+                } else if (codePoint in SYMBOL_PUA_MIN..SYMBOL_PUA_MAX) {
+                    val ascii = codePoint and SYMBOL_ASCII_MAX
+                    if (mapped.canDisplay(ascii)) return mapped to ascii
+                }
+                if (fallback.canDisplay(codePoint)) return fallback to codePoint
+                return logical to codePoint
             }
-            var partBegin = groupBegin
-            var partFont = fontFor(placed.text.codePointAt(partBegin))
-            var offset = partBegin
+
+            var partBegin = remapped.length
+            val firstPair = selectFontAndCodePoint(rawText.codePointAt(groupBegin))
+            var partFont = firstPair.first
+            var offset = groupBegin
             while (offset < groupEnd) {
-                val codePoint = placed.text.codePointAt(offset)
-                val selected = fontFor(codePoint)
+                val codePoint = rawText.codePointAt(offset)
+                val (selected, outCodePoint) = selectFontAndCodePoint(codePoint)
                 if (selected !== partFont) {
-                    ranges += RangeAttribute(TextAttribute.FONT, partFont, placed.begin + partBegin, placed.begin + offset)
-                    partBegin = offset
+                    if (remapped.length > partBegin) {
+                        ranges += RangeAttribute(TextAttribute.FONT, partFont, begin + partBegin, begin + remapped.length)
+                    }
+                    partBegin = remapped.length
                     partFont = selected
                 }
+                remapped.appendCodePoint(outCodePoint)
                 offset += Character.charCount(codePoint)
             }
-            ranges += RangeAttribute(TextAttribute.FONT, partFont, placed.begin + partBegin, placed.begin + groupEnd)
+            if (remapped.length > partBegin) {
+                ranges += RangeAttribute(TextAttribute.FONT, partFont, begin + partBegin, begin + remapped.length)
+            }
             groupBegin = groupEnd
         }
-        return ranges
+        return ResolvedRunText(remapped.toString(), ranges)
+    }
+
+    private fun applyTabStops(
+        graphics: Graphics2D,
+        runText: String,
+        begin: Int,
+        baseFont: Font,
+        startX: Double,
+        tabStops: List<Double>,
+        defaultTabPt: Double,
+        ranges: MutableList<RangeAttribute>,
+    ): Double {
+        var x = startX
+        var segStart = 0
+        for (i in runText.indices) {
+            val ch = runText[i]
+            if (ch == '\n' || ch == '\r') {
+                if (i > segStart) {
+                    x += TextLayout(runText.substring(segStart, i), baseFont, graphics.fontRenderContext).advance
+                }
+                x = 0.0
+                segStart = i + 1
+            } else if (ch == '\t') {
+                if (i > segStart) {
+                    x += TextLayout(runText.substring(segStart, i), baseFont, graphics.fontRenderContext).advance
+                }
+                val nextStop = nextTabStop(x, tabStops, defaultTabPt)
+                val delta = (nextStop - x).coerceAtLeast(1.0)
+                ranges += RangeAttribute(TextAttribute.CHAR_REPLACEMENT, TabGraphicAttribute(delta.toFloat()), begin + i, begin + i + 1)
+                x = nextStop
+                segStart = i + 1
+            }
+        }
+        if (segStart < runText.length) {
+            x += TextLayout(runText.substring(segStart), baseFont, graphics.fontRenderContext).advance
+        }
+        return x
+    }
+
+    private fun renderableTextPreservingTabs(run: TextRun): String {
+        val raw = run.rawText.orEmpty().replace('\u000B', '\n')
+        return when (run.textCap) {
+            TextRun.TextCap.ALL -> raw.uppercase()
+            else -> raw
+        }
     }
 }
 
-/** A run's text and where it starts in its paragraph's. */
-private class PlacedRun(val run: TextRun, val text: String, val begin: Int)
+@Suppress("UNCHECKED_CAST")
+private fun deckEmbeddedFonts(graphics: Graphics2D): Map<String, List<Font>> =
+    (graphics.getRenderingHint(DECK_EMBEDDED_FONTS_KEY) as? Map<String, List<Font>>).orEmpty()
+
+private fun buildAwtFont(
+    deckFonts: Map<String, List<Font>>,
+    family: String,
+    attributes: Map<Attribute, Any>,
+): Font {
+    val cleanKey = family.substringBefore('\u0000').trim().removePrefix("@").lowercase()
+    val embedded = deckFonts[cleanKey]
+    if (!embedded.isNullOrEmpty()) {
+        val wantBold = (attributes[TextAttribute.WEIGHT] as? Float ?: 0f) >= TextAttribute.WEIGHT_BOLD
+        val wantItalic = (attributes[TextAttribute.POSTURE] as? Float ?: 0f) > 0f
+        val best = embedded.firstOrNull { it.isBold == wantBold && it.isItalic == wantItalic }
+            ?: embedded.first()
+        val derivedAttrs = attributes - TextAttribute.FONT - TextAttribute.FAMILY
+        return best.deriveFont(derivedAttrs)
+    }
+    return Font((attributes - TextAttribute.FONT) + (TextAttribute.FAMILY to family))
+}
+
+internal fun characterSpacingPt(run: TextRun): Double {
+    if (run is XSLFTextRun) return run.characterSpacing
+    if (run is HSLFTextRun) {
+        val style = run.characterStyle ?: return 0.0
+        val prop: TextProp = style.findByName<TextProp>("char_spacing")
+            ?: style.findByName<TextProp>("text.spacing")
+            ?: style.findByName<TextProp>("font.charSpace")
+            ?: return 0.0
+        // Binary PowerPoint stores character spacing in hundredths of a point.
+        return prop.value / 100.0
+    }
+    return 0.0
+}
+
+/** Reads `<a:normAutofit fontScale="..."/>` as a multiplier in (0, 1], defaulting to 1.0. */
+internal fun normAutofitFontScale(shape: TextShape<*, *>?): Double {
+    val ctShape = (shape as? XSLFTextShape)?.xmlObject as? CTShape ?: return 1.0
+    val normAutofit = ctShape.txBody?.bodyPr?.normAutofit ?: return 1.0
+    if (!normAutofit.isSetFontScale) return 1.0
+    val raw = normAutofit.fontScale.toString().toDoubleOrNull() ?: return 1.0
+    val scale = raw / AUTOFIT_PERCENT_BASE
+    return if (scale in MIN_AUTOFIT_SCALE..1.0) scale else 1.0
+}
+
+/** Reads `<a:normAutofit lnSpcReduction="..."/>` as a fraction in [0, 0.5], defaulting to 0.0. */
+internal fun normAutofitLineSpacingReduction(shape: TextShape<*, *>?): Double {
+    val ctShape = (shape as? XSLFTextShape)?.xmlObject as? CTShape ?: return 0.0
+    val normAutofit = ctShape.txBody?.bodyPr?.normAutofit ?: return 0.0
+    if (!normAutofit.isSetLnSpcReduction) return 0.0
+    val raw = normAutofit.lnSpcReduction.toString().toDoubleOrNull() ?: return 0.0
+    val reduction = raw / AUTOFIT_PERCENT_BASE
+    return if (reduction in 0.0..MAX_LINE_SPACING_REDUCTION) reduction else 0.0
+}
+
+private fun explicitTabStopsPt(paragraph: TextParagraph<*, *, *>): List<Double> {
+    val pPr = (paragraph as? XSLFTextParagraph)?.xmlObject?.pPr ?: return emptyList()
+    if (!pPr.isSetTabLst) return emptyList()
+    return pPr.tabLst.tabList
+        .mapNotNull { tab ->
+            if (!tab.isSetPos) null
+            else tab.pos.toString().toLongOrNull()?.let { Units.toPoints(it) }
+        }
+        .sorted()
+}
+
+private fun nextTabStop(currentX: Double, explicitStops: List<Double>, defaultTabPt: Double): Double {
+    explicitStops.firstOrNull { it > currentX + TAB_EPSILON }?.let { return it }
+    val step = defaultTabPt.coerceAtLeast(1.0)
+    val index = kotlin.math.floor((currentX + TAB_EPSILON) / step).toLong() + 1L
+    return index * step
+}
 
 /**
  * The next line, wrapped on its visible width: the spaces that end it may run past [width], by up
  * to [slack] (one em of the paragraph's largest size), as they do in PowerPoint.
- *
- * Java's `LineBreakMeasurer` counts trailing spaces into the width, so a line whose words fit
- * exactly lost its last word to the next line. Here the line is measured with the slack added
- * and, while its visible part is still too wide, re-measured with the limit pulled back to the start
- * of its last word — one word at a time, ending at worst on the line POI's own call would give.
  */
 private fun LineBreakMeasurer.nextHangingLayout(
     text: String,
@@ -297,10 +475,17 @@ private fun LineBreakMeasurer.nextHangingLayout(
     }
 }
 
-/** The size POI probes a font at to ask which characters it can show; any size answers the same. */
-
-/** A bullet with no size of its own is as large as its text: 100%. */
 private const val PERCENT = 100.0
+private const val AUTOFIT_PERCENT_BASE = 100_000.0
+private const val MIN_AUTOFIT_SCALE = 0.2
+private const val MAX_LINE_SPACING_REDUCTION = 0.5
+private const val DEFAULT_TAB_SIZE_PT = 72.0
+private const val TAB_EPSILON = 0.01
+private const val SYMBOL_ASCII_MIN = 0x0020
+private const val SYMBOL_ASCII_MAX = 0x00FF
+private const val SYMBOL_PUA_BASE = 0xF000
+private const val SYMBOL_PUA_MIN = 0xF020
+private const val SYMBOL_PUA_MAX = 0xF0FF
 
 private val LINE_BREAKS = Regex("[\\r\\n]")
 

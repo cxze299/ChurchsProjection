@@ -3,11 +3,13 @@ package org.churchpresenter.presentationengine.fonts
 import org.apache.poi.common.usermodel.fonts.FontInfo
 import org.apache.poi.sl.draw.DrawFontManager
 import org.apache.poi.sl.draw.DrawFontManagerDefault
+import org.churchpresenter.presentationengine.pptx.DECK_EMBEDDED_FONTS_KEY
 import java.awt.Font
 import java.awt.Graphics2D
 import java.awt.GraphicsEnvironment
 import java.io.File
 import java.io.InputStream
+import java.nio.charset.Charset
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
@@ -178,15 +180,18 @@ object SlideFontRegistry {
     fun registerFontStream(stream: InputStream): String? {
         return try {
             val fonts = stream.use { Font.createFonts(it) }
-            val graphics = GraphicsEnvironment.getLocalGraphicsEnvironment()
-            fonts.forEach { font ->
-                graphics.registerFont(font)
-                indexFamily(font)
-            }
+            fonts.forEach { registerFont(it) }
             fonts.firstOrNull()?.family
         } catch (_: Exception) {
             null
         }
+    }
+
+    /** Registers an already-created AWT [font] into the JVM and indexes its localized family names. */
+    fun registerFont(font: Font): String {
+        GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(font)
+        indexFamily(font)
+        return font.family
     }
 
     /**
@@ -330,18 +335,47 @@ object SlideFontRegistry {
         }
     }
 
-    private fun cleanTypeface(name: String): String = name.substringBefore('\u0000').trim().removePrefix("@")
+    private val gb18030: Charset? = runCatching { Charset.forName("GB18030") }.getOrNull()
+
+    /**
+     * Cleans null terminators and `@` vertical-writing prefixes, and recovers legacy WMF/EMF
+     * `LOGFONT` Chinese family names that POI decoded from GBK bytes as ISO-8859-1.
+     */
+    internal fun cleanTypeface(name: String): String {
+        val cleaned = name.substringBefore('\u0000').trim().removePrefix("@")
+        if (cleaned.isEmpty()) return cleaned
+        val charset = gb18030 ?: return cleaned
+        val hasHighLatin1 = cleaned.any { it.code in 0x0080..0x00FF } && cleaned.none { it.code > 0x00FF }
+        if (!hasHighLatin1) return cleaned
+        val recovered = String(cleaned.toByteArray(Charsets.ISO_8859_1), charset).trim()
+        val key = recovered.lowercase()
+        return if (availableFamilies.containsKey(key) || substitutionTable.containsKey(key)) recovered else cleaned
+    }
 
     private fun normalizeName(name: String): String =
         name.lowercase().filter { it.isLetterOrDigit() }
 
     /**
      * POI font handler that swaps unavailable families for the best installed substitute before
-     * POI builds its AWT font. Everything else defers to POI's default behavior.
+     * POI builds its AWT font. Preserves codepoints for embedded/installed custom musical fonts
+     * rather than letting POI's default symbol mapper mangle them.
      */
     private class SubstitutingFontManager : DrawFontManagerDefault() {
         override fun getFallbackFont(graphics: Graphics2D, fontInfo: FontInfo?): FontInfo =
             FontInfo { Font.SANS_SERIF }
+
+        override fun mapFontCharset(graphics: Graphics2D?, fontInfo: FontInfo?, string: String?): String? {
+            if (fontInfo == null || string.isNullOrEmpty()) return string
+            val rawName = fontInfo.typeface?.let(::cleanTypeface) ?: return super.mapFontCharset(graphics, fontInfo, string)
+            if (knownSymbolFonts.contains(rawName)) return super.mapFontCharset(graphics, fontInfo, string)
+            val key = rawName.lowercase()
+            val deckFonts = graphics?.getRenderingHint(DECK_EMBEDDED_FONTS_KEY) as? Map<*, *>
+            if (deckFonts?.containsKey(key) == true || availableFamilies.containsKey(key)) {
+                return string
+            }
+            return super.mapFontCharset(graphics, fontInfo, string)
+        }
+
         /**
          * [fontInfo] is nullable on purpose: POI's own callers hand this handler a null for a run
          * that names no font of its own, and the Kotlin non-null check on the parameter then threw
@@ -352,7 +386,14 @@ object SlideFontRegistry {
         override fun getMappedFont(graphics: Graphics2D, fontInfo: FontInfo?): FontInfo {
             val mapped = super.getMappedFont(graphics, fontInfo ?: FontInfo { DEFAULT_FAMILY })
             val typeface = mapped.typeface ?: return mapped
-            val substitute = availableFamilies[cleanTypeface(typeface).lowercase()] ?: resolveFamily(typeface)
+            val cleaned = cleanTypeface(typeface)
+            val key = cleaned.lowercase()
+            val deckFonts = graphics.getRenderingHint(DECK_EMBEDDED_FONTS_KEY) as? Map<*, *>
+            val substitute = if (deckFonts?.containsKey(key) == true) {
+                cleaned
+            } else {
+                availableFamilies[key] ?: resolveFamily(cleaned)
+            }
             if (substitute == typeface) return mapped
             return object : FontInfo by mapped {
                 override fun getTypeface(): String = substitute

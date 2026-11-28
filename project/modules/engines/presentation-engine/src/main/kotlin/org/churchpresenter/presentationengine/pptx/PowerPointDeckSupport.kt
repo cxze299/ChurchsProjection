@@ -18,8 +18,12 @@ import org.churchpresenter.presentationengine.model.LayerSpec
 import org.churchpresenter.presentationengine.model.SlideTransitionSpec
 import org.churchpresenter.presentationengine.model.Timeline
 import org.churchpresenter.presentationengine.timeline.TimelineCompiler
+import java.awt.Font
 import java.io.File
 import java.io.IOException
+import java.util.Collections
+import java.util.Locale
+import java.util.WeakHashMap
 
 /** Per-slide parse results. */
 internal data class PowerPointSlideMeta(
@@ -46,6 +50,20 @@ internal sealed interface PowerPointMetadataResult {
 
 internal object PowerPointDeckSupport {
 
+    private val embeddedFontsByDeck: MutableMap<SlideShow<*, *>, Map<String, List<Font>>> =
+        Collections.synchronizedMap(WeakHashMap())
+
+    private val indexingLocales = listOf(
+        Locale.getDefault(),
+        Locale.ROOT,
+        Locale.ENGLISH,
+        Locale.SIMPLIFIED_CHINESE,
+        Locale.TRADITIONAL_CHINESE,
+    ).distinct()
+
+    fun embeddedFontsFor(show: SlideShow<*, *>?): Map<String, List<Font>> =
+        if (show == null) emptyMap() else embeddedFontsByDeck[show].orEmpty()
+
     /**
      * Opens a slide show with format auto-detection (works for both .pptx and .ppt).
      *
@@ -68,29 +86,63 @@ internal object PowerPointDeckSupport {
     }
 
     /**
-     * Registers embedded fonts before the deck is drawn, including binary PPT/PPS font records.
+     * Registers embedded fonts before the deck is drawn, including binary PPT/PPS font records and
+     * OOXML `.odttf` / `.fntdata` parts, and keeps a per-deck map so subsetted fonts from different
+     * songs never overwrite each other in AWT's global `GraphicsEnvironment`.
      */
     private fun registerEmbeddedFonts(show: SlideShow<*, *>) {
+        val deckFonts = mutableMapOf<String, MutableList<Font>>()
+        fun indexFont(font: Font) {
+            val keys = buildSet {
+                indexingLocales.forEach { locale ->
+                    add(font.getFamily(locale).trim().lowercase())
+                    add(font.getFontName(locale).trim().lowercase())
+                }
+                add(font.psName.trim().lowercase())
+            }
+            for (key in keys) {
+                if (key.isNotEmpty()) deckFonts.getOrPut(key) { mutableListOf() }.add(font)
+            }
+        }
         if (show is HSLFSlideShow) {
             for (font in show.fonts) {
-                font.facets.forEach { runCatching { EmbeddedPowerPointFonts.register(it) } }
+                val declared = font.typeface?.substringBefore('\u0000')?.trim()?.removePrefix("@")?.lowercase()
+                font.facets.forEach { facet ->
+                    runCatching { EmbeddedPowerPointFonts.loadFonts(facet) }
+                        .getOrDefault(emptyList())
+                        .forEach { loaded ->
+                            indexFont(loaded)
+                            if (!declared.isNullOrEmpty()) {
+                                deckFonts.getOrPut(declared) { mutableListOf() }.add(loaded)
+                            }
+                        }
+                }
             }
+            if (deckFonts.isNotEmpty()) embeddedFontsByDeck[show] = deckFonts
             return
         }
         val pkg = (show as? XMLSlideShow)?.`package` ?: return
         try {
             pkg.parts.asSequence()
-                .filter { it.contentType.contains("font", ignoreCase = true) }
-                .forEach { registerFontPart(it) }
+                .filter {
+                    it.contentType.contains("font", ignoreCase = true) ||
+                        it.partName.name.endsWith(".odttf", ignoreCase = true) ||
+                        it.partName.name.endsWith(".fntdata", ignoreCase = true)
+                }
+                .forEach { part ->
+                    registerFontPart(part).forEach(::indexFont)
+                }
         } catch (_: Exception) {
         }
+        if (deckFonts.isNotEmpty()) embeddedFontsByDeck[show] = deckFonts
     }
 
     /** One embedded font; a payload that cannot be read is skipped rather than failing the deck. */
-    private fun registerFontPart(part: PackagePart) {
-        try {
-            EmbeddedPowerPointFonts.register(part.inputStream)
+    private fun registerFontPart(part: PackagePart): List<Font> {
+        return try {
+            EmbeddedPowerPointFonts.loadFonts(part.inputStream, part.partName.name)
         } catch (_: Exception) {
+            emptyList()
         }
     }
 
